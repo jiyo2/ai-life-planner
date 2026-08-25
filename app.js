@@ -47,6 +47,7 @@ if ($("closeReview")) {
   });
 }
 
+
 /* ================================
    PADDLE SANDBOX
 ================================ */
@@ -59,9 +60,27 @@ if (typeof Paddle !== "undefined") {
 
     eventCallback: function (event) {
       console.log("Paddle event:", event);
+
+      if (event.name === "checkout.completed") {
+        if (!trip) {
+          return;
+        }
+
+        $("review").classList.add("hidden");
+        $("app").classList.add("hidden");
+        $("plan").classList.remove("hidden");
+
+        renderPlan(trip);
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth"
+        });
+      }
     }
   });
 }
+
 
 /* ================================
    PADDLE PAYMENT
@@ -88,6 +107,7 @@ if ($("pay")) {
     });
   });
 }
+
 
 /* ================================
    TRAVEL PLAN
