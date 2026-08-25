@@ -7,27 +7,47 @@
 <title>AI Life Planner — Travel smarter</title>
 <meta name="description" content="AI-powered personalized travel planning. One plan, one payment.">
 <link rel="stylesheet" href="style.css">
-</head>
-<body><header class="nav">
+</head><body><header class="nav">
   <a class="brand" href="#">✦ AI Life Planner</a>
-  <div class="nav-right"><span>One-time plan</span><b>$4.99</b></div>
-</header><main id="app">
-<section class="hero">
-  <div class="eyebrow">AI TRAVEL PLANNER</div>
-  <h1>Tell us your trip.<br><em>We'll plan the rest.</em></h1>
-  <p>Hotels, transport, activities, food and a day-by-day itinerary — organized around your destination, budget and preferences.</p>
-</section><section class="planner">
-  <div class="stepbar"><span class="on"></span><span></span><span></span></div>
-  <div class="step-label">STEP 1 · YOUR TRIP</div>
-  <h2>What are you planning?</h2>  <form id="plannerForm">
-    <label>Destination
-      <input id="destination" required placeholder="Istanbul, Turkey">
-    </label><div class="cols">
-  <label>Start date
-    <input id="startDate" type="date" required>
+  <div class="nav-right">
+    <span>One-time plan</span>
+    <b>$4.99</b>
+  </div>
+</header><main id="app"><section class="hero">
+  <div class="eyebrow">AI TRAVEL PLANNER</div>  <h1>
+    Tell us your trip.<br>
+    <em>We'll plan the rest.</em>
+  </h1>  <p>
+    Hotels, transport, activities, food and a day-by-day itinerary —
+    organized around your destination, budget and preferences.
+  </p>
+</section><section class="planner">  <div class="stepbar">
+    <span class="on"></span>
+    <span></span>
+    <span></span>
+  </div>  <div class="step-label">STEP 1 · YOUR TRIP</div>  <h2>What are you planning?</h2>  <form id="plannerForm"><label>
+  Destination
+  <input
+    id="destination"
+    required
+    placeholder="Istanbul, Turkey"
+  >
+</label>
+
+
+<div class="cols">
+
+  <label>
+    Start date
+    <input
+      id="startDate"
+      type="date"
+      required
+    >
   </label>
 
-  <label>Days
+  <label>
+    Days
     <select id="days">
       <option>3</option>
       <option selected>5</option>
@@ -36,14 +56,25 @@
       <option>14</option>
     </select>
   </label>
+
 </div>
 
+
 <div class="cols">
-  <label>Budget (USD)
-    <input id="budget" type="number" min="50" value="800" required>
+
+  <label>
+    Budget (USD)
+    <input
+      id="budget"
+      type="number"
+      min="50"
+      value="800"
+      required
+    >
   </label>
 
-  <label>Travelers
+  <label>
+    Travelers
     <select id="travelers">
       <option selected>1</option>
       <option>2</option>
@@ -52,90 +83,170 @@
       <option>5+</option>
     </select>
   </label>
+
 </div>
+
 
 <label>What matters to you?</label>
 
 <div class="chips" id="chips">
-  <button type="button" class="chip active">Sightseeing</button>
-  <button type="button" class="chip">Food</button>
-  <button type="button" class="chip">Shopping</button>
-  <button type="button" class="chip">Nature</button>
-  <button type="button" class="chip">Nightlife</button>
-  <button type="button" class="chip">Relaxation</button>
-  <button type="button" class="chip">Family</button>
+
+  <button type="button" class="chip active">
+    Sightseeing
+  </button>
+
+  <button type="button" class="chip">
+    Food
+  </button>
+
+  <button type="button" class="chip">
+    Shopping
+  </button>
+
+  <button type="button" class="chip">
+    Nature
+  </button>
+
+  <button type="button" class="chip">
+    Nightlife
+  </button>
+
+  <button type="button" class="chip">
+    Relaxation
+  </button>
+
+  <button type="button" class="chip">
+    Family
+  </button>
+
 </div>
 
-<label>Tell the planner anything else
-  <textarea id="notes" placeholder="Example: central hotel, halal food, low walking, romantic, family-friendly..."></textarea>
+
+<label>
+  Tell the planner anything else
+
+  <textarea
+    id="notes"
+    placeholder="Example: central hotel, halal food, low walking, romantic, family-friendly..."
+  ></textarea>
+
 </label>
 
-<button class="cta" type="submit">
+
+<button
+  class="cta"
+  type="submit"
+>
   Continue <span>→</span>
 </button>
 
+
 <p class="micro">
-  You'll review your plan details before payment. One-time $4.99.
+  You'll review your plan details before payment.
+  One-time $4.99.
 </p>
 
-  </form>
-</section><section class="how">
-  <div>
+  </form></section><section class="how">  <div>
     <strong>01</strong>
     <h3>Tell us</h3>
-    <p>Your destination, dates, budget and preferences.</p>
+    <p>
+      Your destination, dates, budget and preferences.
+    </p>
   </div>  <div>
     <strong>02</strong>
     <h3>Pay once</h3>
-    <p>Unlock one personalized travel plan for $4.99.</p>
+    <p>
+      Unlock one personalized travel plan for $4.99.
+    </p>
   </div>  <div>
     <strong>03</strong>
     <h3>Get your plan</h3>
-    <p>Receive a structured itinerary and recommendations.</p>
-  </div>
-</section>
-</main><div class="overlay hidden" id="review">
-  <div class="modal">
-    <button class="x" id="closeReview">×</button><div class="eyebrow">STEP 2 · REVIEW</div>
-
-<h2>Your trip is ready to plan.</h2>
-
-<div class="summary" id="summary"></div>
-
-<div class="paybox">
-  <div>
-    <span>Personalized AI travel plan</span>
-    <b>$4.99</b>
-  </div>
-
-  <small>One-time payment · no subscription</small>
-</div>
-
-<button class="cta" id="pay">
-  Continue to secure payment <span>→</span>
+    <p>
+      Receive a structured itinerary and recommendations.
+    </p>
+  </div></section></main><div
+  class="overlay hidden"
+  id="review"
+>  <div class="modal"><button
+  class="x"
+  id="closeReview"
+>
+  ×
 </button>
 
+
+<div class="eyebrow">
+  STEP 2 · REVIEW
+</div>
+
+
+<h2>
+  Your trip is ready to plan.
+</h2>
+
+
+<div
+  class="summary"
+  id="summary"
+></div>
+
+
+<div class="paybox">
+
+  <div>
+    <span>
+      Personalized AI travel plan
+    </span>
+
+    <b>
+      $4.99
+    </b>
+  </div>
+
+  <small>
+    One-time payment · no subscription
+  </small>
+
+</div>
+
+
+<button
+  class="cta"
+  id="pay"
+>
+  Continue to secure payment
+  <span>→</span>
+</button>
+
+
 <p class="micro">
-  Payment integration is the next production connection. This V2 demo
-  simulates successful checkout.
+  Secure payment powered by Paddle.
 </p>
 
-  </div>
-</div><section id="plan" class="plan hidden">
-  <div class="plan-head">
-    <div class="eyebrow">YOUR PERSONALIZED PLAN</div>
-    <h2 id="planTitle"></h2>
-    <p id="planIntro"></p>
-  </div>  <div class="cards">
-    <article>
-      <div class="icon">🏨</div>
-      <h3>Stay</h3>
-      <p id="stay"></p>
-    </article><article>
+  </div></div><section
+  id="plan"
+  class="plan hidden"
+>  <div class="plan-head"><div class="eyebrow">
+  YOUR PERSONALIZED PLAN
+</div>
+
+<h2 id="planTitle"></h2>
+
+<p id="planIntro"></p>
+
+  </div>  <div class="cards"><article>
+  <div class="icon">🏨</div>
+  <h3>Stay</h3>
+  <p id="stay"></p>
+</article>
+
+
+<article>
   <div class="icon">🚆</div>
   <h3>Getting around</h3>
   <p id="transport"></p>
 </article>
+
 
 <article>
   <div class="icon">📍</div>
@@ -143,25 +254,42 @@
   <p id="experiences"></p>
 </article>
 
+
 <article>
   <div class="icon">💰</div>
   <h3>Budget strategy</h3>
   <p id="money"></p>
 </article>
 
-  </div>  <h3 class="section-title">Day-by-day itinerary</h3>  <div id="daysOut" class="day-list"></div>  <div class="production-note">
-    <b>Production V2 architecture</b>
-    <p>
-      The interface is ready for the next connections: real AI API,
-      real payment checkout, and live travel/affiliate data.
-      No secret API keys are stored in this front-end.
-    </p>
-  </div>  <button class="secondary" onclick="location.reload()">
-    Create another plan
-  </button>
-</section><footer class="site-footer">
-  <a href="terms.html">Terms of Service</a>
-  <a href="privacy.html">Privacy Policy</a>
-  <a href="refund.html">Refund Policy</a>
-</footer><script src="app.js"></script></body>
-                       </html>
+  </div>  <h3 class="section-title">
+    Day-by-day itinerary
+  </h3>  <div
+    id="daysOut"
+    class="day-list"
+  ></div>  <div class="production-note"><b>
+  Production V2 architecture
+</b>
+
+<p>
+  The interface is ready for the next connections:
+  real AI API, real payment checkout, and live
+  travel/affiliate data. No secret API keys are
+  stored in this front-end.
+</p>
+
+  </div><button
+class="secondary"
+onclick="location.reload()"
+
+«»
+
+Create another plan
+
+  </button></section><footer class="site-footer">  <a href="terms.html">
+    Terms of Service
+  </a>  <a href="privacy.html">
+    Privacy Policy
+  </a>  <a href="refund.html">
+    Refund Policy
+  </a></footer><!-- Paddle.js --><script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script><!-- AI Life Planner --><script src="app.js"></script></body>
+     </html>
