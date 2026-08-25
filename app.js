@@ -47,19 +47,59 @@ if ($("closeReview")) {
   });
 }
 
-if ($("pay")) {
-  $("pay").addEventListener("click", () => {
-    $("review").classList.add("hidden");
-    $("app").classList.add("hidden");
-    $("plan").classList.remove("hidden");
+/* ================================
+   PADDLE SANDBOX
+================================ */
 
-    renderPlan(trip);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+if (typeof Paddle !== "undefined") {
+  Paddle.Environment.set("sandbox");
+
+  Paddle.Initialize({
+    token: "test_2611717af9e5bf12fda64319b8b",
+
+    eventCallback: function (event) {
+      console.log("Paddle event:", event);
+    }
   });
 }
 
+/* ================================
+   PADDLE PAYMENT
+================================ */
+
+if ($("pay")) {
+  $("pay").addEventListener("click", () => {
+    if (!trip) {
+      return;
+    }
+
+    if (typeof Paddle === "undefined") {
+      alert("Payment system is not available yet.");
+      return;
+    }
+
+    Paddle.Checkout.open({
+      items: [
+        {
+          priceId: "pri_01m0x953caxgk28jt53p58dm63",
+          quantity: 1
+        }
+      ]
+    });
+  });
+}
+
+/* ================================
+   TRAVEL PLAN
+================================ */
+
 function renderPlan(t) {
-  $("planTitle").textContent = `${t.days}-Day ${t.destination} Trip`;
+  if (!t) {
+    return;
+  }
+
+  $("planTitle").textContent =
+    `${t.days}-Day ${t.destination} Trip`;
 
   $("planIntro").textContent =
     `A personalized starter plan for ${t.travelers} traveler(s), ` +
@@ -84,12 +124,14 @@ function renderPlan(t) {
     `and free attractions.`;
 
   $("money").textContent =
-    `Hotel $${hotel} · Food $${food} · Transport $${transport} · Activities $${activities}.`;
+    `Hotel $${hotel} · Food $${food} · ` +
+    `Transport $${transport} · Activities $${activities}.`;
 
   $("daysOut").innerHTML = "";
 
   for (let i = 1; i <= t.days; i++) {
     const day = document.createElement("div");
+
     day.className = "day";
 
     let description;
@@ -113,4 +155,4 @@ function renderPlan(t) {
 
     $("daysOut").appendChild(day);
   }
-        }
+      }
