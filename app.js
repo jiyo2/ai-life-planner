@@ -56,7 +56,7 @@ if ($("closeReview")) {
 }
 
 /* ================================
-   PADDLE
+   PADDLE SANDBOX
 ================================ */
 
 if (typeof Paddle !== "undefined") {
@@ -66,10 +66,56 @@ if (typeof Paddle !== "undefined") {
     token: "test_2611717af9e5bf12fda",
 
     eventCallback: function (event) {
-      console.log("Paddle event:", event);
+      console.log("PADDLE EVENT:", event);
+
+      /* CHECKOUT ERROR */
+
+      if (event.name === "checkout.error") {
+        console.error("PADDLE CHECKOUT ERROR:", event);
+
+        alert(
+          "Paddle checkout error: " +
+          (event.detail || event.code || "Unknown error")
+        );
+
+        return;
+      }
+
+      /* PAYMENT ERROR */
+
+      if (event.name === "checkout.payment.error") {
+        console.error("PADDLE PAYMENT ERROR:", event);
+
+        alert(
+          "Payment error: " +
+          (event.detail || event.code || "Unknown payment error")
+        );
+
+        return;
+      }
+
+      /* PAYMENT FAILED */
+
+      if (event.name === "checkout.payment.failed") {
+        console.error("PADDLE PAYMENT FAILED:", event);
+
+        alert(
+          "Payment failed: " +
+          (event.detail || "Please try again.")
+        );
+
+        return;
+      }
+
+      /* PAYMENT COMPLETED */
 
       if (event.name === "checkout.completed") {
-        console.log("Payment completed.");
+        console.log("PAYMENT COMPLETED:", event);
+
+        if (!trip) {
+          console.error("Trip data is missing.");
+          return;
+        }
 
         $("review").classList.add("hidden");
         $("app").classList.add("hidden");
@@ -117,14 +163,23 @@ async function generateAIPlan() {
     return;
   }
 
-  $("planTitle").textContent = "Creating your personalized plan...";
+  $("planTitle").textContent =
+    "Creating your personalized plan...";
+
   $("planIntro").textContent =
     "Our AI is building your itinerary. Please wait a moment.";
 
-  $("stay").textContent = "Generating accommodation strategy...";
-  $("transport").textContent = "Generating transportation strategy...";
-  $("experiences").textContent = "Generating experiences...";
-  $("money").textContent = "Calculating your budget...";
+  $("stay").textContent =
+    "Generating accommodation strategy...";
+
+  $("transport").textContent =
+    "Generating transportation strategy...";
+
+  $("experiences").textContent =
+    "Generating experiences...";
+
+  $("money").textContent =
+    "Calculating your budget...";
 
   $("daysOut").innerHTML = `
     <div class="day">
@@ -136,20 +191,38 @@ async function generateAIPlan() {
   try {
     const response = await fetch("/api/plan", {
       method: "POST",
+
       headers: {
         "Content-Type": "application/json"
       },
+
       body: JSON.stringify(trip)
     });
 
     const data = await response.json();
 
-    if (!response.ok) {
-      console.error("AI plan error:", data);
+    console.log("AI PLAN RESPONSE:", data);
 
-      $("planTitle").textContent = "Something went wrong";
+    if (!response.ok) {
+      console.error("AI PLAN ERROR:", data);
+
+      $("planTitle").textContent =
+        "Something went wrong";
+
       $("planIntro").textContent =
         "We could not create your AI travel plan. Please try again.";
+
+      $("stay").textContent = "";
+      $("transport").textContent = "";
+      $("experiences").textContent = "";
+      $("money").textContent = "";
+
+      $("daysOut").innerHTML = `
+        <div class="day">
+          <b>AI Planner Error</b>
+          <p>Please try again later.</p>
+        </div>
+      `;
 
       return;
     }
@@ -159,11 +232,25 @@ async function generateAIPlan() {
     displayAIPlan(plan);
 
   } catch (error) {
-    console.error("Connection error:", error);
+    console.error("AI CONNECTION ERROR:", error);
 
-    $("planTitle").textContent = "Connection error";
+    $("planTitle").textContent =
+      "Connection error";
+
     $("planIntro").textContent =
       "We could not connect to the AI travel planner.";
+
+    $("stay").textContent = "";
+    $("transport").textContent = "";
+    $("experiences").textContent = "";
+    $("money").textContent = "";
+
+    $("daysOut").innerHTML = `
+      <div class="day">
+        <b>Connection Error</b>
+        <p>Please try again later.</p>
+      </div>
+    `;
   }
 }
 
@@ -180,13 +267,13 @@ function displayAIPlan(plan) {
     `built around your $${trip.budget} budget.`;
 
   $("stay").textContent =
-    "Your personalized accommodation recommendations are included in the AI-generated plan below.";
+    "Your personalized accommodation recommendations are included in your AI-generated plan below.";
 
   $("transport").textContent =
-    "Your transportation recommendations are included in the AI-generated plan below.";
+    "Your transportation recommendations are included in your AI-generated plan below.";
 
   $("experiences").textContent =
-    "Your activities, attractions and food recommendations are included in the AI-generated plan below.";
+    "Your activities, attractions and food recommendations are included in your AI-generated plan below.";
 
   $("money").textContent =
     `Total trip budget: $${trip.budget}`;
@@ -204,7 +291,10 @@ function displayAIPlan(plan) {
 ================================ */
 
 function formatAIText(text) {
-  return text
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
     .replace(/\n\n/g, "<br><br>")
     .replace(/\n/g, "<br>");
 }
