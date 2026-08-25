@@ -8,6 +8,10 @@ document.querySelectorAll(".chip").forEach((chip) => {
 
 let trip = null;
 
+/* ================================
+   TRIP FORM
+================================ */
+
 const form = $("plannerForm");
 
 if (form) {
@@ -23,7 +27,7 @@ if (form) {
       interests: [...document.querySelectorAll(".chip.active")].map(
         (chip) => chip.textContent.trim()
       ),
-      notes: $("notes").value.trim(),
+      notes: $("notes").value.trim()
     };
 
     $("summary").innerHTML = `
@@ -41,59 +45,55 @@ if (form) {
   });
 }
 
+/* ================================
+   CLOSE REVIEW
+================================ */
+
 if ($("closeReview")) {
   $("closeReview").addEventListener("click", () => {
     $("review").classList.add("hidden");
   });
 }
 
-
 /* ================================
-   PADDLE SANDBOX
+   PADDLE
 ================================ */
 
 if (typeof Paddle !== "undefined") {
   Paddle.Environment.set("sandbox");
 
   Paddle.Initialize({
-    token: "test_2611717af9e5bf12fda64319b8b",
+    token: "test_2611717af9e5bf12fda",
 
     eventCallback: function (event) {
       console.log("Paddle event:", event);
 
       if (event.name === "checkout.completed") {
-        if (!trip) {
-          return;
-        }
+        console.log("Payment completed.");
 
         $("review").classList.add("hidden");
         $("app").classList.add("hidden");
         $("plan").classList.remove("hidden");
 
-        renderPlan(trip);
-
-        window.scrollTo({
-          top: 0,
-          behavior: "smooth"
-        });
+        generateAIPlan();
       }
     }
   });
 }
 
-
 /* ================================
-   PADDLE PAYMENT
+   PAYMENT BUTTON
 ================================ */
 
 if ($("pay")) {
   $("pay").addEventListener("click", () => {
     if (!trip) {
+      alert("Please complete your trip details first.");
       return;
     }
 
     if (typeof Paddle === "undefined") {
-      alert("Payment system is not available yet.");
+      alert("Payment system is not available.");
       return;
     }
 
@@ -108,71 +108,103 @@ if ($("pay")) {
   });
 }
 
-
 /* ================================
-   TRAVEL PLAN
+   GENERATE AI PLAN
 ================================ */
 
-function renderPlan(t) {
-  if (!t) {
+async function generateAIPlan() {
+  if (!trip) {
     return;
   }
 
-  $("planTitle").textContent =
-    `${t.days}-Day ${t.destination} Trip`;
-
+  $("planTitle").textContent = "Creating your personalized plan...";
   $("planIntro").textContent =
-    `A personalized starter plan for ${t.travelers} traveler(s), ` +
-    `built around your $${t.budget} budget and ` +
-    `${t.interests.join(", ") || "general"} preferences.`;
+    "Our AI is building your itinerary. Please wait a moment.";
 
-  const hotel = Math.round(t.budget * 0.35);
-  const food = Math.round(t.budget * 0.20);
-  const transport = Math.round(t.budget * 0.15);
-  const activities = t.budget - hotel - food - transport;
+  $("stay").textContent = "Generating accommodation strategy...";
+  $("transport").textContent = "Generating transportation strategy...";
+  $("experiences").textContent = "Generating experiences...";
+  $("money").textContent = "Calculating your budget...";
 
-  $("stay").textContent =
-    `Target approximately $${hotel} for accommodation. ` +
-    `Prioritize a central location, strong reviews and easy transport access.`;
+  $("daysOut").innerHTML = `
+    <div class="day">
+      <b>AI Travel Planner</b>
+      <p>Creating your personalized day-by-day itinerary...</p>
+    </div>
+  `;
 
-  $("transport").textContent =
-    `Keep about $${transport} for airport and local transport. ` +
-    `Prefer rail/metro when practical.`;
+  try {
+    const response = await fetch("/api/plan", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(trip)
+    });
 
-  $("experiences").textContent =
-    `Mix ${t.interests[0] || "sightseeing"} with high-value experiences ` +
-    `and free attractions.`;
+    const data = await response.json();
 
-  $("money").textContent =
-    `Hotel $${hotel} · Food $${food} · ` +
-    `Transport $${transport} · Activities $${activities}.`;
+    if (!response.ok) {
+      console.error("AI plan error:", data);
 
-  $("daysOut").innerHTML = "";
+      $("planTitle").textContent = "Something went wrong";
+      $("planIntro").textContent =
+        "We could not create your AI travel plan. Please try again.";
 
-  for (let i = 1; i <= t.days; i++) {
-    const day = document.createElement("div");
-
-    day.className = "day";
-
-    let description;
-
-    if (i === 1) {
-      description =
-        "Arrival, check-in, neighborhood orientation and an easy first evening.";
-    } else if (i === t.days) {
-      description =
-        "Final highlights, shopping/free time and departure preparation.";
-    } else {
-      description =
-        `Morning ${t.interests[0] || "sightseeing"} · local lunch · ` +
-        `afternoon ${t.interests[1] || "activity"} · evening flexible time.`;
+      return;
     }
 
-    day.innerHTML = `
-      <b>Day ${i}</b>
-      <p>${description}</p>
-    `;
+    const plan = data.plan || "No plan was generated.";
 
-    $("daysOut").appendChild(day);
+    displayAIPlan(plan);
+
+  } catch (error) {
+    console.error("Connection error:", error);
+
+    $("planTitle").textContent = "Connection error";
+    $("planIntro").textContent =
+      "We could not connect to the AI travel planner.";
   }
-      }
+}
+
+/* ================================
+   DISPLAY AI PLAN
+================================ */
+
+function displayAIPlan(plan) {
+  $("planTitle").textContent =
+    `${trip.days}-Day ${trip.destination} Trip`;
+
+  $("planIntro").textContent =
+    `Your personalized AI travel plan for ${trip.travelers} traveler(s), ` +
+    `built around your $${trip.budget} budget.`;
+
+  $("stay").textContent =
+    "Your personalized accommodation recommendations are included in the AI-generated plan below.";
+
+  $("transport").textContent =
+    "Your transportation recommendations are included in the AI-generated plan below.";
+
+  $("experiences").textContent =
+    "Your activities, attractions and food recommendations are included in the AI-generated plan below.";
+
+  $("money").textContent =
+    `Total trip budget: $${trip.budget}`;
+
+  $("daysOut").innerHTML = `
+    <div class="day">
+      <b>Your AI Travel Plan</b>
+      <p>${formatAIText(plan)}</p>
+    </div>
+  `;
+}
+
+/* ================================
+   FORMAT AI TEXT
+================================ */
+
+function formatAIText(text) {
+  return text
+    .replace(/\n\n/g, "<br><br>")
+    .replace(/\n/g, "<br>");
+}
