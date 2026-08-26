@@ -10,7 +10,7 @@ export default async function handler(req, res) {
 
     if (!apiKey) {
       return res.status(500).json({
-        error: "OPENAI_API_KEY is missing"
+        error: "OPENAI_API_KEY is missing in Vercel"
       });
     }
 
@@ -79,11 +79,13 @@ Do not invent exact current prices.
 
     const data = await response.json();
 
-    if (!response.ok) {
-      console.error("OPENAI ERROR:", data);
+    console.log("OPENAI STATUS:", response.status);
+    console.log("OPENAI RESPONSE:", data);
 
-      return res.status(response.status).json({
+    if (!response.ok) {
+      return res.status(500).json({
         error: "OpenAI request failed",
+        openai_status: response.status,
         details: data
       });
     }
@@ -117,4 +119,4 @@ Do not invent exact current prices.
       message: error.message
     });
   }
-  }
+          }
