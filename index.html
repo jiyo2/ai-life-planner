@@ -1,295 +1,730 @@
-<!doctype html>
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI Life Planner — Travel smarter</title>
-<meta name="description" content="AI-powered personalized travel planning. One plan, one payment.">
-<link rel="stylesheet" href="style.css">
-</head><body><header class="nav">
-  <a class="brand" href="#">✦ AI Life Planner</a>
-  <div class="nav-right">
-    <span>One-time plan</span>
-    <b>$4.99</b>
-  </div>
-</header><main id="app"><section class="hero">
-  <div class="eyebrow">AI TRAVEL PLANNER</div>  <h1>
-    Tell us your trip.<br>
-    <em>We'll plan the rest.</em>
-  </h1>  <p>
-    Hotels, transport, activities, food and a day-by-day itinerary —
-    organized around your destination, budget and preferences.
-  </p>
-</section><section class="planner">  <div class="stepbar">
-    <span class="on"></span>
-    <span></span>
-    <span></span>
-  </div>  <div class="step-label">STEP 1 · YOUR TRIP</div>  <h2>What are you planning?</h2>  <form id="plannerForm"><label>
-  Destination
-  <input
-    id="destination"
-    required
-    placeholder="Istanbul, Turkey"
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
   >
-</label>
+
+  <title>AI Life Planner</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- ================================
+       MAIN APP
+  ================================= -->
+
+  <main id="app">
+
+    <section class="hero">
+
+      <div class="brand">
+        ✦ AI Life Planner
+      </div>
+
+      <h1>
+        Plan your perfect trip with AI
+      </h1>
+
+      <p>
+        Tell us where you're going, your budget and what you love.
+        Our AI will create a personalized travel plan for you.
+      </p>
+
+    </section>
 
 
-<div class="cols">
+    <!-- ================================
+         TRIP FORM
+    ================================= -->
 
-  <label>
-    Start date
-    <input
-      id="startDate"
-      type="date"
-      required
-    >
-  </label>
+    <section class="card">
 
-  <label>
-    Days
-    <select id="days">
-      <option>3</option>
-      <option selected>5</option>
-      <option>7</option>
-      <option>10</option>
-      <option>14</option>
-    </select>
-  </label>
+      <form id="plannerForm">
 
-</div>
+        <div class="field">
 
+          <label for="destination">
+            Destination
+          </label>
 
-<div class="cols">
+          <input
+            id="destination"
+            type="text"
+            placeholder="e.g. Istanbul"
+            required
+          >
 
-  <label>
-    Budget (USD)
-    <input
-      id="budget"
-      type="number"
-      min="50"
-      value="800"
-      required
-    >
-  </label>
-
-  <label>
-    Travelers
-    <select id="travelers">
-      <option selected>1</option>
-      <option>2</option>
-      <option>3</option>
-      <option>4</option>
-      <option>5+</option>
-    </select>
-  </label>
-
-</div>
+        </div>
 
 
-<label>What matters to you?</label>
+        <div class="form-grid">
 
-<div class="chips" id="chips">
+          <div class="field">
 
-  <button type="button" class="chip active">
-    Sightseeing
-  </button>
+            <label for="startDate">
+              Start date
+            </label>
 
-  <button type="button" class="chip">
-    Food
-  </button>
+            <input
+              id="startDate"
+              type="date"
+            >
 
-  <button type="button" class="chip">
-    Shopping
-  </button>
-
-  <button type="button" class="chip">
-    Nature
-  </button>
-
-  <button type="button" class="chip">
-    Nightlife
-  </button>
-
-  <button type="button" class="chip">
-    Relaxation
-  </button>
-
-  <button type="button" class="chip">
-    Family
-  </button>
-
-</div>
+          </div>
 
 
-<label>
-  Tell the planner anything else
+          <div class="field">
 
-  <textarea
-    id="notes"
-    placeholder="Example: central hotel, halal food, low walking, romantic, family-friendly..."
-  ></textarea>
+            <label for="days">
+              Number of days
+            </label>
 
-</label>
+            <input
+              id="days"
+              type="number"
+              min="1"
+              max="60"
+              value="5"
+              required
+            >
 
+          </div>
 
-<button
-  class="cta"
-  type="submit"
->
-  Continue <span>→</span>
-</button>
-
-
-<p class="micro">
-  You'll review your plan details before payment.
-  One-time $4.99.
-</p>
-
-  </form></section><section class="how">  <div>
-    <strong>01</strong>
-    <h3>Tell us</h3>
-    <p>
-      Your destination, dates, budget and preferences.
-    </p>
-  </div>  <div>
-    <strong>02</strong>
-    <h3>Pay once</h3>
-    <p>
-      Unlock one personalized travel plan for $4.99.
-    </p>
-  </div>  <div>
-    <strong>03</strong>
-    <h3>Get your plan</h3>
-    <p>
-      Receive a structured itinerary and recommendations.
-    </p>
-  </div></section></main><div
-  class="overlay hidden"
-  id="review"
->  <div class="modal"><button
-  class="x"
-  id="closeReview"
->
-  ×
-</button>
+        </div>
 
 
-<div class="eyebrow">
-  STEP 2 · REVIEW
-</div>
+        <div class="form-grid">
+
+          <div class="field">
+
+            <label for="budget">
+              Budget (USD)
+            </label>
+
+            <input
+              id="budget"
+              type="number"
+              min="1"
+              placeholder="800"
+              required
+            >
+
+          </div>
 
 
-<h2>
-  Your trip is ready to plan.
-</h2>
+          <div class="field">
+
+            <label for="travelers">
+              Travelers
+            </label>
+
+            <select id="travelers">
+
+              <option value="1">
+                1 traveler
+              </option>
+
+              <option value="2">
+                2 travelers
+              </option>
+
+              <option value="3">
+                3 travelers
+              </option>
+
+              <option value="4">
+                4 travelers
+              </option>
+
+              <option value="5">
+                5 travelers
+              </option>
+
+              <option value="6">
+                6+ travelers
+              </option>
+
+            </select>
+
+          </div>
+
+        </div>
 
 
-<div
-  class="summary"
-  id="summary"
-></div>
+        <!-- ================================
+             INTERESTS
+        ================================= -->
+
+        <div class="field">
+
+          <label>
+            What are you interested in?
+          </label>
+
+          <div class="chips">
+
+            <button
+              type="button"
+              class="chip"
+            >
+              🏖️ Beaches
+            </button>
+
+            <button
+              type="button"
+              class="chip"
+            >
+              🏛️ Culture
+            </button>
+
+            <button
+              type="button"
+              class="chip"
+            >
+              🍴 Food
+            </button>
+
+            <button
+              type="button"
+              class="chip"
+            >
+              🛍️ Shopping
+            </button>
+
+            <button
+              type="button"
+              class="chip"
+            >
+              🌲 Nature
+            </button>
+
+            <button
+              type="button"
+              class="chip"
+            >
+              🎨 Art
+            </button>
+
+            <button
+              type="button"
+              class="chip"
+            >
+              🌃 Nightlife
+            </button>
+
+            <button
+              type="button"
+              class="chip"
+            >
+              🧘 Relaxation
+            </button>
+
+          </div>
+
+        </div>
 
 
-<div class="paybox">
+        <!-- ================================
+             NOTES
+        ================================= -->
 
-  <div>
-    <span>
-      Personalized AI travel plan
-    </span>
+        <div class="field">
 
-    <b>
-      $4.99
-    </b>
-  </div>
+          <label for="notes">
+            Additional notes
+          </label>
 
-  <small>
-    One-time payment · no subscription
-  </small>
+          <textarea
+            id="notes"
+            rows="4"
+            placeholder="Anything else we should know?"
+          ></textarea>
 
-</div>
-
-
-<button
-  class="cta"
-  id="pay"
->
-  Continue to secure payment
-  <span>→</span>
-</button>
+        </div>
 
 
-<p class="micro">
-  Secure payment powered by Paddle.
-</p>
+        <button
+          type="submit"
+          class="primary-button"
+        >
+          Create My Travel Plan
+        </button>
 
-  </div></div><section
-  id="plan"
-  class="plan hidden"
->  <div class="plan-head"><div class="eyebrow">
-  YOUR PERSONALIZED PLAN
-</div>
+      </form>
 
-<h2 id="planTitle"></h2>
+    </section>
 
-<p id="planIntro"></p>
-
-  </div>  <div class="cards"><article>
-  <div class="icon">🏨</div>
-  <h3>Stay</h3>
-  <p id="stay"></p>
-</article>
+  </main>
 
 
-<article>
-  <div class="icon">🚆</div>
-  <h3>Getting around</h3>
-  <p id="transport"></p>
-</article>
+  <!-- ================================
+       REVIEW
+  ================================= -->
+
+  <section
+    id="review"
+    class="hidden"
+  >
+
+    <div class="review-card">
+
+      <div class="brand">
+        ✦ AI Life Planner
+      </div>
+
+      <h2>
+        Review your trip
+      </h2>
+
+      <div id="summary"></div>
 
 
-<article>
-  <div class="icon">📍</div>
-  <h3>Experiences</h3>
-  <p id="experiences"></p>
-</article>
+      <div class="review-actions">
+
+        <button
+          id="closeReview"
+          type="button"
+        >
+          Edit
+        </button>
+
+        <button
+          id="pay"
+          type="button"
+          class="primary-button"
+        >
+          $4.99 — Create My Plan
+        </button>
+
+      </div>
+
+    </div>
+
+  </section>
 
 
-<article>
-  <div class="icon">💰</div>
-  <h3>Budget strategy</h3>
-  <p id="money"></p>
-</article>
+  <!-- ================================
+       AI PLAN
+  ================================= -->
 
-  </div>  <h3 class="section-title">
-    Day-by-day itinerary
-  </h3>  <div
-    id="daysOut"
-    class="day-list"
-  ></div>  <div class="production-note"><b>
-  Production V2 architecture
-</b>
+  <section
+    id="plan"
+    class="hidden"
+  >
 
-<p>
-  The interface is ready for the next connections:
-  real AI API, real payment checkout, and live
-  travel/affiliate data. No secret API keys are
-  stored in this front-end.
-</p>
+    <div class="plan-container">
 
-  </div><button
-class="secondary"
-onclick="location.reload()"
+      <!-- HEADER -->
 
-«»
+      <div class="plan-header">
 
-Create another plan
+        <div class="brand">
+          ✦ AI Life Planner
+        </div>
 
-  </button></section><footer class="site-footer">  <a href="terms.html">
-    Terms of Service
-  </a>  <a href="privacy.html">
-    Privacy Policy
-  </a>  <a href="refund.html">
-    Refund Policy
-  </a></footer><!-- Paddle.js --><script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script><!-- AI Life Planner --><script src="app.js"></script></body>
-     </html>
+        <div class="price">
+          $4.99
+        </div>
+
+      </div>
+
+
+      <div class="plan-introduction">
+
+        <h1 id="planTitle">
+          Creating your personalized plan...
+        </h1>
+
+        <p id="planIntro">
+          Our AI is building your itinerary.
+          Please wait a moment.
+        </p>
+
+      </div>
+
+
+      <!-- ================================
+           PLAN NAVIGATION
+      ================================= -->
+
+      <div class="plan-tabs">
+
+        <button
+          type="button"
+          class="plan-tab active"
+          data-section="staySection"
+        >
+          <span>🏨</span>
+          <strong>Stay</strong>
+        </button>
+
+
+        <button
+          type="button"
+          class="plan-tab"
+          data-section="transportSection"
+        >
+          <span>🚆</span>
+          <strong>Getting Around</strong>
+        </button>
+
+
+        <button
+          type="button"
+          class="plan-tab"
+          data-section="experiencesSection"
+        >
+          <span>📍</span>
+          <strong>Experiences</strong>
+        </button>
+
+
+        <button
+          type="button"
+          class="plan-tab"
+          data-section="moneySection"
+        >
+          <span>💰</span>
+          <strong>Budget Strategy</strong>
+        </button>
+
+
+        <button
+          type="button"
+          class="plan-tab"
+          data-section="daysSection"
+        >
+          <span>📅</span>
+          <strong>Day-by-Day Itinerary</strong>
+        </button>
+
+      </div>
+
+
+      <!-- ================================
+           PLAN CONTENT
+      ================================= -->
+
+      <div class="plan-content">
+
+
+        <!-- STAY -->
+
+        <section
+          id="staySection"
+          class="plan-section active"
+        >
+
+          <div class="section-title">
+
+            <span class="section-icon">
+              🏨
+            </span>
+
+            <div>
+
+              <h2>
+                Stay
+              </h2>
+
+              <p>
+                Your personalized accommodation strategy
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div
+            id="stay"
+            class="section-body"
+          >
+            Generating accommodation strategy...
+          </div>
+
+        </section>
+
+
+        <!-- TRANSPORT -->
+
+        <section
+          id="transportSection"
+          class="plan-section"
+        >
+
+          <div class="section-title">
+
+            <span class="section-icon">
+              🚆
+            </span>
+
+            <div>
+
+              <h2>
+                Getting Around
+              </h2>
+
+              <p>
+                Your personalized transportation strategy
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div
+            id="transport"
+            class="section-body"
+          >
+            Generating transportation strategy...
+          </div>
+
+        </section>
+
+
+        <!-- EXPERIENCES -->
+
+        <section
+          id="experiencesSection"
+          class="plan-section"
+        >
+
+          <div class="section-title">
+
+            <span class="section-icon">
+              📍
+            </span>
+
+            <div>
+
+              <h2>
+                Experiences
+              </h2>
+
+              <p>
+                Activities, attractions and food
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div
+            id="experiences"
+            class="section-body"
+          >
+            Generating experiences...
+          </div>
+
+        </section>
+
+
+        <!-- BUDGET -->
+
+        <section
+          id="moneySection"
+          class="plan-section"
+        >
+
+          <div class="section-title">
+
+            <span class="section-icon">
+              💰
+            </span>
+
+            <div>
+
+              <h2>
+                Budget Strategy
+              </h2>
+
+              <p>
+                Your personalized trip budget
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div
+            id="money"
+            class="section-body"
+          >
+            Calculating your budget...
+          </div>
+
+        </section>
+
+
+        <!-- DAY BY DAY -->
+
+        <section
+          id="daysSection"
+          class="plan-section"
+        >
+
+          <div class="section-title">
+
+            <span class="section-icon">
+              📅
+            </span>
+
+            <div>
+
+              <h2>
+                Day-by-Day Itinerary
+              </h2>
+
+              <p>
+                Your personalized daily travel plan
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div
+            id="daysOut"
+            class="days-container"
+          >
+
+            <div class="day">
+
+              <b>
+                AI Travel Planner
+              </b>
+
+              <p>
+                Creating your personalized
+                day-by-day itinerary...
+              </p>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+      </div>
+
+
+      <!-- ================================
+           FOOTER
+      ================================= -->
+
+      <div class="plan-footer">
+
+        <p>
+          Production V2 architecture
+        </p>
+
+        <p>
+          The interface is ready for the next connections:
+          real AI API, real payment checkout, and live
+          travel/affiliate data. No secret API keys are
+          stored in this front-end.
+        </p>
+
+
+        <div class="footer-links">
+
+          <a href="terms.html">
+            Terms of Service
+          </a>
+
+          <a href="privacy.html">
+            Privacy Policy
+          </a>
+
+          <a href="refund.html">
+            Refund Policy
+          </a>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ================================
+       PLAN TAB SCRIPT
+  ================================= -->
+
+  <script>
+
+    document
+      .querySelectorAll(".plan-tab")
+      .forEach((tab) => {
+
+        tab.addEventListener("click", () => {
+
+          const target =
+            tab.getAttribute("data-section");
+
+          /* Remove active from all tabs */
+
+          document
+            .querySelectorAll(".plan-tab")
+            .forEach((item) => {
+              item.classList.remove("active");
+            });
+
+
+          /* Remove active from all sections */
+
+          document
+            .querySelectorAll(".plan-section")
+            .forEach((section) => {
+              section.classList.remove("active");
+            });
+
+
+          /* Activate selected tab */
+
+          tab.classList.add("active");
+
+
+          /* Activate selected section */
+
+          const section =
+            document.getElementById(target);
+
+          if (section) {
+            section.classList.add("active");
+          }
+
+        });
+
+      });
+
+  </script>
+
+
+  <!-- Paddle -->
+
+  <script
+    src="https://cdn.paddle.com/paddle/v2/paddle.js"
+  ></script>
+
+
+  <!-- App -->
+
+  <script src="app.js"></script>
+
+</body>
+  </html>
