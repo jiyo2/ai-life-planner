@@ -8,6 +8,9 @@ export default async function handler(req, res) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
 
+    console.log("PLAN API START");
+    console.log("GEMINI KEY EXISTS:", !!apiKey);
+
     if (!apiKey) {
       return res.status(500).json({
         error: "GEMINI_API_KEY is missing in Vercel"
@@ -30,19 +33,16 @@ export default async function handler(req, res) {
       });
     }
 
-    const numberOfDays = Number(days);
-    const totalBudget = Number(budget);
-
     const prompt = `
 You are an expert AI travel planner.
 
-Create a personalized travel plan for this trip.
+Create a personalized travel plan.
 
 Destination: ${destination}
 Start date: ${start || "Not specified"}
-Number of days: ${numberOfDays}
-Total budget: $${totalBudget} USD
-Travelers: ${travelers || "1 traveler"}
+Number of days: ${days}
+Total budget: $${budget} USD
+Travelers: ${travelers || 1}
 Interests: ${
       Array.isArray(interests) && interests.length
         ? interests.join(", ")
@@ -50,36 +50,22 @@ Interests: ${
     }
 Additional notes: ${notes || "None"}
 
-IMPORTANT:
-
 Return ONLY valid JSON.
 
-Do NOT use markdown.
-Do NOT use code fences.
-Do NOT write any explanation before or after the JSON.
-
-The JSON must use EXACTLY this structure:
+Use exactly this structure:
 
 {
-  "overview": "Short personalized overview of the trip",
+  "overview": "Short personalized trip overview",
 
   "stay": {
-    "strategy": "Practical accommodation strategy",
-    "areas": [
-      "Recommended area 1",
-      "Recommended area 2",
-      "Recommended area 3"
-    ],
-    "tips": [
-      "Accommodation tip 1",
-      "Accommodation tip 2",
-      "Accommodation tip 3"
-    ]
+    "strategy": "Accommodation strategy",
+    "areas": ["Area 1", "Area 2", "Area 3"],
+    "tips": ["Tip 1", "Tip 2", "Tip 3"]
   },
 
   "transport": {
-    "strategy": "Practical transportation strategy",
-    "airport": "Airport arrival and departure transportation recommendation",
+    "strategy": "Transportation strategy",
+    "airport": "Airport transportation recommendation",
     "local": [
       "Local transportation option 1",
       "Local transportation option 2",
@@ -88,13 +74,13 @@ The JSON must use EXACTLY this structure:
   },
 
   "experiences": {
-    "summary": "Short description of the recommended experiences",
+    "summary": "Short description of experiences",
     "places": [
-      "Attraction or place 1",
-      "Attraction or place 2",
-      "Attraction or place 3",
-      "Attraction or place 4",
-      "Attraction or place 5"
+      "Attraction 1",
+      "Attraction 2",
+      "Attraction 3",
+      "Attraction 4",
+      "Attraction 5"
     ],
     "food": [
       "Food experience 1",
@@ -110,79 +96,43 @@ The JSON must use EXACTLY this structure:
     "activities": 0,
     "other": 0,
     "total": 0,
-    "strategy": "Practical strategy for staying within the user's budget"
+    "strategy": "Budget strategy"
   },
 
   "days": [
     {
       "day": 1,
       "title": "Day title",
-      "morning": "Morning activities",
-      "afternoon": "Afternoon activities",
-      "evening": "Evening activities"
+      "morning": "Morning plan",
+      "afternoon": "Afternoon plan",
+      "evening": "Evening plan"
     }
   ]
 }
 
-STRICT RULES:
+Rules:
 
-1. Create EXACTLY ${numberOfDays} objects inside the "days" array.
-
-2. The first day must have:
-"day": 1
-
-3. The last day must have:
-"day": ${numberOfDays}
-
-4. Every day must contain:
-- day
-- title
-- morning
-- afternoon
-- evening
-
-5. Budget fields must contain numbers only.
-
-6. The sum of:
-accommodation
-+ transportation
-+ food
-+ activities
-+ other
-
-must equal the "total".
-
-7. The "total" MUST NOT exceed $${totalBudget}.
-
-8. Use realistic estimated costs.
-
-9. Do not claim live hotel availability.
-
-10. Do not claim live flight availability.
-
-11. Do not invent exact current prices.
-
-12. Prices are estimates only.
-
-13. Make the itinerary practical and geographically sensible.
-
-14. Consider the user's interests.
-
-15. Keep the plan useful and specific rather than generic.
-
-16. The response MUST be valid JSON that can be parsed directly using JSON.parse().
+- Create exactly ${days} day objects.
+- Budget values must be numbers.
+- Total budget must not exceed $${budget}.
+- Make the itinerary realistic.
+- Consider the user's interests.
+- Do not claim live availability.
+- Do not invent exact current prices.
+- Treat prices as estimates.
+- Return JSON only.
 `;
+
+    console.log("CALLING GEMINI...");
 
     const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" +
         encodeURIComponent(apiKey),
       {
         method: "POST",
-
         headers: {
           "Content-Type": "application/json"
         },
-
         body: JSON.stringify({
           contents: [
             {
@@ -193,7 +143,6 @@ must equal the "total".
               ]
             }
           ],
-
           generationConfig: {
             temperature: 0.4,
             responseMimeType: "application/json"
@@ -202,9 +151,10 @@ must equal the "total".
       }
     );
 
+    console.log("GEMINI STATUS:", response.status);
+
     const data = await response.json();
 
-    console.log("GEMINI STATUS:", response.status);
     console.log("GEMINI RESPONSE:", data);
 
     if (!response.ok) {
@@ -221,19 +171,15 @@ must equal the "total".
         .filter(Boolean)
         .join("") || "";
 
-    if (!text) {
-      console.error("EMPTY GEMINI RESPONSE:", data);
+    console.log("GEMINI TEXT EXISTS:", !!text);
 
+    if (!text) {
       return res.status(500).json({
         error: "Gemini returned no text"
       });
     }
 
-    console.log("GEMINI TEXT:", text);
-
     let cleanText = text.trim();
-
-    /* Remove accidental markdown fences if Gemini adds them */
 
     if (cleanText.startsWith("```")) {
       cleanText = cleanText
@@ -242,8 +188,6 @@ must equal the "total".
         .replace(/\s*```$/i, "")
         .trim();
     }
-
-    /* Find JSON object if extra text was returned */
 
     const firstBrace = cleanText.indexOf("{");
     const lastBrace = cleanText.lastIndexOf("}");
@@ -259,85 +203,17 @@ must equal the "total".
 
     try {
       plan = JSON.parse(cleanText);
-    } catch (parseError) {
-      console.error("JSON PARSE ERROR:", parseError);
-      console.error("TEXT RECEIVED FROM GEMINI:", cleanText);
+    } catch (error) {
+      console.error("JSON PARSE ERROR:", error);
+      console.error("INVALID GEMINI TEXT:", cleanText);
 
       return res.status(500).json({
         error: "Gemini returned invalid JSON",
-        message: parseError.message
+        details: error.message
       });
     }
 
-    /* Basic validation */
-
-    if (!plan.overview) {
-      plan.overview = "Your personalized travel plan.";
-    }
-
-    if (!plan.stay) {
-      plan.stay = {
-        strategy: "",
-        areas: [],
-        tips: []
-      };
-    }
-
-    if (!plan.transport) {
-      plan.transport = {
-        strategy: "",
-        airport: "",
-        local: []
-      };
-    }
-
-    if (!plan.experiences) {
-      plan.experiences = {
-        summary: "",
-        places: [],
-        food: []
-      };
-    }
-
-    if (!plan.budget) {
-      plan.budget = {
-        accommodation: 0,
-        transportation: 0,
-        food: 0,
-        activities: 0,
-        other: 0,
-        total: 0,
-        strategy: ""
-      };
-    }
-
-    if (!Array.isArray(plan.days)) {
-      plan.days = [];
-    }
-
-    /* Make sure budget values are numbers */
-
-    plan.budget.accommodation =
-      Number(plan.budget.accommodation) || 0;
-
-    plan.budget.transportation =
-      Number(plan.budget.transportation) || 0;
-
-    plan.budget.food =
-      Number(plan.budget.food) || 0;
-
-    plan.budget.activities =
-      Number(plan.budget.activities) || 0;
-
-    plan.budget.other =
-      Number(plan.budget.other) || 0;
-
-    plan.budget.total =
-      plan.budget.accommodation +
-      plan.budget.transportation +
-      plan.budget.food +
-      plan.budget.activities +
-      plan.budget.other;
+    console.log("PLAN CREATED SUCCESSFULLY");
 
     return res.status(200).json({
       plan
