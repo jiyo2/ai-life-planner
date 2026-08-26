@@ -126,27 +126,27 @@
 
             <select id="travelers">
 
-              <option value="1">
+              <option value="1 traveler">
                 1 traveler
               </option>
 
-              <option value="2">
+              <option value="2 travelers">
                 2 travelers
               </option>
 
-              <option value="3">
+              <option value="3 travelers">
                 3 travelers
               </option>
 
-              <option value="4">
+              <option value="4 travelers">
                 4 travelers
               </option>
 
-              <option value="5">
+              <option value="5 travelers">
                 5 travelers
               </option>
 
-              <option value="6">
+              <option value="6+ travelers">
                 6+ travelers
               </option>
 
@@ -358,7 +358,7 @@
         <button
           type="button"
           class="plan-tab active"
-          data-section="staySection"
+          data-plan-section="stay"
         >
           <span>🏨</span>
           <strong>Stay</strong>
@@ -368,7 +368,7 @@
         <button
           type="button"
           class="plan-tab"
-          data-section="transportSection"
+          data-plan-section="transport"
         >
           <span>🚆</span>
           <strong>Getting Around</strong>
@@ -378,7 +378,7 @@
         <button
           type="button"
           class="plan-tab"
-          data-section="experiencesSection"
+          data-plan-section="experiences"
         >
           <span>📍</span>
           <strong>Experiences</strong>
@@ -388,7 +388,7 @@
         <button
           type="button"
           class="plan-tab"
-          data-section="moneySection"
+          data-plan-section="money"
         >
           <span>💰</span>
           <strong>Budget Strategy</strong>
@@ -398,7 +398,7 @@
         <button
           type="button"
           class="plan-tab"
-          data-section="daysSection"
+          data-plan-section="days"
         >
           <span>📅</span>
           <strong>Day-by-Day Itinerary</strong>
@@ -418,7 +418,7 @@
 
         <section
           id="staySection"
-          class="plan-section active"
+          class="plan-section"
         >
 
           <div class="section-title">
@@ -661,60 +661,6 @@
   </section>
 
 
-  <!-- ================================
-       PLAN TAB SCRIPT
-  ================================= -->
-
-  <script>
-
-    document
-      .querySelectorAll(".plan-tab")
-      .forEach((tab) => {
-
-        tab.addEventListener("click", () => {
-
-          const target =
-            tab.getAttribute("data-section");
-
-          /* Remove active from all tabs */
-
-          document
-            .querySelectorAll(".plan-tab")
-            .forEach((item) => {
-              item.classList.remove("active");
-            });
-
-
-          /* Remove active from all sections */
-
-          document
-            .querySelectorAll(".plan-section")
-            .forEach((section) => {
-              section.classList.remove("active");
-            });
-
-
-          /* Activate selected tab */
-
-          tab.classList.add("active");
-
-
-          /* Activate selected section */
-
-          const section =
-            document.getElementById(target);
-
-          if (section) {
-            section.classList.add("active");
-          }
-
-        });
-
-      });
-
-  </script>
-
-
   <!-- Paddle -->
 
   <script
@@ -727,4 +673,4 @@
   <script src="app.js"></script>
 
 </body>
-  </html>
+</html>
