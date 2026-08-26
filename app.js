@@ -1,5 +1,9 @@
 const $ = (id) => document.getElementById(id);
 
+/* =========================================
+   INTEREST CHIPS
+========================================= */
+
 document.querySelectorAll(".chip").forEach((chip) => {
   chip.addEventListener("click", () => {
     chip.classList.toggle("active");
@@ -7,10 +11,11 @@ document.querySelectorAll(".chip").forEach((chip) => {
 });
 
 let trip = null;
+let currentPlan = null;
 
-/* ================================
+/* =========================================
    TRIP FORM
-================================ */
+========================================= */
 
 const form = $("plannerForm");
 
@@ -33,7 +38,10 @@ if (form) {
     $("summary").innerHTML = `
       <b>${escapeHTML(trip.destination)}</b><br>
       ${trip.days} days · ${escapeHTML(trip.travelers)} traveler(s) · $${trip.budget} budget<br>
-      ${trip.interests.map(escapeHTML).join(" · ") || "General trip"}
+      ${
+        trip.interests.map(escapeHTML).join(" · ") ||
+        "General trip"
+      }
       ${
         trip.notes
           ? `<br><span>${escapeHTML(trip.notes)}</span>`
@@ -45,9 +53,9 @@ if (form) {
   });
 }
 
-/* ================================
+/* =========================================
    CLOSE REVIEW
-================================ */
+========================================= */
 
 if ($("closeReview")) {
   $("closeReview").addEventListener("click", () => {
@@ -55,17 +63,19 @@ if ($("closeReview")) {
   });
 }
 
-/* ================================
-   PADDLE SANDBOX
-================================ */
+/* =========================================
+   PADDLE
+========================================= */
 
 if (typeof Paddle !== "undefined") {
+
   Paddle.Environment.set("sandbox");
 
   Paddle.Initialize({
     token: "test_2611717af9e5bf12fda64319b8b",
 
     eventCallback: function (event) {
+
       console.log("PADDLE EVENT:", event);
 
       /* CHECKOUT ERROR */
@@ -110,6 +120,7 @@ if (typeof Paddle !== "undefined") {
       /* PAYMENT COMPLETED */
 
       if (event.name === "checkout.completed") {
+
         console.log("PAYMENT COMPLETED:", event);
 
         if (!trip) {
@@ -127,12 +138,14 @@ if (typeof Paddle !== "undefined") {
   });
 }
 
-/* ================================
+/* =========================================
    PAYMENT BUTTON
-================================ */
+========================================= */
 
 if ($("pay")) {
+
   $("pay").addEventListener("click", () => {
+
     if (!trip) {
       alert("Please complete your trip details first.");
       return;
@@ -151,17 +164,70 @@ if ($("pay")) {
         }
       ]
     });
+
   });
 }
 
-/* ================================
+/* =========================================
    GENERATE AI PLAN
-================================ */
+========================================= */
 
 async function generateAIPlan() {
+
   if (!trip) {
     return;
   }
+
+  setLoadingState();
+
+  try {
+
+    const response = await fetch("/api/plan", {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify(trip)
+    });
+
+    const data = await response.json();
+
+    console.log("AI PLAN RESPONSE:", data);
+
+    if (!response.ok) {
+
+      console.error("AI PLAN ERROR:", data);
+
+      showPlanError();
+
+      return;
+    }
+
+    const plan = data.plan;
+
+    if (!plan) {
+      throw new Error("No plan returned from AI");
+    }
+
+    currentPlan = plan;
+
+    displayAIPlan(plan);
+
+  } catch (error) {
+
+    console.error("AI CONNECTION ERROR:", error);
+
+    showConnectionError();
+  }
+}
+
+/* =========================================
+   LOADING STATE
+========================================= */
+
+function setLoadingState() {
 
   $("planTitle").textContent =
     "Creating your personalized plan...";
@@ -187,80 +253,61 @@ async function generateAIPlan() {
       <p>Creating your personalized day-by-day itinerary...</p>
     </div>
   `;
-
-  try {
-    const response = await fetch("/api/plan", {
-      method: "POST",
-
-      headers: {
-        "Content-Type": "application/json"
-      },
-
-      body: JSON.stringify(trip)
-    });
-
-    const data = await response.json();
-
-    console.log("AI PLAN RESPONSE:", data);
-
-    if (!response.ok) {
-      console.error("AI PLAN ERROR:", data);
-
-      $("planTitle").textContent =
-        "Something went wrong";
-
-      $("planIntro").textContent =
-        "We could not create your AI travel plan. Please try again.";
-
-      $("stay").textContent = "";
-      $("transport").textContent = "";
-      $("experiences").textContent = "";
-      $("money").textContent = "";
-
-      $("daysOut").innerHTML = `
-        <div class="day">
-          <b>AI Planner Error</b>
-          <p>Please try again later.</p>
-        </div>
-      `;
-
-      return;
-    }
-
-    const plan = data.plan;
-
-    if (!plan) {
-      throw new Error("No plan returned from AI");
-    }
-
-    displayAIPlan(plan);
-
-  } catch (error) {
-    console.error("AI CONNECTION ERROR:", error);
-
-    $("planTitle").textContent =
-      "Connection error";
-
-    $("planIntro").textContent =
-      "We could not connect to the AI travel planner.";
-
-    $("stay").textContent = "";
-    $("transport").textContent = "";
-    $("experiences").textContent = "";
-    $("money").textContent = "";
-
-    $("daysOut").innerHTML = `
-      <div class="day">
-        <b>Connection Error</b>
-        <p>Please try again later.</p>
-      </div>
-    `;
-  }
 }
 
-/* ================================
+/* =========================================
+   ERROR STATE
+========================================= */
+
+function showPlanError() {
+
+  $("planTitle").textContent =
+    "Something went wrong";
+
+  $("planIntro").textContent =
+    "We could not create your AI travel plan. Please try again.";
+
+  $("stay").textContent = "";
+  $("transport").textContent = "";
+  $("experiences").textContent = "";
+  $("money").textContent = "";
+
+  $("daysOut").innerHTML = `
+    <div class="day">
+      <b>AI Planner Error</b>
+      <p>Please try again later.</p>
+    </div>
+  `;
+}
+
+/* =========================================
+   CONNECTION ERROR
+========================================= */
+
+function showConnectionError() {
+
+  $("planTitle").textContent =
+    "Connection error";
+
+  $("planIntro").textContent =
+    "We could not connect to the AI travel planner.";
+
+  $("stay").textContent = "";
+  $("transport").textContent = "";
+  $("experiences").textContent = "";
+  $("money").textContent = "";
+
+  $("daysOut").innerHTML = `
+    <div class="day">
+      <b>Connection Error</b>
+      <p>Please try again later.</p>
+    </div>
+  `;
+}
+
+/* =========================================
    DISPLAY AI PLAN
-================================ */
+========================================= */
 
 function displayAIPlan(plan) {
 
@@ -271,42 +318,58 @@ function displayAIPlan(plan) {
     plan.overview ||
     `Your personalized AI travel plan for ${trip.travelers} traveler(s), built around your $${trip.budget} budget.`;
 
-  /* ================================
+  /* =======================================
      STAY
-  ================================ */
+  ======================================= */
 
   if (plan.stay) {
 
     $("stay").innerHTML = `
-      <strong>
+
+      <div class="plan-main-text">
         ${escapeHTML(plan.stay.strategy || "")}
-      </strong>
+      </div>
 
       ${
-        Array.isArray(plan.stay.areas)
+        Array.isArray(plan.stay.areas) &&
+        plan.stay.areas.length
           ? `
-            <br><br>
-            <b>Recommended areas:</b>
-            <br>
-            ${plan.stay.areas
-              .map((item) => `• ${escapeHTML(item)}`)
-              .join("<br>")}
+            <div class="plan-subsection">
+              <h4>Recommended Areas</h4>
+
+              <ul>
+                ${plan.stay.areas
+                  .map(
+                    (item) =>
+                      `<li>${escapeHTML(item)}</li>`
+                  )
+                  .join("")}
+              </ul>
+            </div>
           `
           : ""
       }
 
       ${
-        Array.isArray(plan.stay.tips)
+        Array.isArray(plan.stay.tips) &&
+        plan.stay.tips.length
           ? `
-            <br><br>
-            <b>Tips:</b>
-            <br>
-            ${plan.stay.tips
-              .map((item) => `• ${escapeHTML(item)}`)
-              .join("<br>")}
+            <div class="plan-subsection">
+              <h4>Accommodation Tips</h4>
+
+              <ul>
+                ${plan.stay.tips
+                  .map(
+                    (item) =>
+                      `<li>${escapeHTML(item)}</li>`
+                  )
+                  .join("")}
+              </ul>
+            </div>
           `
           : ""
       }
+
     `;
 
   } else {
@@ -315,40 +378,49 @@ function displayAIPlan(plan) {
       "Accommodation information is not available.";
   }
 
-  /* ================================
+  /* =======================================
      TRANSPORT
-  ================================ */
+  ======================================= */
 
   if (plan.transport) {
 
     $("transport").innerHTML = `
-      <strong>
+
+      <div class="plan-main-text">
         ${escapeHTML(plan.transport.strategy || "")}
-      </strong>
+      </div>
 
       ${
         plan.transport.airport
           ? `
-            <br><br>
-            <b>Airport:</b>
-            <br>
-            ${escapeHTML(plan.transport.airport)}
+            <div class="plan-subsection">
+              <h4>Airport Transportation</h4>
+              <p>${escapeHTML(plan.transport.airport)}</p>
+            </div>
           `
           : ""
       }
 
       ${
-        Array.isArray(plan.transport.local)
+        Array.isArray(plan.transport.local) &&
+        plan.transport.local.length
           ? `
-            <br><br>
-            <b>Local transportation:</b>
-            <br>
-            ${plan.transport.local
-              .map((item) => `• ${escapeHTML(item)}`)
-              .join("<br>")}
+            <div class="plan-subsection">
+              <h4>Local Transportation</h4>
+
+              <ul>
+                ${plan.transport.local
+                  .map(
+                    (item) =>
+                      `<li>${escapeHTML(item)}</li>`
+                  )
+                  .join("")}
+              </ul>
+            </div>
           `
           : ""
       }
+
     `;
 
   } else {
@@ -357,44 +429,64 @@ function displayAIPlan(plan) {
       "Transportation information is not available.";
   }
 
-  /* ================================
+  /* =======================================
      EXPERIENCES
-  ================================ */
+  ======================================= */
 
   if (plan.experiences) {
 
     $("experiences").innerHTML = `
+
       ${
         plan.experiences.summary
-          ? escapeHTML(plan.experiences.summary)
-          : ""
-      }
-
-      ${
-        Array.isArray(plan.experiences.places)
           ? `
-            <br><br>
-            <b>Places & attractions:</b>
-            <br>
-            ${plan.experiences.places
-              .map((item) => `• ${escapeHTML(item)}`)
-              .join("<br>")}
+            <div class="plan-main-text">
+              ${escapeHTML(plan.experiences.summary)}
+            </div>
           `
           : ""
       }
 
       ${
-        Array.isArray(plan.experiences.food)
+        Array.isArray(plan.experiences.places) &&
+        plan.experiences.places.length
           ? `
-            <br><br>
-            <b>Food experiences:</b>
-            <br>
-            ${plan.experiences.food
-              .map((item) => `• ${escapeHTML(item)}`)
-              .join("<br>")}
+            <div class="plan-subsection">
+              <h4>Places & Attractions</h4>
+
+              <ul>
+                ${plan.experiences.places
+                  .map(
+                    (item) =>
+                      `<li>${escapeHTML(item)}</li>`
+                  )
+                  .join("")}
+              </ul>
+            </div>
           `
           : ""
       }
+
+      ${
+        Array.isArray(plan.experiences.food) &&
+        plan.experiences.food.length
+          ? `
+            <div class="plan-subsection">
+              <h4>Food Experiences</h4>
+
+              <ul>
+                ${plan.experiences.food
+                  .map(
+                    (item) =>
+                      `<li>${escapeHTML(item)}</li>`
+                  )
+                  .join("")}
+              </ul>
+            </div>
+          `
+          : ""
+      }
+
     `;
 
   } else {
@@ -403,92 +495,147 @@ function displayAIPlan(plan) {
       "Experience information is not available.";
   }
 
-  /* ================================
+  /* =======================================
      BUDGET
-  ================================ */
+  ======================================= */
 
   if (plan.budget) {
 
+    const accommodation =
+      Number(plan.budget.accommodation || 0);
+
+    const transportation =
+      Number(plan.budget.transportation || 0);
+
+    const food =
+      Number(plan.budget.food || 0);
+
+    const activities =
+      Number(plan.budget.activities || 0);
+
+    const other =
+      Number(plan.budget.other || 0);
+
+    const total =
+      Number(plan.budget.total || 0);
+
     $("money").innerHTML = `
-      <b>Estimated Budget</b>
-      <br><br>
 
-      🏨 Accommodation:
-      $${Number(plan.budget.accommodation || 0)}
-      <br>
+      <div class="budget-grid">
 
-      🚆 Transportation:
-      $${Number(plan.budget.transportation || 0)}
-      <br>
+        <div class="budget-item">
+          <span>🏨 Accommodation</span>
+          <strong>$${accommodation}</strong>
+        </div>
 
-      🍴 Food:
-      $${Number(plan.budget.food || 0)}
-      <br>
+        <div class="budget-item">
+          <span>🚆 Transportation</span>
+          <strong>$${transportation}</strong>
+        </div>
 
-      🎟️ Activities:
-      $${Number(plan.budget.activities || 0)}
-      <br>
+        <div class="budget-item">
+          <span>🍴 Food</span>
+          <strong>$${food}</strong>
+        </div>
 
-      💵 Other:
-      $${Number(plan.budget.other || 0)}
-      <br><br>
+        <div class="budget-item">
+          <span>🎟️ Activities</span>
+          <strong>$${activities}</strong>
+        </div>
 
-      <b>
-        Estimated Total:
-        $${Number(plan.budget.total || 0)}
-      </b>
+        <div class="budget-item">
+          <span>💵 Other</span>
+          <strong>$${other}</strong>
+        </div>
+
+      </div>
+
+      <div class="budget-total">
+        <span>Estimated Total</span>
+        <strong>$${total}</strong>
+      </div>
 
       ${
         plan.budget.strategy
           ? `
-            <br><br>
-            ${escapeHTML(plan.budget.strategy)}
+            <div class="plan-subsection">
+              <h4>Budget Strategy</h4>
+              <p>${escapeHTML(plan.budget.strategy)}</p>
+            </div>
           `
           : ""
       }
+
     `;
 
   } else {
 
-    $("money").textContent =
-      `Total trip budget: $${trip.budget}`;
+    $("money").innerHTML = `
+      <div class="budget-total">
+        <span>Total Trip Budget</span>
+        <strong>$${trip.budget}</strong>
+      </div>
+    `;
   }
 
-  /* ================================
-     DAY-BY-DAY ITINERARY
-  ================================ */
+  /* =======================================
+     DAY-BY-DAY
+  ======================================= */
 
-  if (Array.isArray(plan.days) && plan.days.length) {
+  if (
+    Array.isArray(plan.days) &&
+    plan.days.length
+  ) {
 
     $("daysOut").innerHTML = plan.days
       .map(
         (day) => `
-          <div class="day">
 
-            <b>
-              Day ${Number(day.day || 0)}:
+          <div class="day-card">
+
+            <div class="day-number">
+              Day ${Number(day.day || 0)}
+            </div>
+
+            <h3>
               ${escapeHTML(day.title || "")}
-            </b>
+            </h3>
 
-            <p>
-              <strong>Morning</strong>
-              <br>
-              ${escapeHTML(day.morning || "")}
-            </p>
+            ${
+              day.morning
+                ? `
+                  <div class="day-period">
+                    <span>🌅 Morning</span>
+                    <p>${escapeHTML(day.morning)}</p>
+                  </div>
+                `
+                : ""
+            }
 
-            <p>
-              <strong>Afternoon</strong>
-              <br>
-              ${escapeHTML(day.afternoon || "")}
-            </p>
+            ${
+              day.afternoon
+                ? `
+                  <div class="day-period">
+                    <span>☀️ Afternoon</span>
+                    <p>${escapeHTML(day.afternoon)}</p>
+                  </div>
+                `
+                : ""
+            }
 
-            <p>
-              <strong>Evening</strong>
-              <br>
-              ${escapeHTML(day.evening || "")}
-            </p>
+            ${
+              day.evening
+                ? `
+                  <div class="day-period">
+                    <span>🌙 Evening</span>
+                    <p>${escapeHTML(day.evening)}</p>
+                  </div>
+                `
+                : ""
+            }
 
           </div>
+
         `
       )
       .join("");
@@ -502,15 +649,105 @@ function displayAIPlan(plan) {
       </div>
     `;
   }
+
+  /* =======================================
+     ACTIVATE SECTION NAVIGATION
+  ======================================= */
+
+  setupPlanNavigation();
+
+  /* Show first section */
+  showPlanSection("stay");
 }
 
-/* ================================
+/* =========================================
+   PLAN SECTION NAVIGATION
+========================================= */
+
+function setupPlanNavigation() {
+
+  const buttons = document.querySelectorAll(
+    "[data-plan-section]"
+  );
+
+  buttons.forEach((button) => {
+
+    button.addEventListener("click", () => {
+
+      const section =
+        button.getAttribute("data-plan-section");
+
+      showPlanSection(section);
+
+    });
+
+  });
+}
+
+/* =========================================
+   SHOW PLAN SECTION
+========================================= */
+
+function showPlanSection(sectionName) {
+
+  const sections = {
+    stay: $("stay"),
+    transport: $("transport"),
+    experiences: $("experiences"),
+    money: $("money"),
+    days: $("daysOut")
+  };
+
+  const buttons =
+    document.querySelectorAll(
+      "[data-plan-section]"
+    );
+
+  Object.keys(sections).forEach((key) => {
+
+    if (!sections[key]) {
+      return;
+    }
+
+    if (key === sectionName) {
+
+      sections[key].classList.remove("plan-section-hidden");
+      sections[key].classList.add("plan-section-visible");
+
+    } else {
+
+      sections[key].classList.remove("plan-section-visible");
+      sections[key].classList.add("plan-section-hidden");
+
+    }
+
+  });
+
+  buttons.forEach((button) => {
+
+    const key =
+      button.getAttribute("data-plan-section");
+
+    if (key === sectionName) {
+      button.classList.add("active");
+    } else {
+      button.classList.remove("active");
+    }
+
+  });
+
+}
+
+/* =========================================
    ESCAPE HTML
-================================ */
+========================================= */
 
 function escapeHTML(text) {
+
   return String(text || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
     }
