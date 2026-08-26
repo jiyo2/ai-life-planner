@@ -1,4 +1,4 @@
-console.log("PLAN.JS PRODUCTION V3 RUNNING");
+console.log("PLAN.JS PRODUCTION V4 RUNNING");
 
 export default async function handler(req, res) {
   console.log("PLAN API START");
@@ -15,19 +15,24 @@ export default async function handler(req, res) {
 
   try {
     // =========================================
-    // API KEY
+    // API KEYS
     // =========================================
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const stayingApiKey = process.env.STAYINGAPI_KEY;
 
-    console.log(
-      "GEMINI KEY EXISTS:",
-      Boolean(apiKey)
-    );
+    console.log("GEMINI KEY EXISTS:", Boolean(geminiKey));
+    console.log("STAYINGAPI KEY EXISTS:", Boolean(stayingApiKey));
 
-    if (!apiKey) {
+    if (!geminiKey) {
       return res.status(500).json({
         error: "GEMINI_API_KEY is missing in Vercel"
+      });
+    }
+
+    if (!stayingApiKey) {
+      return res.status(500).json({
+        error: "STAYINGAPI_KEY is missing in Vercel"
       });
     }
 
@@ -45,10 +50,9 @@ export default async function handler(req, res) {
     const start =
       typeof body.start === "string" && body.start.trim()
         ? body.start.trim()
-        : "Not specified";
+        : "";
 
     const days = Number(body.days);
-
     const budget = Number(body.budget);
 
     const travelers =
@@ -100,6 +104,67 @@ export default async function handler(req, res) {
     }
 
     // =========================================
+    // TRAVELER PARSING
+    // =========================================
+
+    function extractAdults(value) {
+      const text = String(value || "").toLowerCase();
+
+      const match = text.match(/(\d+)/);
+
+      if (match) {
+        const number = Number(match[1]);
+
+        if (Number.isFinite(number) && number >= 1) {
+          return Math.min(number, 20);
+        }
+      }
+
+      return 1;
+    }
+
+    const adults = extractAdults(travelers);
+
+    console.log("ADULTS:", adults);
+
+    // =========================================
+    // DATE HELPERS
+    // =========================================
+
+    function isValidDateString(value) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return false;
+      }
+
+      const date = new Date(`${value}T00:00:00Z`);
+
+      return !Number.isNaN(date.getTime());
+    }
+
+    function addDays(dateString, numberOfDays) {
+      const date = new Date(`${dateString}T00:00:00Z`);
+
+      date.setUTCDate(
+        date.getUTCDate() + numberOfDays
+      );
+
+      return date.toISOString().slice(0, 10);
+    }
+
+    const validStart =
+      isValidDateString(start);
+
+    const checkOut =
+      validStart
+        ? addDays(start, days)
+        : "";
+
+    console.log("HOTEL DATES:", {
+      checkIn: validStart ? start : "none",
+      checkOut: validStart ? checkOut : "none"
+    });
+
+    // =========================================
     // INTERESTS
     // =========================================
 
@@ -109,25 +174,21 @@ export default async function handler(req, res) {
         : "General sightseeing, local food and culture";
 
     // =========================================
-    // PROFESSIONAL AI PROMPT
+    // GEMINI PROMPT
     // =========================================
 
     const prompt = `
 You are AI Life Planner, a premium personalized travel planning assistant.
 
-Your job is to create a realistic, useful and personalized trip plan.
+Create a realistic and useful trip plan.
 
-The user has paid for this travel plan, so the result should feel thoughtful, practical and specific rather than generic.
-
-=========================================
 TRIP INFORMATION
-=========================================
 
 Destination:
 ${destination}
 
 Start date:
-${start}
+${start || "Not specified"}
 
 Number of days:
 ${days}
@@ -144,48 +205,38 @@ ${interestText}
 Additional notes:
 ${notes || "None"}
 
-=========================================
-CORE PLANNING RULES
-=========================================
+CORE RULES
 
 1. Create exactly ${days} itinerary days.
 
 2. Every day must contain:
-   - morning
-   - afternoon
-   - evening
+- morning
+- afternoon
+- evening
 
-3. The itinerary must be realistic for ${destination}.
+3. Make the itinerary realistic for ${destination}.
 
-4. Adapt the plan to the user's interests.
+4. Adapt it to the user's interests.
 
-5. Do not give a generic tourist checklist.
+5. Organize activities geographically when practical.
 
-6. Organize activities geographically when practical.
-   Avoid unnecessary backtracking across the city.
+6. Avoid unnecessary backtracking.
 
-7. Balance sightseeing with food, transportation,
-   rest and free time.
+7. Balance sightseeing, food, transportation, rest and free time.
 
-8. Do not overload the traveler with too many activities.
+8. Do not overload the traveler.
 
-9. Consider the number of travelers when making recommendations.
+9. Consider the number of travelers.
 
-10. If the user provides a start date, use it to understand
-    the trip timing, but do not claim exact opening hours
-    or live availability.
+10. Do not claim live opening hours, transport schedules or availability.
 
-=========================================
-BUDGET RULES
-=========================================
+BUDGET
 
 The user's total budget is:
 
 $${budget} USD
 
-The estimated budget MUST NOT exceed this amount.
-
-Create a realistic estimated allocation between:
+Create estimated allocations for:
 
 - accommodation
 - transportation
@@ -193,68 +244,41 @@ Create a realistic estimated allocation between:
 - activities
 - other
 
-The sum of these five categories must equal the "total".
+The sum must not exceed the user's budget.
 
-The "total" must be less than or equal to:
+Prices in the budget section are planning estimates only.
 
-$${budget}
+Do not pretend they are live prices.
 
-Prefer leaving a small emergency/flexibility amount when practical.
+ACCOMMODATION
 
-Do not invent exact live prices.
-
-Prices are estimates only.
-
-Never claim that a specific hotel, restaurant,
-flight or attraction currently costs an exact amount.
-
-Use approximate planning logic instead.
-
-If the user's budget is tight for the destination,
-adapt the itinerary toward affordable options.
-
-If the budget is generous, improve comfort and experiences
-without wasting money.
-
-=========================================
-ACCOMMODATION STRATEGY
-=========================================
-
-Recommend suitable neighborhoods or areas.
+Recommend suitable neighborhoods and areas.
 
 Consider:
 
 - location
 - transportation access
-- safety/general practicality
-- value for money
-- proximity to major attractions
+- practical value
+- proximity to attractions
+- general safety
 
-Do not claim a specific hotel is currently available.
+Do not claim that a particular hotel is available.
 
-Do not claim a specific hotel has a specific current price.
+The system separately searches live hotel inventory.
 
-Give a strategy for choosing accommodation.
-
-=========================================
-TRANSPORTATION STRATEGY
-=========================================
+TRANSPORTATION
 
 Explain:
 
 - airport transfer approach
 - local transportation
-- when walking makes sense
-- when public transportation makes sense
-- when taxis or ride-hailing may be useful
+- walking
+- public transportation
+- taxis when useful
 
-Do not claim live transport schedules.
+Do not claim exact live schedules or fares.
 
-Do not claim exact current fares.
-
-=========================================
 EXPERIENCES
-=========================================
 
 Recommend relevant attractions and experiences.
 
@@ -264,21 +288,13 @@ Prioritize:
 - iconic highlights
 - authentic local experiences
 - good-value activities
-- practical geographic grouping
-
-Include food experiences relevant to the destination.
+- geographic grouping
 
 Do not invent businesses.
 
-Do not pretend that recommendations are live bookings.
+DAY QUALITY
 
-=========================================
-DAY-BY-DAY QUALITY
-=========================================
-
-Each day should feel like a coherent travel day.
-
-Example structure:
+Each day must feel coherent.
 
 Morning:
 One or two related activities.
@@ -288,30 +304,18 @@ Nearby attractions, lunch or another experience.
 
 Evening:
 Dinner, neighborhood exploration, scenic activity,
-relaxation or nightlife depending on interests.
-
-Avoid repeating the same activity.
-
-Avoid putting distant attractions together unnecessarily.
+relaxation or nightlife depending on the user.
 
 Include realistic downtime.
 
-The final day should consider departure if appropriate,
+FINAL DAY
+
+Consider departure when appropriate,
 but do not invent a flight time.
 
-=========================================
-PROFESSIONAL TONE
-=========================================
+TONE
 
-Write concise but useful descriptions.
-
-The user should understand:
-
-- what to do
-- why it is recommended
-- how it fits the budget
-- how to move around
-- how the days connect together
+Premium, practical and personalized.
 
 Do not mention that you are an AI.
 
@@ -321,45 +325,43 @@ Do not use Markdown.
 
 Return ONLY valid JSON.
 
-=========================================
-REQUIRED JSON STRUCTURE
-=========================================
+REQUIRED JSON
 
 {
-  "overview": "Short personalized overview of the complete trip.",
+  "overview": "Short personalized overview.",
 
   "stay": {
-    "strategy": "Personalized accommodation strategy.",
+    "strategy": "Accommodation strategy.",
     "areas": [
-      "Recommended area 1",
-      "Recommended area 2",
-      "Recommended area 3"
+      "Area 1",
+      "Area 2",
+      "Area 3"
     ],
     "tips": [
-      "Accommodation tip 1",
-      "Accommodation tip 2",
-      "Accommodation tip 3"
+      "Tip 1",
+      "Tip 2",
+      "Tip 3"
     ]
   },
 
   "transport": {
-    "strategy": "Personalized transportation strategy.",
+    "strategy": "Transportation strategy.",
     "airport": "Airport transfer strategy.",
     "local": [
-      "Local transportation recommendation 1",
-      "Local transportation recommendation 2",
-      "Local transportation recommendation 3"
+      "Recommendation 1",
+      "Recommendation 2",
+      "Recommendation 3"
     ]
   },
 
   "experiences": {
-    "summary": "Personalized experience strategy.",
+    "summary": "Experience strategy.",
     "places": [
-      "Recommended attraction or experience 1",
-      "Recommended attraction or experience 2",
-      "Recommended attraction or experience 3",
-      "Recommended attraction or experience 4",
-      "Recommended attraction or experience 5"
+      "Experience 1",
+      "Experience 2",
+      "Experience 3",
+      "Experience 4",
+      "Experience 5"
     ],
     "food": [
       "Food experience 1",
@@ -375,7 +377,7 @@ REQUIRED JSON STRUCTURE
     "activities": 0,
     "other": 0,
     "total": 0,
-    "strategy": "Personalized explanation of how to stay within budget."
+    "strategy": "Budget strategy."
   },
 
   "days": [
@@ -389,121 +391,89 @@ REQUIRED JSON STRUCTURE
   ]
 }
 
-=========================================
-FINAL VALIDATION BEFORE RESPONSE
-=========================================
+FINAL VALIDATION
 
-Before returning the JSON:
+Verify:
 
-1. Verify that "days" contains exactly ${days} objects.
+1. Exactly ${days} days.
 
-2. Verify that day numbers are sequential:
-   1, 2, 3 ... ${days}
+2. Sequential day numbers.
 
-3. Verify that all five budget categories are numbers.
+3. All five budget categories are numbers.
 
-4. Calculate:
+4. Calculate the budget total.
 
-accommodation
-+
-transportation
-+
-food
-+
-activities
-+
-other
+5. total <= ${budget}.
 
-5. Set "total" equal to that calculated sum.
+6. No negative budget values.
 
-6. Verify:
+7. No null budget values.
 
-total <= ${budget}
-
-7. Do not return negative budget values.
-
-8. Do not return null budget values.
-
-9. Do not return Markdown.
-
-10. Return JSON only.
+8. Return JSON only.
 `;
 
-    console.log("CALLING GEMINI...");
+    // =========================================
+    // GEMINI
+    // =========================================
 
-    // =========================================
-    // GEMINI REQUEST
-    // =========================================
+    console.log("CALLING GEMINI...");
 
     const geminiURL =
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
 
-    const response = await fetch(geminiURL, {
-      method: "POST",
+    const geminiResponse = await fetch(
+      geminiURL,
+      {
+        method: "POST",
 
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey
-      },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": geminiKey
+        },
 
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: prompt
-              }
-            ]
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ],
+
+          generationConfig: {
+            temperature: 0.35,
+            responseMimeType: "application/json"
           }
-        ],
-
-        generationConfig: {
-          temperature: 0.35,
-          responseMimeType: "application/json"
-        }
-      })
-    });
+        })
+      }
+    );
 
     console.log(
       "GEMINI STATUS:",
-      response.status
+      geminiResponse.status
     );
 
-    // =========================================
-    // READ GEMINI RESPONSE
-    // =========================================
+    const geminiData =
+      await geminiResponse.json();
 
-    const data = await response.json();
-
-    console.log(
-      "GEMINI RESPONSE RECEIVED:",
-      Boolean(data)
-    );
-
-    // =========================================
-    // GEMINI ERROR
-    // =========================================
-
-    if (!response.ok) {
+    if (!geminiResponse.ok) {
       console.error(
         "GEMINI REQUEST FAILED:",
-        JSON.stringify(data)
+        JSON.stringify(geminiData)
       );
 
       return res.status(500).json({
         error: "Gemini request failed",
-        geminiStatus: response.status,
-        details: data
+        geminiStatus: geminiResponse.status,
+        details: geminiData
       });
     }
 
-    // =========================================
-    // EXTRACT TEXT
-    // =========================================
-
     const parts =
-      data?.candidates?.[0]?.content?.parts || [];
+      geminiData?.candidates?.[0]?.content?.parts || [];
 
     const text = parts
       .map((part) => part?.text || "")
@@ -516,13 +486,8 @@ total <= ${budget}
     );
 
     if (!text) {
-      console.error(
-        "GEMINI RETURNED NO TEXT"
-      );
-
       return res.status(500).json({
-        error: "Gemini returned no text",
-        raw: data
+        error: "Gemini returned no text"
       });
     }
 
@@ -551,43 +516,36 @@ total <= ${budget}
       lastBrace === -1 ||
       lastBrace <= firstBrace
     ) {
-      console.error(
-        "NO JSON OBJECT FOUND"
-      );
-
       return res.status(500).json({
         error: "Gemini returned invalid JSON"
       });
     }
 
-    cleanText = cleanText.substring(
-      firstBrace,
-      lastBrace + 1
-    );
+    cleanText =
+      cleanText.substring(
+        firstBrace,
+        lastBrace + 1
+      );
 
     // =========================================
-    // PARSE JSON
+    // PARSE PLAN
     // =========================================
 
     let plan;
 
     try {
       plan = JSON.parse(cleanText);
-    } catch (parseError) {
+    } catch (error) {
       console.error(
         "JSON PARSE ERROR:",
-        parseError.message
+        error.message
       );
 
       return res.status(500).json({
         error: "Gemini returned invalid JSON",
-        details: parseError.message
+        details: error.message
       });
     }
-
-    // =========================================
-    // BASIC OBJECT VALIDATION
-    // =========================================
 
     if (
       !plan ||
@@ -736,12 +694,7 @@ total <= ${budget}
       activities +
       other;
 
-    // =========================================
-    // BUDGET SAFETY
-    // =========================================
-
     if (calculatedTotal > budget) {
-
       console.warn(
         "AI BUDGET EXCEEDED USER BUDGET:",
         calculatedTotal,
@@ -803,61 +756,289 @@ total <= ${budget}
     // NORMALIZE DAYS
     // =========================================
 
-    plan.days = plan.days
-      .slice(0, days)
-      .map((day, index) => {
+    plan.days =
+      plan.days
+        .slice(0, days)
+        .map((day, index) => {
 
-        if (
-          !day ||
-          typeof day !== "object"
-        ) {
-          day = {};
-        }
+          if (
+            !day ||
+            typeof day !== "object"
+          ) {
+            day = {};
+          }
 
-        return {
-          day: index + 1,
+          return {
+            day: index + 1,
 
-          title:
-            typeof day.title === "string"
-              ? day.title
-              : `Day ${index + 1}`,
+            title:
+              typeof day.title === "string"
+                ? day.title
+                : `Day ${index + 1}`,
 
-          morning:
-            typeof day.morning === "string"
-              ? day.morning
-              : "",
+            morning:
+              typeof day.morning === "string"
+                ? day.morning
+                : "",
 
-          afternoon:
-            typeof day.afternoon === "string"
-              ? day.afternoon
-              : "",
+            afternoon:
+              typeof day.afternoon === "string"
+                ? day.afternoon
+                : "",
 
-          evening:
-            typeof day.evening === "string"
-              ? day.evening
-              : ""
-        };
-      });
-
-    // =========================================
-    // DAY COUNT SAFETY
-    // =========================================
+            evening:
+              typeof day.evening === "string"
+                ? day.evening
+                : ""
+          };
+        });
 
     if (plan.days.length !== days) {
-
-      console.warn(
-        "AI RETURNED WRONG DAY COUNT:",
-        plan.days.length,
-        "EXPECTED:",
-        days
-      );
-
       return res.status(500).json({
         error:
           "AI returned an incorrect number of itinerary days",
         expectedDays: days,
         returnedDays: plan.days.length
       });
+    }
+
+    // =========================================
+    // HOTEL SEARCH
+    // =========================================
+
+    let hotels = [];
+    let hotelSearch = {
+      enabled: false,
+      status: "not_searched",
+      checkIn: validStart ? start : null,
+      checkOut: validStart ? checkOut : null,
+      adults,
+      platforms: ["booking", "google"],
+      creditsCharged: 0
+    };
+
+    if (validStart) {
+      console.log("STARTING STAYINGAPI HOTEL SEARCH...");
+
+      const params =
+        new URLSearchParams();
+
+      params.set(
+        "location",
+        destination
+      );
+
+      params.set(
+        "checkIn",
+        start
+      );
+
+      params.set(
+        "checkOut",
+        checkOut
+      );
+
+      params.set(
+        "adults",
+        String(adults)
+      );
+
+      params.set(
+        "children",
+        "0"
+      );
+
+      params.set(
+        "platforms",
+        "booking,google"
+      );
+
+      params.set(
+        "limit",
+        "5"
+      );
+
+      params.set(
+        "sort",
+        "price_asc"
+      );
+
+      params.set(
+        "currency",
+        "USD"
+      );
+
+      const stayingURL =
+        `https://api.stayingapi.com/v1/search?${params.toString()}`;
+
+      console.log(
+        "STAYINGAPI SEARCH URL:",
+        stayingURL.replace(
+          /Authorization.*/gi,
+          "[hidden]"
+        )
+      );
+
+      const stayingResponse =
+        await fetch(
+          stayingURL,
+          {
+            method: "GET",
+
+            headers: {
+              "Authorization":
+                `Bearer ${stayingApiKey}`,
+
+              "Accept":
+                "application/json"
+            }
+          }
+        );
+
+      console.log(
+        "STAYINGAPI STATUS:",
+        stayingResponse.status
+      );
+
+      const stayingData =
+        await stayingResponse.json();
+
+      // =========================================
+      // ASYNC JOB
+      // =========================================
+
+      if (
+        stayingResponse.status === 202 &&
+        stayingData?.data?.jobId
+      ) {
+        console.log(
+          "STAYINGAPI ASYNC JOB:",
+          stayingData.data.jobId
+        );
+
+        hotelSearch = {
+          ...hotelSearch,
+          enabled: true,
+          status: "processing",
+          jobId: stayingData.data.jobId
+        };
+      }
+
+      // =========================================
+      // SYNCHRONOUS RESULT
+      // =========================================
+
+      else if (
+        stayingResponse.ok &&
+        Array.isArray(stayingData?.data)
+      ) {
+        hotels =
+          stayingData.data
+            .map((hotel) => ({
+              id: hotel?.id || null,
+
+              platform:
+                hotel?.platform || null,
+
+              name:
+                hotel?.name || "Unnamed property",
+
+              propertyType:
+                hotel?.propertyType || null,
+
+              url:
+                hotel?.url || null,
+
+              location:
+                hotel?.location || null,
+
+              starRating:
+                hotel?.starRating ?? null,
+
+              guestRating:
+                hotel?.guestRating ?? null,
+
+              ratingScale:
+                hotel?.ratingScale ?? null,
+
+              reviewCount:
+                hotel?.reviewCount ?? null,
+
+              amenities:
+                Array.isArray(hotel?.amenities)
+                  ? hotel.amenities
+                  : [],
+
+              price:
+                hotel?.price || null
+            }))
+            .filter(
+              (hotel) =>
+                hotel.name &&
+                hotel.price
+            )
+            .slice(0, 10);
+
+        hotelSearch = {
+          ...hotelSearch,
+
+          enabled: true,
+          status: "completed",
+
+          creditsCharged:
+            Number(
+              stayingData?.meta?.creditsCharged || 0
+            ),
+
+          partial:
+            Boolean(
+              stayingData?.meta?.partial
+            ),
+
+          warnings:
+            Array.isArray(
+              stayingData?.meta?.warnings
+            )
+              ? stayingData.meta.warnings
+              : []
+        };
+
+        console.log(
+          "HOTELS FOUND:",
+          hotels.length
+        );
+
+        console.log(
+          "STAYINGAPI CREDITS:",
+          hotelSearch.creditsCharged
+        );
+      }
+
+      // =========================================
+      // STAYING API ERROR
+      // =========================================
+
+      else {
+        console.error(
+          "STAYINGAPI REQUEST FAILED:",
+          JSON.stringify(stayingData)
+        );
+
+        hotelSearch = {
+          ...hotelSearch,
+          enabled: true,
+          status: "error",
+          error:
+            stayingData?.error ||
+            stayingData?.message ||
+            "Hotel search failed"
+        };
+      }
+    } else {
+      console.log(
+        "HOTEL SEARCH SKIPPED:",
+        "Valid YYYY-MM-DD start date is required"
+      );
     }
 
     // =========================================
@@ -880,8 +1061,17 @@ total <= ${budget}
       budget
     );
 
+    console.log(
+      "HOTEL SEARCH STATUS:",
+      hotelSearch.status
+    );
+
     return res.status(200).json({
-      plan
+      plan,
+
+      hotels,
+
+      hotelSearch
     });
 
   } catch (error) {
@@ -902,4 +1092,4 @@ total <= ${budget}
         "Unknown error"
     });
   }
-  }
+      }
