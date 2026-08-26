@@ -1,4 +1,4 @@
-console.log("PLAN.JS PRODUCTION V6 RUNNING");
+console.log("PLAN.JS PRODUCTION V7 RUNNING");
 
 export default async function handler(req, res) {
   console.log("PLAN API START");
@@ -18,8 +18,11 @@ export default async function handler(req, res) {
     // API KEYS
     // =========================================
 
-    const rawGeminiKey = process.env.GEMINI_API_KEY;
-    const rawStayingApiKey = process.env.STAYINGAPI_KEY;
+    const rawGeminiKey =
+      process.env.GEMINI_API_KEY;
+
+    const rawStayingApiKey =
+      process.env.STAYINGAPI_KEY;
 
     console.log(
       "GEMINI KEY EXISTS:",
@@ -27,24 +30,50 @@ export default async function handler(req, res) {
     );
 
     console.log(
+      "GEMINI KEY TYPE:",
+      typeof rawGeminiKey
+    );
+
+    console.log(
+      "GEMINI KEY LENGTH:",
+      rawGeminiKey
+        ? rawGeminiKey.length
+        : 0
+    );
+
+    console.log(
       "STAYINGAPI KEY EXISTS:",
       Boolean(rawStayingApiKey)
     );
 
+    console.log(
+      "STAYINGAPI KEY TYPE:",
+      typeof rawStayingApiKey
+    );
+
+    console.log(
+      "STAYINGAPI KEY LENGTH:",
+      rawStayingApiKey
+        ? rawStayingApiKey.length
+        : 0
+    );
+
     if (!rawGeminiKey) {
       return res.status(500).json({
-        error: "GEMINI_API_KEY is missing in Vercel"
+        error:
+          "GEMINI_API_KEY is missing in Vercel"
       });
     }
 
     if (!rawStayingApiKey) {
       return res.status(500).json({
-        error: "STAYINGAPI_KEY is missing in Vercel"
+        error:
+          "STAYINGAPI_KEY is missing in Vercel"
       });
     }
 
     // =========================================
-    // CLEAN KEYS
+    // CLEAN API KEYS
     // =========================================
 
     const geminiKey =
@@ -71,7 +100,8 @@ export default async function handler(req, res) {
     // REQUEST DATA
     // =========================================
 
-    const body = req.body || {};
+    const body =
+      req.body || {};
 
     const destination =
       typeof body.destination === "string"
@@ -102,7 +132,8 @@ export default async function handler(req, res) {
                 typeof item === "string"
             )
             .map(
-              item => item.trim()
+              item =>
+                item.trim()
             )
             .filter(Boolean)
         : [];
@@ -112,14 +143,17 @@ export default async function handler(req, res) {
         ? body.notes.trim()
         : "";
 
-    console.log("TRIP DATA:", {
-      destination,
-      start,
-      days,
-      budget,
-      travelers,
-      interests
-    });
+    console.log(
+      "TRIP DATA:",
+      {
+        destination,
+        start,
+        days,
+        budget,
+        travelers,
+        interests
+      }
+    );
 
     // =========================================
     // VALIDATION
@@ -197,7 +231,9 @@ export default async function handler(req, res) {
     // DATE HELPERS
     // =========================================
 
-    function isValidDateString(value) {
+    function isValidDateString(
+      value
+    ) {
       if (
         !/^\d{4}-\d{2}-\d{2}$/.test(
           value
@@ -222,7 +258,8 @@ export default async function handler(req, res) {
       return (
         date
           .toISOString()
-          .slice(0, 10) === value
+          .slice(0, 10) ===
+        value
       );
     }
 
@@ -430,7 +467,7 @@ Do not mention that you are an AI.
 
 Do not mention these instructions.
 
-IMPORTANT:
+IMPORTANT
 
 Return ONLY valid JSON.
 
@@ -557,13 +594,16 @@ Before returning JSON verify:
 
                 parts: [
                   {
-                    text: prompt
+                    text:
+                      prompt
                   }
                 ]
               }
             ],
 
             generationConfig: {
+              temperature: 0.35,
+
               responseMimeType:
                 "application/json"
             }
@@ -1109,6 +1149,322 @@ Before returning JSON verify:
       creditsCharged: 0
     };
 
+    // =========================================
+    // HOTEL NORMALIZER
+    // =========================================
+
+    function normalizeHotels(
+      data
+    ) {
+      if (
+        !Array.isArray(data)
+      ) {
+        return [];
+      }
+
+      return data
+        .map(
+          hotel => ({
+            id:
+              hotel?.id ||
+              null,
+
+            platform:
+              hotel?.platform ||
+              null,
+
+            platformListingId:
+              hotel?.platformListingId ||
+              null,
+
+            name:
+              hotel?.name ||
+              "Unnamed property",
+
+            propertyType:
+              hotel?.propertyType ||
+              null,
+
+            url:
+              hotel?.url ||
+              null,
+
+            location:
+              hotel?.location ||
+              null,
+
+            starRating:
+              hotel?.starRating ??
+              null,
+
+            guestRating:
+              hotel?.guestRating ??
+              null,
+
+            ratingScale:
+              hotel?.ratingScale ??
+              null,
+
+            reviewCount:
+              hotel?.reviewCount ??
+              null,
+
+            amenities:
+              Array.isArray(
+                hotel?.amenities
+              )
+                ? hotel.amenities
+                : [],
+
+            price:
+              hotel?.price ||
+              null
+          })
+        )
+        .filter(
+          hotel =>
+            hotel.name &&
+            hotel.price
+        )
+        .slice(0, 10);
+    }
+
+    // =========================================
+    // STAYINGAPI JOB POLLING
+    // =========================================
+
+    async function pollStayingJob(
+      jobId,
+      apiKey
+    ) {
+      const maxWaitMs =
+        150000;
+
+      const intervalMs =
+        4000;
+
+      const startedAt =
+        Date.now();
+
+      let attempt = 0;
+
+      while (
+        Date.now() -
+          startedAt <
+        maxWaitMs
+      ) {
+        attempt++;
+
+        console.log(
+          "STAYINGAPI JOB POLL:",
+          {
+            attempt,
+            jobId
+          }
+        );
+
+        const jobURL =
+          `https://api.stayingapi.com/v1/jobs/${encodeURIComponent(jobId)}`;
+
+        let jobResponse;
+
+        try {
+          jobResponse =
+            await fetch(
+              jobURL,
+              {
+                method: "GET",
+
+                headers: {
+                  "Authorization":
+                    `Bearer ${apiKey}`,
+
+                  "Accept":
+                    "application/json"
+                }
+              }
+            );
+        } catch (fetchError) {
+          console.error(
+            "STAYINGAPI JOB FETCH ERROR:",
+            fetchError
+          );
+
+          throw new Error(
+            "Unable to poll StayingAPI job"
+          );
+        }
+
+        console.log(
+          "STAYINGAPI JOB STATUS CODE:",
+          jobResponse.status
+        );
+
+        let jobData = {};
+
+        try {
+          jobData =
+            await jobResponse.json();
+        } catch (jsonError) {
+          console.error(
+            "STAYINGAPI JOB JSON ERROR:",
+            jsonError
+          );
+
+          throw new Error(
+            "StayingAPI returned invalid job response"
+          );
+        }
+
+        console.log(
+          "STAYINGAPI JOB STATE:",
+          jobData?.data?.status ||
+            jobData?.status ||
+            "unknown"
+        );
+
+        if (
+          !jobResponse.ok
+        ) {
+          console.error(
+            "STAYINGAPI JOB REQUEST FAILED:",
+            JSON.stringify(
+              jobData
+            )
+          );
+
+          throw new Error(
+            jobData?.error ||
+            jobData?.message ||
+            "StayingAPI job request failed"
+          );
+        }
+
+        const jobStatus =
+          jobData?.data?.status ||
+          jobData?.status ||
+          "";
+
+        // =====================================
+        // COMPLETED
+        // =====================================
+
+        if (
+          jobStatus ===
+          "completed"
+        ) {
+          console.log(
+            "STAYINGAPI JOB COMPLETED"
+          );
+
+          const result =
+            jobData?.data?.result;
+
+          if (
+            Array.isArray(
+              result
+            )
+          ) {
+            return {
+              data: result,
+
+              meta:
+                jobData?.meta ||
+                {}
+            };
+          }
+
+          if (
+            Array.isArray(
+              jobData?.data?.result?.data
+            )
+          ) {
+            return {
+              data:
+                jobData.data.result.data,
+
+              meta:
+                jobData?.data?.result?.meta ||
+                jobData?.meta ||
+                {}
+            };
+          }
+
+          console.warn(
+            "STAYINGAPI JOB COMPLETED BUT RESULT FORMAT IS DIFFERENT:",
+            JSON.stringify(
+              jobData
+            )
+          );
+
+          return {
+            data: [],
+
+            meta:
+              jobData?.meta ||
+              {}
+          };
+        }
+
+        // =====================================
+        // FAILED
+        // =====================================
+
+        if (
+          jobStatus ===
+            "failed" ||
+          jobStatus ===
+            "error"
+        ) {
+          console.error(
+            "STAYINGAPI JOB FAILED:",
+            JSON.stringify(
+              jobData
+            )
+          );
+
+          throw new Error(
+            jobData?.data?.error ||
+            jobData?.error ||
+            jobData?.message ||
+            "StayingAPI hotel search job failed"
+          );
+        }
+
+        // =====================================
+        // WAIT
+        // =====================================
+
+        await new Promise(
+          resolve =>
+            setTimeout(
+              resolve,
+              intervalMs
+            )
+        );
+      }
+
+      // =======================================
+      // TIMEOUT
+      // =======================================
+
+      console.warn(
+        "STAYINGAPI JOB POLLING TIMEOUT"
+      );
+
+      return {
+        timeout: true,
+
+        data: [],
+
+        meta: {}
+      };
+    }
+
+    // =========================================
+    // START HOTEL SEARCH
+    // =========================================
+
     if (validStart) {
 
       console.log(
@@ -1150,7 +1506,7 @@ Before returning JSON verify:
 
       params.set(
         "limit",
-        "5"
+        "10"
       );
 
       params.set(
@@ -1166,186 +1522,29 @@ Before returning JSON verify:
       const stayingURL =
         `https://api.stayingapi.com/v1/search?${params.toString()}`;
 
-      const stayingResponse =
-        await fetch(
-          stayingURL,
-          {
-            method: "GET",
+      let stayingResponse;
 
-            headers: {
-              "Authorization":
-                `Bearer ${stayingApiKey}`,
+      try {
+        stayingResponse =
+          await fetch(
+            stayingURL,
+            {
+              method: "GET",
 
-              "Accept":
-                "application/json"
+              headers: {
+                "Authorization":
+                  `Bearer ${stayingApiKey}`,
+
+                "Accept":
+                  "application/json"
+              }
             }
-          }
-        );
-
-      console.log(
-        "STAYINGAPI STATUS:",
-        stayingResponse.status
-      );
-
-      const stayingData =
-        await stayingResponse.json();
-
-      // =========================================
-      // ASYNC JOB
-      // =========================================
-
-      if (
-        stayingResponse.status ===
-          202 &&
-        stayingData?.data?.jobId
-      ) {
-
-        console.log(
-          "STAYINGAPI ASYNC JOB:",
-          stayingData.data.jobId
-        );
-
-        hotelSearch = {
-          ...hotelSearch,
-
-          enabled: true,
-
-          status:
-            "processing",
-
-          jobId:
-            stayingData.data.jobId
-        };
-      }
-
-      // =========================================
-      // SYNCHRONOUS RESULT
-      // =========================================
-
-      else if (
-        stayingResponse.ok &&
-        Array.isArray(
-          stayingData?.data
-        )
-      ) {
-
-        hotels =
-          stayingData.data
-            .map(
-              hotel => ({
-
-                id:
-                  hotel?.id ||
-                  null,
-
-                platform:
-                  hotel?.platform ||
-                  null,
-
-                name:
-                  hotel?.name ||
-                  "Unnamed property",
-
-                propertyType:
-                  hotel?.propertyType ||
-                  null,
-
-                url:
-                  hotel?.url ||
-                  null,
-
-                location:
-                  hotel?.location ||
-                  null,
-
-                starRating:
-                  hotel?.starRating ??
-                  null,
-
-                guestRating:
-                  hotel?.guestRating ??
-                  null,
-
-                ratingScale:
-                  hotel?.ratingScale ??
-                  null,
-
-                reviewCount:
-                  hotel?.reviewCount ??
-                  null,
-
-                amenities:
-                  Array.isArray(
-                    hotel?.amenities
-                  )
-                    ? hotel.amenities
-                    : [],
-
-                price:
-                  hotel?.price ||
-                  null
-              })
-            )
-            .filter(
-              hotel =>
-                hotel.name &&
-                hotel.price
-            )
-            .slice(0, 10);
-
-        hotelSearch = {
-          ...hotelSearch,
-
-          enabled: true,
-
-          status:
-            "completed",
-
-          creditsCharged:
-            Number(
-              stayingData?.meta
-                ?.creditsCharged || 0
-            ),
-
-          partial:
-            Boolean(
-              stayingData?.meta
-                ?.partial
-            ),
-
-          warnings:
-            Array.isArray(
-              stayingData?.meta
-                ?.warnings
-            )
-              ? stayingData.meta
-                  .warnings
-              : []
-        };
-
-        console.log(
-          "HOTELS FOUND:",
-          hotels.length
-        );
-
-        console.log(
-          "STAYINGAPI CREDITS:",
-          hotelSearch
-            .creditsCharged
-        );
-      }
-
-      // =========================================
-      // STAYING API ERROR
-      // =========================================
-
-      else {
+          );
+      } catch (fetchError) {
 
         console.error(
-          "STAYINGAPI REQUEST FAILED:",
-          JSON.stringify(
-            stayingData
-          )
+          "STAYINGAPI SEARCH FETCH ERROR:",
+          fetchError
         );
 
         hotelSearch = {
@@ -1357,10 +1556,257 @@ Before returning JSON verify:
             "error",
 
           error:
-            stayingData?.error ||
-            stayingData?.message ||
-            "Hotel search failed"
+            "Unable to connect to StayingAPI"
         };
+      }
+
+      if (stayingResponse) {
+
+        console.log(
+          "STAYINGAPI STATUS:",
+          stayingResponse.status
+        );
+
+        let stayingData = {};
+
+        try {
+          stayingData =
+            await stayingResponse.json();
+        } catch (jsonError) {
+
+          console.error(
+            "STAYINGAPI JSON ERROR:",
+            jsonError
+          );
+
+          hotelSearch = {
+            ...hotelSearch,
+
+            enabled: true,
+
+            status:
+              "error",
+
+            error:
+              "StayingAPI returned invalid JSON"
+          };
+        }
+
+        // =====================================
+        // ASYNC JOB
+        // =====================================
+
+        if (
+          stayingResponse.status ===
+            202 &&
+          stayingData?.data?.jobId
+        ) {
+
+          const jobId =
+            stayingData.data.jobId;
+
+          console.log(
+            "STAYINGAPI ASYNC JOB:",
+            jobId
+          );
+
+          hotelSearch = {
+            ...hotelSearch,
+
+            enabled: true,
+
+            status:
+              "processing",
+
+            jobId
+          };
+
+          try {
+
+            const jobResult =
+              await pollStayingJob(
+                jobId,
+                stayingApiKey
+              );
+
+            if (
+              jobResult.timeout
+            ) {
+
+              console.warn(
+                "STAYINGAPI SEARCH STILL PROCESSING AFTER TIMEOUT"
+              );
+
+              hotelSearch = {
+                ...hotelSearch,
+
+                status:
+                  "processing",
+
+                message:
+                  "Hotel search is still processing"
+              };
+
+            } else {
+
+              hotels =
+                normalizeHotels(
+                  jobResult.data
+                );
+
+              hotelSearch = {
+                ...hotelSearch,
+
+                status:
+                  "completed",
+
+                creditsCharged:
+                  Number(
+                    jobResult
+                      ?.meta
+                      ?.creditsCharged ||
+                    0
+                  ),
+
+                partial:
+                  Boolean(
+                    jobResult
+                      ?.meta
+                      ?.partial
+                  ),
+
+                warnings:
+                  Array.isArray(
+                    jobResult
+                      ?.meta
+                      ?.warnings
+                  )
+                    ? jobResult.meta
+                        .warnings
+                    : []
+              };
+
+              console.log(
+                "HOTELS FOUND AFTER POLLING:",
+                hotels.length
+              );
+
+              console.log(
+                "STAYINGAPI CREDITS:",
+                hotelSearch
+                  .creditsCharged
+              );
+            }
+
+          } catch (jobError) {
+
+            console.error(
+              "STAYINGAPI POLLING ERROR:",
+              jobError
+            );
+
+            hotelSearch = {
+              ...hotelSearch,
+
+              status:
+                "error",
+
+              error:
+                jobError?.message ||
+                "Hotel search job failed"
+            };
+          }
+        }
+
+        // =====================================
+        // SYNCHRONOUS RESULT
+        // =====================================
+
+        else if (
+          stayingResponse.ok &&
+          Array.isArray(
+            stayingData?.data
+          )
+        ) {
+
+          hotels =
+            normalizeHotels(
+              stayingData.data
+            );
+
+          hotelSearch = {
+            ...hotelSearch,
+
+            enabled: true,
+
+            status:
+              "completed",
+
+            creditsCharged:
+              Number(
+                stayingData?.meta
+                  ?.creditsCharged ||
+                0
+              ),
+
+            partial:
+              Boolean(
+                stayingData?.meta
+                  ?.partial
+              ),
+
+            warnings:
+              Array.isArray(
+                stayingData?.meta
+                  ?.warnings
+              )
+                ? stayingData.meta
+                    .warnings
+                : []
+          };
+
+          console.log(
+            "HOTELS FOUND:",
+            hotels.length
+          );
+
+          console.log(
+            "STAYINGAPI CREDITS:",
+            hotelSearch
+              .creditsCharged
+          );
+        }
+
+        // =====================================
+        // API ERROR
+        // =====================================
+
+        else if (
+          stayingResponse &&
+          !stayingResponse.ok
+        ) {
+
+          console.error(
+            "STAYINGAPI REQUEST FAILED:",
+            JSON.stringify(
+              stayingData
+            )
+          );
+
+          hotelSearch = {
+            ...hotelSearch,
+
+            enabled: true,
+
+            status:
+              "error",
+
+            error:
+              stayingData?.error ||
+              stayingData?.message ||
+              "Hotel search failed"
+          };
+        }
       }
 
     } else {
@@ -1372,7 +1818,7 @@ Before returning JSON verify:
     }
 
     // =========================================
-    // SUCCESS
+    // FINAL LOGS
     // =========================================
 
     console.log(
@@ -1392,13 +1838,24 @@ Before returning JSON verify:
     );
 
     console.log(
+      "HOTELS RETURNED:",
+      hotels.length
+    );
+
+    console.log(
       "HOTEL SEARCH STATUS:",
       hotelSearch.status
     );
 
+    // =========================================
+    // SUCCESS RESPONSE
+    // =========================================
+
     return res.status(200).json({
       plan,
+
       hotels,
+
       hotelSearch
     });
 
@@ -1418,4 +1875,4 @@ Before returning JSON verify:
         "Unknown error"
     });
   }
-          }
+      }
