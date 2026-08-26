@@ -336,8 +336,6 @@ async function generateAIPlan() {
 
     /* =====================================
        READ RESPONSE AS TEXT FIRST
-       This prevents JSON parsing errors
-       from hiding the real Vercel error.
     ===================================== */
 
     const rawText = await response.text();
@@ -419,9 +417,35 @@ async function generateAIPlan() {
       plan
     );
 
+    /* =====================================
+       HOTELS
+    ===================================== */
+
+    const hotels =
+      Array.isArray(data?.hotels)
+        ? data.hotels
+        : [];
+
+    const hotelSearch =
+      data?.hotelSearch || null;
+
+    console.log(
+      "HOTELS RECEIVED:",
+      hotels
+    );
+
+    console.log(
+      "HOTEL SEARCH RECEIVED:",
+      hotelSearch
+    );
+
     currentPlan = plan;
 
-    displayAIPlan(plan);
+    displayAIPlan(
+      plan,
+      hotels,
+      hotelSearch
+    );
 
     console.log(
       "========== AI PLAN COMPLETE =========="
@@ -541,11 +565,20 @@ function showConnectionError(message) {
    DISPLAY AI PLAN
 ========================================= */
 
-function displayAIPlan(plan) {
+function displayAIPlan(
+  plan,
+  hotels = [],
+  hotelSearch = null
+) {
 
   console.log(
     "DISPLAYING AI PLAN:",
     plan
+  );
+
+  console.log(
+    "DISPLAYING HOTELS:",
+    hotels
   );
 
   $("planTitle").textContent =
@@ -614,6 +647,15 @@ function displayAIPlan(plan) {
     $("stay").textContent =
       "Accommodation information is not available.";
   }
+
+  /* =======================================
+     REAL HOTEL RESULTS
+  ======================================= */
+
+  renderHotels(
+    hotels,
+    hotelSearch
+  );
 
   /* =======================================
      TRANSPORT
@@ -907,6 +949,589 @@ function displayAIPlan(plan) {
 }
 
 /* =========================================
+   REAL HOTEL RENDERER
+========================================= */
+
+function renderHotels(
+  hotels = [],
+  hotelSearch = null
+) {
+
+  console.log(
+    "========== RENDER HOTELS =========="
+  );
+
+  console.log(
+    "HOTELS COUNT:",
+    hotels.length
+  );
+
+  console.log(
+    "HOTEL SEARCH:",
+    hotelSearch
+  );
+
+  if (!$("stay")) {
+    console.error(
+      "STAY CONTAINER NOT FOUND"
+    );
+
+    return;
+  }
+
+  /* =====================================
+     CREATE HOTEL SECTION
+  ===================================== */
+
+  let existingHotels =
+    $("liveHotelsSection");
+
+  if (!existingHotels) {
+
+    existingHotels =
+      document.createElement("div");
+
+    existingHotels.id =
+      "liveHotelsSection";
+
+    existingHotels.className =
+      "plan-subsection";
+
+    $("stay").appendChild(
+      existingHotels
+    );
+  }
+
+  /* =====================================
+     SEARCH PROCESSING
+  ===================================== */
+
+  if (
+    hotelSearch &&
+    hotelSearch.status === "processing"
+  ) {
+
+    existingHotels.innerHTML = `
+
+      <div class="hotel-results">
+
+        <h4>
+          🏨 Live Hotel Options
+        </h4>
+
+        <div class="hotel-status">
+          Searching live hotel availability...
+        </div>
+
+        <p>
+          Hotel search is still processing.
+          Please refresh the plan shortly.
+        </p>
+
+      </div>
+
+    `;
+
+    return;
+  }
+
+  /* =====================================
+     SEARCH ERROR
+  ===================================== */
+
+  if (
+    hotelSearch &&
+    hotelSearch.status === "error"
+  ) {
+
+    existingHotels.innerHTML = `
+
+      <div class="hotel-results">
+
+        <h4>
+          🏨 Live Hotel Options
+        </h4>
+
+        <div class="hotel-status">
+          Hotel search could not be completed.
+        </div>
+
+        <p>
+          We could not retrieve live hotel options right now.
+          Your personalized accommodation strategy is still available above.
+        </p>
+
+      </div>
+
+    `;
+
+    return;
+  }
+
+  /* =====================================
+     NO HOTELS
+  ===================================== */
+
+  if (
+    !Array.isArray(hotels) ||
+    hotels.length === 0
+  ) {
+
+    existingHotels.innerHTML = `
+
+      <div class="hotel-results">
+
+        <h4>
+          🏨 Live Hotel Options
+        </h4>
+
+        <div class="hotel-status">
+          No hotel results were returned.
+        </div>
+
+        <p>
+          Try another date or destination.
+        </p>
+
+      </div>
+
+    `;
+
+    return;
+  }
+
+  /* =====================================
+     HOTEL RESULTS
+  ===================================== */
+
+  existingHotels.innerHTML = `
+
+    <div class="hotel-results">
+
+      <h4>
+        🏨 Live Hotel Options
+      </h4>
+
+      <p class="hotel-results-intro">
+        Real accommodation options found for your trip.
+      </p>
+
+      <div class="hotel-list">
+
+        ${hotels
+          .map(
+            (hotel, index) =>
+              renderHotelCard(
+                hotel,
+                index
+              )
+          )
+          .join("")}
+
+      </div>
+
+      ${
+        hotelSearch?.partial
+          ? `
+            <p class="hotel-note">
+              Some results may be unavailable or incomplete.
+            </p>
+          `
+          : ""
+      }
+
+    </div>
+
+  `;
+}
+
+/* =========================================
+   HOTEL CARD
+========================================= */
+
+function renderHotelCard(
+  hotel,
+  index
+) {
+
+  const name =
+    hotel?.name ||
+    "Unnamed property";
+
+  const platform =
+    hotel?.platform ||
+    "";
+
+  const starRating =
+    hotel?.starRating;
+
+  const guestRating =
+    hotel?.guestRating;
+
+  const reviewCount =
+    hotel?.reviewCount;
+
+  const location =
+    hotel?.location;
+
+  const url =
+    hotel?.url;
+
+  const price =
+    formatHotelPrice(
+      hotel?.price
+    );
+
+  const amenities =
+    Array.isArray(
+      hotel?.amenities
+    )
+      ? hotel.amenities
+      : [];
+
+  const safeUrl =
+    isSafeHttpUrl(url)
+      ? url
+      : "";
+
+  return `
+
+    <div class="hotel-card">
+
+      <div class="hotel-card-top">
+
+        <div class="hotel-card-number">
+          ${index + 1}
+        </div>
+
+        <div class="hotel-card-info">
+
+          <h5>
+            ${escapeHTML(name)}
+          </h5>
+
+          ${
+            location
+              ? `
+                <div class="hotel-location">
+                  📍 ${escapeHTML(
+                    formatHotelLocation(
+                      location
+                    )
+                  )}
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            starRating !== null &&
+            starRating !== undefined
+              ? `
+                <div class="hotel-rating">
+                  ⭐ ${escapeHTML(
+                    starRating
+                  )} star property
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            guestRating !== null &&
+            guestRating !== undefined
+              ? `
+                <div class="hotel-guest-rating">
+                  ${escapeHTML(
+                    guestRating
+                  )}${
+                    reviewCount
+                      ? ` · ${escapeHTML(
+                          reviewCount
+                        )} reviews`
+                      : ""
+                  }
+                </div>
+              `
+              : ""
+          }
+
+        </div>
+
+      </div>
+
+      <div class="hotel-card-bottom">
+
+        <div class="hotel-price">
+
+          ${
+            price
+              ? `
+                <strong>
+                  ${escapeHTML(price)}
+                </strong>
+              `
+              : `
+                <span>
+                  Price available on booking
+                </span>
+              `
+          }
+
+        </div>
+
+        ${
+          platform
+            ? `
+              <div class="hotel-platform">
+                ${escapeHTML(
+                  String(platform)
+                )}
+              </div>
+            `
+            : ""
+        }
+
+      </div>
+
+      ${
+        amenities.length
+          ? `
+            <div class="hotel-amenities">
+
+              ${amenities
+                .slice(0, 5)
+                .map(
+                  (item) =>
+                    `<span>${escapeHTML(
+                      formatAmenity(item)
+                    )}</span>`
+                )
+                .join("")}
+
+            </div>
+          `
+          : ""
+      }
+
+      ${
+        safeUrl
+          ? `
+            <a
+              class="hotel-button"
+              href="${escapeHTML(
+                safeUrl
+              )}"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View Hotel
+            </a>
+          `
+          : `
+            <div class="hotel-button disabled">
+              Booking link unavailable
+            </div>
+          `
+      }
+
+    </div>
+
+  `;
+}
+
+/* =========================================
+   FORMAT HOTEL PRICE
+========================================= */
+
+function formatHotelPrice(
+  price
+) {
+
+  if (
+    price === null ||
+    price === undefined
+  ) {
+    return "";
+  }
+
+  if (
+    typeof price === "number"
+  ) {
+
+    return `$${price}`;
+  }
+
+  if (
+    typeof price === "string"
+  ) {
+
+    return price.trim();
+  }
+
+  if (
+    typeof price === "object"
+  ) {
+
+    const amount =
+      price.amount ??
+      price.value ??
+      price.total ??
+      price.price ??
+      price.minPrice ??
+      null;
+
+    const currency =
+      price.currency ||
+      price.currencyCode ||
+      "USD";
+
+    if (
+      amount !== null &&
+      amount !== undefined
+    ) {
+
+      return `${currency} ${amount}`;
+    }
+
+    if (
+      price.formatted
+    ) {
+
+      return String(
+        price.formatted
+      );
+    }
+
+    if (
+      price.display
+    ) {
+
+      return String(
+        price.display
+      );
+    }
+
+    try {
+
+      return JSON.stringify(
+        price
+      );
+
+    } catch {
+
+      return "";
+    }
+  }
+
+  return "";
+}
+
+/* =========================================
+   FORMAT HOTEL LOCATION
+========================================= */
+
+function formatHotelLocation(
+  location
+) {
+
+  if (
+    typeof location === "string"
+  ) {
+
+    return location;
+  }
+
+  if (
+    typeof location !== "object" ||
+    !location
+  ) {
+
+    return "";
+  }
+
+  const parts = [
+    location.address,
+    location.area,
+    location.city,
+    location.country
+  ]
+    .filter(Boolean)
+    .map(
+      (item) =>
+        String(item)
+    );
+
+  return parts.join(", ");
+}
+
+/* =========================================
+   FORMAT AMENITY
+========================================= */
+
+function formatAmenity(
+  amenity
+) {
+
+  if (
+    typeof amenity === "string"
+  ) {
+
+    return amenity;
+  }
+
+  if (
+    typeof amenity === "object" &&
+    amenity
+  ) {
+
+    return (
+      amenity.name ||
+      amenity.label ||
+      amenity.title ||
+      ""
+    );
+  }
+
+  return String(
+    amenity || ""
+  );
+}
+
+/* =========================================
+   SAFE URL CHECK
+========================================= */
+
+function isSafeHttpUrl(
+  value
+) {
+
+  if (
+    typeof value !== "string"
+  ) {
+
+    return false;
+  }
+
+  try {
+
+    const url =
+      new URL(value);
+
+    return (
+      url.protocol ===
+        "https:" ||
+      url.protocol ===
+        "http:"
+    );
+
+  } catch {
+
+    return false;
+  }
+}
+
+/* =========================================
    PLAN SECTION NAVIGATION
 ========================================= */
 
@@ -918,12 +1543,6 @@ function setupPlanNavigation() {
     );
 
   buttons.forEach((button) => {
-
-    /*
-      Remove old listener by cloning the button.
-      This prevents duplicate listeners when
-      displayAIPlan() runs again.
-    */
 
     const cleanButton =
       button.cloneNode(true);
@@ -1043,4 +1662,4 @@ function escapeHTML(text) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
-}
+      }
