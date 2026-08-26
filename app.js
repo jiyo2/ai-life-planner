@@ -1,17 +1,88 @@
 const $ = (id) => document.getElementById(id);
 
 /* =========================================
-   INTEREST CHIPS
+   AI LIFE PLANNER — APP.JS
+   FULL VERSION
 ========================================= */
-
-document.querySelectorAll(".chip").forEach((chip) => {
-  chip.addEventListener("click", () => {
-    chip.classList.toggle("active");
-  });
-});
 
 let trip = null;
 let currentPlan = null;
+
+/* =========================================
+   INTEREST CHIPS — FIXED
+========================================= */
+
+/*
+  Event delegation:
+  يجعل أزرار الاختيارات تعمل حتى لو تم تحميل
+  JavaScript قبل عناصر HTML.
+*/
+
+document.addEventListener("click", (e) => {
+  const chip = e.target.closest(".chip");
+
+  if (!chip) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  chip.classList.toggle("active");
+
+  if (chip.tagName === "BUTTON") {
+    chip.type = "button";
+  }
+
+  console.log(
+    "INTEREST CHIP:",
+    chip.textContent.trim(),
+    chip.classList.contains("active")
+  );
+});
+
+/* =========================================
+   PREPARE INTEREST CHIPS
+========================================= */
+
+function prepareInterestChips() {
+  document.querySelectorAll(".chip").forEach((chip) => {
+    if (chip.tagName === "BUTTON") {
+      chip.type = "button";
+    }
+
+    chip.setAttribute("role", "button");
+    chip.setAttribute("tabindex", "0");
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener(
+    "DOMContentLoaded",
+    prepareInterestChips
+  );
+} else {
+  prepareInterestChips();
+}
+
+/* =========================================
+   KEYBOARD SUPPORT FOR CHIPS
+========================================= */
+
+document.addEventListener("keydown", (e) => {
+  const chip = e.target.closest(".chip");
+
+  if (!chip) return;
+
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+
+    chip.classList.toggle("active");
+
+    console.log(
+      "INTEREST CHIP KEYBOARD:",
+      chip.textContent.trim()
+    );
+  }
+});
 
 /* =========================================
    TRIP FORM
@@ -23,35 +94,154 @@ if (form) {
   form.addEventListener("submit", (e) => {
     e.preventDefault();
 
+    const destination =
+      $("destination")?.value.trim() || "";
+
+    const start =
+      $("startDate")?.value || "";
+
+    const days =
+      Number($("days")?.value || 0);
+
+    const budget =
+      Number($("budget")?.value || 0);
+
+    const travelers =
+      $("travelers")?.value || "";
+
+    const notes =
+      $("notes")?.value.trim() || "";
+
+    const interests = [
+      ...document.querySelectorAll(
+        ".chip.active"
+      )
+    ].map(
+      (chip) =>
+        chip.textContent.trim()
+    );
+
+    /* =====================================
+       BASIC VALIDATION
+    ===================================== */
+
+    if (!destination) {
+      alert(
+        "Please enter your destination."
+      );
+
+      $("destination")?.focus();
+
+      return;
+    }
+
+    if (!days || days < 1) {
+      alert(
+        "Please enter the number of travel days."
+      );
+
+      $("days")?.focus();
+
+      return;
+    }
+
+    if (!budget || budget < 1) {
+      alert(
+        "Please enter your travel budget."
+      );
+
+      $("budget")?.focus();
+
+      return;
+    }
+
+    /* =====================================
+       CREATE TRIP
+    ===================================== */
+
     trip = {
-      destination: $("destination").value.trim(),
-      start: $("startDate").value,
-      days: Number($("days").value),
-      budget: Number($("budget").value),
-      travelers: $("travelers").value,
-      interests: [...document.querySelectorAll(".chip.active")].map(
-        (chip) => chip.textContent.trim()
-      ),
-      notes: $("notes").value.trim()
+      destination,
+      start,
+      days,
+      budget,
+      travelers,
+      interests,
+      notes
     };
 
-    console.log("TRIP CREATED:", trip);
+    console.log(
+      "================================="
+    );
 
-    $("summary").innerHTML = `
-      <b>${escapeHTML(trip.destination)}</b><br>
-      ${trip.days} days · ${escapeHTML(trip.travelers)} · $${trip.budget} budget<br>
-      ${
-        trip.interests.map(escapeHTML).join(" · ") ||
-        "General trip"
-      }
-      ${
-        trip.notes
-          ? `<br><span>${escapeHTML(trip.notes)}</span>`
-          : ""
-      }
-    `;
+    console.log(
+      "TRIP CREATED:"
+    );
 
-    $("review").classList.remove("hidden");
+    console.log(trip);
+
+    console.log(
+      "================================="
+    );
+
+    /* =====================================
+       SUMMARY
+    ===================================== */
+
+    if ($("summary")) {
+      $("summary").innerHTML = `
+        <b>${escapeHTML(
+          trip.destination
+        )}</b><br>
+
+        ${trip.days} days ·
+        ${escapeHTML(
+          trip.travelers
+        )} ·
+        $${formatNumber(
+          trip.budget
+        )} budget
+
+        <br>
+
+        ${
+          trip.interests.length
+            ? trip.interests
+                .map(
+                  escapeHTML
+                )
+                .join(" · ")
+            : "General trip"
+        }
+
+        ${
+          trip.notes
+            ? `
+              <br>
+              <span>
+                ${escapeHTML(
+                  trip.notes
+                )}
+              </span>
+            `
+            : ""
+        }
+      `;
+    }
+
+    /* =====================================
+       SHOW REVIEW
+    ===================================== */
+
+    if ($("review")) {
+      $("review").classList.remove(
+        "hidden"
+      );
+
+      $("review").scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }
   });
 }
 
@@ -60,9 +250,14 @@ if (form) {
 ========================================= */
 
 if ($("closeReview")) {
-  $("closeReview").addEventListener("click", () => {
-    $("review").classList.add("hidden");
-  });
+  $("closeReview").addEventListener(
+    "click",
+    () => {
+      $("review").classList.add(
+        "hidden"
+      );
+    }
+  );
 }
 
 /* =========================================
@@ -76,20 +271,38 @@ console.log(
 
 if (typeof Paddle !== "undefined") {
   try {
-    Paddle.Environment.set("sandbox");
+    Paddle.Environment.set(
+      "sandbox"
+    );
 
     Paddle.Initialize({
-      token: "test_2611717af9e5bf12fda64319b8b",
+      token:
+        "test_2611717af9e5bf12fda64319b8b",
 
       eventCallback: function (event) {
-        console.log("========== PADDLE EVENT ==========");
+        console.log(
+          "========== PADDLE EVENT =========="
+        );
+
         console.log(event);
-        console.log("EVENT NAME:", event?.name);
-        console.log("==================================");
 
-        /* CHECKOUT ERROR */
+        console.log(
+          "EVENT NAME:",
+          event?.name
+        );
 
-        if (event?.name === "checkout.error") {
+        console.log(
+          "=================================="
+        );
+
+        /* =================================
+           CHECKOUT ERROR
+        ================================= */
+
+        if (
+          event?.name ===
+          "checkout.error"
+        ) {
           console.error(
             "PADDLE CHECKOUT ERROR:",
             event
@@ -107,9 +320,14 @@ if (typeof Paddle !== "undefined") {
           return;
         }
 
-        /* PAYMENT ERROR */
+        /* =================================
+           PAYMENT ERROR
+        ================================= */
 
-        if (event?.name === "checkout.payment.error") {
+        if (
+          event?.name ===
+          "checkout.payment.error"
+        ) {
           console.error(
             "PADDLE PAYMENT ERROR:",
             event
@@ -127,9 +345,14 @@ if (typeof Paddle !== "undefined") {
           return;
         }
 
-        /* PAYMENT FAILED */
+        /* =================================
+           PAYMENT FAILED
+        ================================= */
 
-        if (event?.name === "checkout.payment.failed") {
+        if (
+          event?.name ===
+          "checkout.payment.failed"
+        ) {
           console.error(
             "PADDLE PAYMENT FAILED:",
             event
@@ -146,13 +369,22 @@ if (typeof Paddle !== "undefined") {
           return;
         }
 
-        /* =====================================
+        /* =================================
            PAYMENT COMPLETED
-        ===================================== */
+        ================================= */
 
-        if (event?.name === "checkout.completed") {
-          console.log("PAYMENT COMPLETED");
-          console.log("TRIP BEFORE AI:", trip);
+        if (
+          event?.name ===
+          "checkout.completed"
+        ) {
+          console.log(
+            "PAYMENT COMPLETED"
+          );
+
+          console.log(
+            "TRIP BEFORE AI:",
+            trip
+          );
 
           if (!trip) {
             console.error(
@@ -166,19 +398,36 @@ if (typeof Paddle !== "undefined") {
             return;
           }
 
-          $("review").classList.add("hidden");
-          $("app").classList.add("hidden");
+          if ($("review")) {
+            $("review").classList.add(
+              "hidden"
+            );
+          }
 
-          $("plan").classList.remove("hidden");
+          if ($("app")) {
+            $("app").classList.add(
+              "hidden"
+            );
+          }
 
-          console.log("PLAN SCREEN SHOWN");
+          if ($("plan")) {
+            $("plan").classList.remove(
+              "hidden"
+            );
+          }
+
+          console.log(
+            "PLAN SCREEN SHOWN"
+          );
 
           generateAIPlan();
         }
       }
     });
 
-    console.log("PADDLE INITIALIZED");
+    console.log(
+      "PADDLE INITIALIZED"
+    );
 
   } catch (error) {
     console.error(
@@ -188,7 +437,9 @@ if (typeof Paddle !== "undefined") {
   }
 
 } else {
-  console.error("PADDLE SDK NOT FOUND");
+  console.error(
+    "PADDLE SDK NOT FOUND"
+  );
 }
 
 /* =========================================
@@ -196,48 +447,60 @@ if (typeof Paddle !== "undefined") {
 ========================================= */
 
 if ($("pay")) {
-  $("pay").addEventListener("click", () => {
-    console.log("PAY BUTTON CLICKED");
-
-    if (!trip) {
-      alert(
-        "Please complete your trip details first."
+  $("pay").addEventListener(
+    "click",
+    () => {
+      console.log(
+        "PAY BUTTON CLICKED"
       );
-      return;
+
+      if (!trip) {
+        alert(
+          "Please complete your trip details first."
+        );
+
+        return;
+      }
+
+      if (
+        typeof Paddle ===
+        "undefined"
+      ) {
+        alert(
+          "Payment system is not available."
+        );
+
+        return;
+      }
+
+      console.log(
+        "OPENING PADDLE CHECKOUT"
+      );
+
+      try {
+        Paddle.Checkout.open({
+          items: [
+            {
+              priceId:
+                "pri_01m0x953caxgk28jt53p58dm63",
+
+              quantity: 1
+            }
+          ]
+        });
+
+      } catch (error) {
+        console.error(
+          "PADDLE CHECKOUT OPEN ERROR:",
+          error
+        );
+
+        alert(
+          "Unable to open payment checkout."
+        );
+      }
     }
-
-    if (typeof Paddle === "undefined") {
-      alert(
-        "Payment system is not available."
-      );
-      return;
-    }
-
-    console.log(
-      "OPENING PADDLE CHECKOUT"
-    );
-
-    try {
-      Paddle.Checkout.open({
-        items: [
-          {
-            priceId: "pri_01m0x953caxgk28jt53p58dm63",
-            quantity: 1
-          }
-        ]
-      });
-
-    } catch (error) {
-      console.error(
-        "PADDLE CHECKOUT OPEN ERROR:",
-        error
-      );
-
-      alert(
-        "Unable to open payment checkout."
-      );
-    }
-  });
+  );
 }
 
 /* =========================================
@@ -255,7 +518,9 @@ async function generateAIPlan() {
   );
 
   if (!trip) {
-    console.error("NO TRIP DATA");
+    console.error(
+      "NO TRIP DATA"
+    );
 
     showPlanError(
       "Trip information is missing."
@@ -271,19 +536,24 @@ async function generateAIPlan() {
       "CALLING /api/plan ..."
     );
 
-    const response = await fetch(
-      "/api/plan",
-      {
-        method: "POST",
+    const response =
+      await fetch(
+        "/api/plan",
+        {
+          method: "POST",
 
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
+          headers: {
+            "Content-Type":
+              "application/json",
 
-        body: JSON.stringify(trip)
-      }
-    );
+            "Accept":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify(trip)
+        }
+      );
 
     console.log(
       "API RESPONSE STATUS:",
@@ -296,7 +566,7 @@ async function generateAIPlan() {
     );
 
     /* =====================================
-       READ RESPONSE AS TEXT FIRST
+       READ TEXT FIRST
     ===================================== */
 
     const rawText =
@@ -311,7 +581,9 @@ async function generateAIPlan() {
 
     try {
       data = rawText
-        ? JSON.parse(rawText)
+        ? JSON.parse(
+            rawText
+          )
         : null;
 
     } catch (jsonError) {
@@ -355,7 +627,8 @@ async function generateAIPlan() {
        PLAN
     ===================================== */
 
-    const plan = data?.plan;
+    const plan =
+      data?.plan;
 
     if (!plan) {
       console.error(
@@ -380,12 +653,15 @@ async function generateAIPlan() {
     ===================================== */
 
     const hotels =
-      Array.isArray(data?.hotels)
+      Array.isArray(
+        data?.hotels
+      )
         ? data.hotels
         : [];
 
     const hotelSearch =
-      data?.hotelSearch || null;
+      data?.hotelSearch ||
+      null;
 
     console.log(
       "HOTELS RECEIVED:",
@@ -402,7 +678,8 @@ async function generateAIPlan() {
       hotelSearch
     );
 
-    currentPlan = plan;
+    currentPlan =
+      plan;
 
     displayAIPlan(
       plan,
@@ -432,32 +709,48 @@ async function generateAIPlan() {
 ========================================= */
 
 function setLoadingState() {
-  $("planTitle").textContent =
-    "Creating your personalized plan...";
+  if ($("planTitle")) {
+    $("planTitle").textContent =
+      "Creating your personalized plan...";
+  }
 
-  $("planIntro").textContent =
-    "Our AI is building your itinerary. Please wait a moment.";
+  if ($("planIntro")) {
+    $("planIntro").textContent =
+      "Our AI is building your itinerary. Please wait a moment.";
+  }
 
-  $("stay").textContent =
-    "Generating accommodation strategy...";
+  if ($("stay")) {
+    $("stay").textContent =
+      "Generating accommodation strategy...";
+  }
 
-  $("transport").textContent =
-    "Generating transportation strategy...";
+  if ($("transport")) {
+    $("transport").textContent =
+      "Generating transportation strategy...";
+  }
 
-  $("experiences").textContent =
-    "Generating experiences...";
+  if ($("experiences")) {
+    $("experiences").textContent =
+      "Generating experiences...";
+  }
 
-  $("money").textContent =
-    "Calculating your budget...";
+  if ($("money")) {
+    $("money").textContent =
+      "Calculating your budget...";
+  }
 
-  $("daysOut").innerHTML = `
-    <div class="day">
-      <b>AI Travel Planner</b>
-      <p>
-        Creating your personalized day-by-day itinerary...
-      </p>
-    </div>
-  `;
+  if ($("daysOut")) {
+    $("daysOut").innerHTML = `
+      <div class="day">
+        <b>AI Travel Planner</b>
+
+        <p>
+          Creating your personalized
+          day-by-day itinerary...
+        </p>
+      </div>
+    `;
+  }
 }
 
 /* =========================================
@@ -465,59 +758,97 @@ function setLoadingState() {
 ========================================= */
 
 function showPlanError(message) {
-  $("planTitle").textContent =
-    "Something went wrong";
+  if ($("planTitle")) {
+    $("planTitle").textContent =
+      "Something went wrong";
+  }
 
-  $("planIntro").textContent =
-    message ||
-    "We could not create your AI travel plan. Please try again.";
+  if ($("planIntro")) {
+    $("planIntro").textContent =
+      message ||
+      "We could not create your AI travel plan. Please try again.";
+  }
 
-  $("stay").textContent = "";
-  $("transport").textContent = "";
-  $("experiences").textContent = "";
-  $("money").textContent = "";
+  if ($("stay")) {
+    $("stay").textContent = "";
+  }
 
-  $("daysOut").innerHTML = `
-    <div class="day">
-      <b>AI Planner Error</b>
-      <p>
-        ${escapeHTML(
-          message ||
-          "Please try again later."
-        )}
-      </p>
-    </div>
-  `;
+  if ($("transport")) {
+    $("transport").textContent = "";
+  }
+
+  if ($("experiences")) {
+    $("experiences").textContent = "";
+  }
+
+  if ($("money")) {
+    $("money").textContent = "";
+  }
+
+  if ($("daysOut")) {
+    $("daysOut").innerHTML = `
+      <div class="day">
+        <b>AI Planner Error</b>
+
+        <p>
+          ${escapeHTML(
+            message ||
+            "Please try again later."
+          )}
+        </p>
+      </div>
+    `;
+  }
 }
 
 /* =========================================
    CONNECTION ERROR
 ========================================= */
 
-function showConnectionError(message) {
-  $("planTitle").textContent =
-    "Connection error";
+function showConnectionError(
+  message
+) {
+  if ($("planTitle")) {
+    $("planTitle").textContent =
+      "Connection error";
+  }
 
-  $("planIntro").textContent =
-    message ||
-    "We could not connect to the AI travel planner.";
+  if ($("planIntro")) {
+    $("planIntro").textContent =
+      message ||
+      "We could not connect to the AI travel planner.";
+  }
 
-  $("stay").textContent = "";
-  $("transport").textContent = "";
-  $("experiences").textContent = "";
-  $("money").textContent = "";
+  if ($("stay")) {
+    $("stay").textContent = "";
+  }
 
-  $("daysOut").innerHTML = `
-    <div class="day">
-      <b>Connection Error</b>
-      <p>
-        ${escapeHTML(
-          message ||
-          "Please try again later."
-        )}
-      </p>
-    </div>
-  `;
+  if ($("transport")) {
+    $("transport").textContent = "";
+  }
+
+  if ($("experiences")) {
+    $("experiences").textContent = "";
+  }
+
+  if ($("money")) {
+    $("money").textContent = "";
+  }
+
+  if ($("daysOut")) {
+    $("daysOut").innerHTML = `
+      <div class="day">
+        <b>Connection Error</b>
+
+        <p>
+          ${escapeHTML(
+            message ||
+            "Please try again later."
+          )}
+        </p>
+      </div>
+    `;
+  }
 }
 
 /* =========================================
@@ -539,12 +870,16 @@ function displayAIPlan(
     hotels
   );
 
-  $("planTitle").textContent =
-    `${trip.days}-Day ${trip.destination} Trip`;
+  if ($("planTitle")) {
+    $("planTitle").textContent =
+      `${trip.days}-Day ${trip.destination} Trip`;
+  }
 
-  $("planIntro").textContent =
-    plan.overview ||
-    `Your personalized AI travel plan for ${trip.travelers}, built around your $${trip.budget} budget.`;
+  if ($("planIntro")) {
+    $("planIntro").textContent =
+      plan.overview ||
+      `Your personalized AI travel plan for ${trip.travelers}, built around your $${trip.budget} budget.`;
+  }
 
   /* =======================================
      STAY
@@ -559,17 +894,23 @@ function displayAIPlan(
       </div>
 
       ${
-        Array.isArray(plan.stay.areas) &&
+        Array.isArray(
+          plan.stay.areas
+        ) &&
         plan.stay.areas.length
           ? `
             <div class="plan-subsection">
-              <h4>Recommended Areas</h4>
+              <h4>
+                Recommended Areas
+              </h4>
 
               <ul>
                 ${plan.stay.areas
                   .map(
                     (item) =>
-                      `<li>${escapeHTML(item)}</li>`
+                      `<li>${escapeHTML(
+                        item
+                      )}</li>`
                   )
                   .join("")}
               </ul>
@@ -579,17 +920,23 @@ function displayAIPlan(
       }
 
       ${
-        Array.isArray(plan.stay.tips) &&
+        Array.isArray(
+          plan.stay.tips
+        ) &&
         plan.stay.tips.length
           ? `
             <div class="plan-subsection">
-              <h4>Accommodation Tips</h4>
+              <h4>
+                Accommodation Tips
+              </h4>
 
               <ul>
                 ${plan.stay.tips
                   .map(
                     (item) =>
-                      `<li>${escapeHTML(item)}</li>`
+                      `<li>${escapeHTML(
+                        item
+                      )}</li>`
                   )
                   .join("")}
               </ul>
@@ -629,7 +976,9 @@ function displayAIPlan(
         plan.transport.airport
           ? `
             <div class="plan-subsection">
-              <h4>Airport Transportation</h4>
+              <h4>
+                Airport Transportation
+              </h4>
 
               <p>
                 ${escapeHTML(
@@ -642,17 +991,23 @@ function displayAIPlan(
       }
 
       ${
-        Array.isArray(plan.transport.local) &&
+        Array.isArray(
+          plan.transport.local
+        ) &&
         plan.transport.local.length
           ? `
             <div class="plan-subsection">
-              <h4>Local Transportation</h4>
+              <h4>
+                Local Transportation
+              </h4>
 
               <ul>
                 ${plan.transport.local
                   .map(
                     (item) =>
-                      `<li>${escapeHTML(item)}</li>`
+                      `<li>${escapeHTML(
+                        item
+                      )}</li>`
                   )
                   .join("")}
               </ul>
@@ -692,13 +1047,17 @@ function displayAIPlan(
         plan.experiences.places.length
           ? `
             <div class="plan-subsection">
-              <h4>Places & Attractions</h4>
+              <h4>
+                Places & Attractions
+              </h4>
 
               <ul>
                 ${plan.experiences.places
                   .map(
                     (item) =>
-                      `<li>${escapeHTML(item)}</li>`
+                      `<li>${escapeHTML(
+                        item
+                      )}</li>`
                   )
                   .join("")}
               </ul>
@@ -714,13 +1073,17 @@ function displayAIPlan(
         plan.experiences.food.length
           ? `
             <div class="plan-subsection">
-              <h4>Food Experiences</h4>
+              <h4>
+                Food Experiences
+              </h4>
 
               <ul>
                 ${plan.experiences.food
                   .map(
                     (item) =>
-                      `<li>${escapeHTML(item)}</li>`
+                      `<li>${escapeHTML(
+                        item
+                      )}</li>`
                   )
                   .join("")}
               </ul>
@@ -774,42 +1137,86 @@ function displayAIPlan(
       <div class="budget-grid">
 
         <div class="budget-item">
-          <span>🏨 Accommodation</span>
-          <strong>$${accommodation}</strong>
+          <span>
+            🏨 Accommodation
+          </span>
+
+          <strong>
+            $${formatNumber(
+              accommodation
+            )}
+          </strong>
         </div>
 
         <div class="budget-item">
-          <span>🚆 Transportation</span>
-          <strong>$${transportation}</strong>
+          <span>
+            🚆 Transportation
+          </span>
+
+          <strong>
+            $${formatNumber(
+              transportation
+            )}
+          </strong>
         </div>
 
         <div class="budget-item">
-          <span>🍴 Food</span>
-          <strong>$${food}</strong>
+          <span>
+            🍴 Food
+          </span>
+
+          <strong>
+            $${formatNumber(
+              food
+            )}
+          </strong>
         </div>
 
         <div class="budget-item">
-          <span>🎟️ Activities</span>
-          <strong>$${activities}</strong>
+          <span>
+            🎟️ Activities
+          </span>
+
+          <strong>
+            $${formatNumber(
+              activities
+            )}
+          </strong>
         </div>
 
         <div class="budget-item">
-          <span>💵 Other</span>
-          <strong>$${other}</strong>
+          <span>
+            💵 Other
+          </span>
+
+          <strong>
+            $${formatNumber(
+              other
+            )}
+          </strong>
         </div>
 
       </div>
 
       <div class="budget-total">
-        <span>Estimated Total</span>
-        <strong>$${total}</strong>
+        <span>
+          Estimated Total
+        </span>
+
+        <strong>
+          $${formatNumber(
+            total
+          )}
+        </strong>
       </div>
 
       ${
         plan.budget.strategy
           ? `
             <div class="plan-subsection">
-              <h4>Budget Strategy</h4>
+              <h4>
+                Budget Strategy
+              </h4>
 
               <p>
                 ${escapeHTML(
@@ -825,8 +1232,15 @@ function displayAIPlan(
   } else {
     $("money").innerHTML = `
       <div class="budget-total">
-        <span>Total Trip Budget</span>
-        <strong>$${trip.budget}</strong>
+        <span>
+          Total Trip Budget
+        </span>
+
+        <strong>
+          $${formatNumber(
+            trip.budget
+          )}
+        </strong>
       </div>
     `;
   }
@@ -836,7 +1250,9 @@ function displayAIPlan(
   ======================================= */
 
   if (
-    Array.isArray(plan.days) &&
+    Array.isArray(
+      plan.days
+    ) &&
     plan.days.length
   ) {
     $("daysOut").innerHTML =
@@ -846,7 +1262,9 @@ function displayAIPlan(
             <div class="day-card">
 
               <div class="day-number">
-                Day ${Number(day.day || 0)}
+                Day ${Number(
+                  day.day || 0
+                )}
               </div>
 
               <h3>
@@ -859,7 +1277,9 @@ function displayAIPlan(
                 day.morning
                   ? `
                     <div class="day-period">
-                      <span>🌅 Morning</span>
+                      <span>
+                        🌅 Morning
+                      </span>
 
                       <p>
                         ${escapeHTML(
@@ -875,7 +1295,9 @@ function displayAIPlan(
                 day.afternoon
                   ? `
                     <div class="day-period">
-                      <span>☀️ Afternoon</span>
+                      <span>
+                        ☀️ Afternoon
+                      </span>
 
                       <p>
                         ${escapeHTML(
@@ -891,7 +1313,9 @@ function displayAIPlan(
                 day.evening
                   ? `
                     <div class="day-period">
-                      <span>🌙 Evening</span>
+                      <span>
+                        🌙 Evening
+                      </span>
 
                       <p>
                         ${escapeHTML(
@@ -911,8 +1335,13 @@ function displayAIPlan(
   } else {
     $("daysOut").innerHTML = `
       <div class="day">
-        <b>Day-by-Day Itinerary</b>
-        <p>No itinerary was generated.</p>
+        <b>
+          Day-by-Day Itinerary
+        </b>
+
+        <p>
+          No itinerary was generated.
+        </p>
       </div>
     `;
   }
@@ -923,7 +1352,9 @@ function displayAIPlan(
 
   setupPlanNavigation();
 
-  showPlanSection("stay");
+  showPlanSection(
+    "stay"
+  );
 }
 
 /* =========================================
@@ -956,16 +1387,14 @@ function renderHotels(
     return;
   }
 
-  /* =====================================
-     FIND OR CREATE HOTEL SECTION
-  ===================================== */
-
   let existingHotels =
     $("liveHotelsSection");
 
   if (!existingHotels) {
     existingHotels =
-      document.createElement("div");
+      document.createElement(
+        "div"
+      );
 
     existingHotels.id =
       "liveHotelsSection";
@@ -979,12 +1408,13 @@ function renderHotels(
   }
 
   /* =====================================
-     SEARCH PROCESSING
+     PROCESSING
   ===================================== */
 
   if (
     hotelSearch &&
-    hotelSearch.status === "processing"
+    hotelSearch.status ===
+      "processing"
   ) {
     existingHotels.innerHTML = `
       <div class="hotel-results">
@@ -1014,7 +1444,8 @@ function renderHotels(
 
   if (
     hotelSearch &&
-    hotelSearch.status === "error"
+    hotelSearch.status ===
+      "error"
   ) {
     existingHotels.innerHTML = `
       <div class="hotel-results">
@@ -1154,26 +1585,24 @@ function renderHotelCard(
       : [];
 
   const safeUrl =
-    isSafeHttpUrl(url)
+    isSafeHttpUrl(
+      url
+    )
       ? url
       : "";
 
   return `
     <div class="hotel-card">
 
-      <!-- NUMBER -->
-
       <div class="hotel-number">
         ${index + 1}
       </div>
 
-      <!-- HOTEL NAME -->
-
       <h5 class="hotel-name">
-        ${escapeHTML(name)}
+        ${escapeHTML(
+          name
+        )}
       </h5>
-
-      <!-- LOCATION -->
 
       ${
         location
@@ -1189,8 +1618,6 @@ function renderHotelCard(
           : ""
       }
 
-      <!-- STAR RATING -->
-
       ${
         starRating !== null &&
         starRating !== undefined &&
@@ -1205,14 +1632,13 @@ function renderHotelCard(
           : ""
       }
 
-      <!-- GUEST RATING -->
-
       ${
         guestRating !== null &&
         guestRating !== undefined &&
         guestRating !== ""
           ? `
             <div class="hotel-guest-rating">
+
               <strong>
                 ${escapeHTML(
                   guestRating
@@ -1230,12 +1656,11 @@ function renderHotelCard(
                   `
                   : ""
               }
+
             </div>
           `
           : ""
       }
-
-      <!-- PRICE -->
 
       ${
         priceInfo
@@ -1246,8 +1671,6 @@ function renderHotelCard(
           `
           : ""
       }
-
-      <!-- PLATFORM -->
 
       ${
         platform
@@ -1263,8 +1686,6 @@ function renderHotelCard(
           : ""
       }
 
-      <!-- AMENITIES -->
-
       ${
         amenities.length
           ? `
@@ -1274,13 +1695,14 @@ function renderHotelCard(
                 .slice(0, 6)
                 .map(
                   (item) => {
-
                     const formatted =
                       formatAmenity(
                         item
                       );
 
-                    if (!formatted) {
+                    if (
+                      !formatted
+                    ) {
                       return "";
                     }
 
@@ -1299,8 +1721,6 @@ function renderHotelCard(
           `
           : ""
       }
-
-      <!-- VIEW HOTEL -->
 
       ${
         safeUrl
@@ -1341,26 +1761,22 @@ function formatHotelPrice(
     return "";
   }
 
-  /* =====================================
-     NUMBER
-  ===================================== */
-
   if (
-    typeof price === "number"
+    typeof price ===
+    "number"
   ) {
     return `
       <strong>
-        $${formatNumber(price)}
+        $${formatNumber(
+          price
+        )}
       </strong>
     `;
   }
 
-  /* =====================================
-     STRING
-  ===================================== */
-
   if (
-    typeof price === "string"
+    typeof price ===
+    "string"
   ) {
     const cleaned =
       price.trim();
@@ -1371,17 +1787,16 @@ function formatHotelPrice(
 
     return `
       <strong>
-        ${escapeHTML(cleaned)}
+        ${escapeHTML(
+          cleaned
+        )}
       </strong>
     `;
   }
 
-  /* =====================================
-     OBJECT
-  ===================================== */
-
   if (
-    typeof price === "object"
+    typeof price ===
+    "object"
   ) {
     const total =
       price.total ??
@@ -1403,10 +1818,6 @@ function formatHotelPrice(
       price.currencyCode ||
       "USD";
 
-    /* =================================
-       TOTAL + NIGHTLY
-    ================================= */
-
     if (
       total !== null &&
       total !== undefined &&
@@ -1417,20 +1828,23 @@ function formatHotelPrice(
         <strong>
           ${escapeHTML(
             currency
-          )} ${formatNumber(total)}
+          )}
+          ${formatNumber(
+            total
+          )}
         </strong>
 
         <span class="hotel-nightly">
           ${escapeHTML(
             currency
-          )} ${formatNumber(nightly)} / night
+          )}
+          ${formatNumber(
+            nightly
+          )}
+          / night
         </span>
       `;
     }
-
-    /* =================================
-       TOTAL ONLY
-    ================================= */
 
     if (
       total !== null &&
@@ -1440,14 +1854,13 @@ function formatHotelPrice(
         <strong>
           ${escapeHTML(
             currency
-          )} ${formatNumber(total)}
+          )}
+          ${formatNumber(
+            total
+          )}
         </strong>
       `;
     }
-
-    /* =================================
-       FORMATTED VALUE
-    ================================= */
 
     if (
       price.formatted
@@ -1512,13 +1925,15 @@ function formatHotelLocation(
   location
 ) {
   if (
-    typeof location === "string"
+    typeof location ===
+    "string"
   ) {
     return location;
   }
 
   if (
-    typeof location !== "object" ||
+    typeof location !==
+      "object" ||
     !location
   ) {
     return "";
@@ -1536,7 +1951,9 @@ function formatHotelLocation(
         String(item)
     );
 
-  return parts.join(", ");
+  return parts.join(
+    ", "
+  );
 }
 
 /* =========================================
@@ -1575,13 +1992,14 @@ function formatAmenity(
   let value = "";
 
   if (
-    typeof amenity === "string"
+    typeof amenity ===
+    "string"
   ) {
     value = amenity;
-  }
 
-  else if (
-    typeof amenity === "object" &&
+  } else if (
+    typeof amenity ===
+      "object" &&
     amenity
   ) {
     value =
@@ -1589,9 +2007,8 @@ function formatAmenity(
       amenity.label ||
       amenity.title ||
       "";
-  }
 
-  else {
+  } else {
     value =
       String(
         amenity || ""
@@ -1601,18 +2018,17 @@ function formatAmenity(
   value =
     String(value)
       .trim()
-      .replace(/_/g, " ");
+      .replace(
+        /_/g,
+        " "
+      );
 
   if (!value) {
     return "";
   }
 
-  /* =====================================
-     SPECIAL AMENITIES
-  ===================================== */
-
   const known = {
-    air conditioning:
+    "air conditioning":
       "Air conditioning",
 
     heating:
@@ -1630,7 +2046,7 @@ function formatAmenity(
     workspace:
       "Workspace",
 
-    free parking:
+    "free parking":
       "Free parking",
 
     parking:
@@ -1648,7 +2064,7 @@ function formatAmenity(
     pool:
       "Pool",
 
-    swimming pool:
+    "swimming pool":
       "Swimming pool",
 
     breakfast:
@@ -1676,19 +2092,11 @@ function formatAmenity(
     return known[lower];
   }
 
-  /* =====================================
-     WORD SPLITTING
-  ===================================== */
-
   value =
     value.replace(
       /([a-z])([A-Z])/g,
       "$1 $2"
     );
-
-  /* =====================================
-     CAPITALIZE
-  ===================================== */
 
   return value
     .split(" ")
@@ -1709,7 +2117,8 @@ function isSafeHttpUrl(
   value
 ) {
   if (
-    typeof value !== "string"
+    typeof value !==
+    "string"
   ) {
     return false;
   }
@@ -1740,43 +2149,56 @@ function setupPlanNavigation() {
       "[data-plan-section]"
     );
 
-  buttons.forEach((button) => {
-    const cleanButton =
-      button.cloneNode(true);
+  /*
+    Remove previous listeners safely
+    by replacing each button.
+  */
 
-    button.parentNode.replaceChild(
-      cleanButton,
-      button
-    );
-  });
+  buttons.forEach(
+    (button) => {
+      const cleanButton =
+        button.cloneNode(
+          true
+        );
+
+      button.parentNode.replaceChild(
+        cleanButton,
+        button
+      );
+    }
+  );
 
   document
     .querySelectorAll(
       "[data-plan-section]"
     )
-    .forEach((button) => {
+    .forEach(
+      (button) => {
 
-      button.addEventListener(
-        "click",
-        () => {
+        button.addEventListener(
+          "click",
+          (e) => {
 
-          const section =
-            button.getAttribute(
-              "data-plan-section"
+            e.preventDefault();
+
+            const section =
+              button.getAttribute(
+                "data-plan-section"
+              );
+
+            console.log(
+              "PLAN TAB CLICKED:",
+              section
             );
 
-          console.log(
-            "PLAN TAB CLICKED:",
-            section
-          );
+            showPlanSection(
+              section
+            );
+          }
+        );
 
-          showPlanSection(
-            section
-          );
-        }
-      );
-
-    });
+      }
+    );
 }
 
 /* =========================================
@@ -1813,7 +2235,9 @@ function showPlanSection(
       "[data-plan-section]"
     );
 
-  Object.keys(sections).forEach(
+  Object.keys(
+    sections
+  ).forEach(
     (key) => {
 
       const section =
@@ -1892,4 +2316,32 @@ function escapeHTML(
       /'/g,
       "&#039;"
     );
-       }
+}
+
+/* =========================================
+   FINAL APP CHECK
+========================================= */
+
+console.log(
+  "================================="
+);
+
+console.log(
+  "AI LIFE PLANNER APP.JS LOADED"
+);
+
+console.log(
+  "Interest chips:",
+  document.querySelectorAll(
+    ".chip"
+  ).length
+);
+
+console.log(
+  "Planner form:",
+  !!$("plannerForm")
+);
+
+console.log(
+  "================================="
+);
