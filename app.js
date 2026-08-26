@@ -31,12 +31,12 @@ if (form) {
     };
 
     $("summary").innerHTML = `
-      <b>${trip.destination}</b><br>
-      ${trip.days} days · ${trip.travelers} traveler(s) · $${trip.budget} budget<br>
-      ${trip.interests.join(" · ") || "General trip"}
+      <b>${escapeHTML(trip.destination)}</b><br>
+      ${trip.days} days · ${escapeHTML(trip.travelers)} traveler(s) · $${trip.budget} budget<br>
+      ${trip.interests.map(escapeHTML).join(" · ") || "General trip"}
       ${
         trip.notes
-          ? `<br><span>${trip.notes}</span>`
+          ? `<br><span>${escapeHTML(trip.notes)}</span>`
           : ""
       }
     `;
@@ -227,7 +227,11 @@ async function generateAIPlan() {
       return;
     }
 
-    const plan = data.plan || "No plan was generated.";
+    const plan = data.plan;
+
+    if (!plan) {
+      throw new Error("No plan returned from AI");
+    }
 
     displayAIPlan(plan);
 
@@ -259,42 +263,254 @@ async function generateAIPlan() {
 ================================ */
 
 function displayAIPlan(plan) {
+
   $("planTitle").textContent =
     `${trip.days}-Day ${trip.destination} Trip`;
 
   $("planIntro").textContent =
-    `Your personalized AI travel plan for ${trip.travelers} traveler(s), ` +
-    `built around your $${trip.budget} budget.`;
+    plan.overview ||
+    `Your personalized AI travel plan for ${trip.travelers} traveler(s), built around your $${trip.budget} budget.`;
 
-  $("stay").textContent =
-    "Your personalized accommodation recommendations are included in your AI-generated plan below.";
+  /* ================================
+     STAY
+  ================================ */
 
-  $("transport").textContent =
-    "Your transportation recommendations are included in your AI-generated plan below.";
+  if (plan.stay) {
 
-  $("experiences").textContent =
-    "Your activities, attractions and food recommendations are included in your AI-generated plan below.";
+    $("stay").innerHTML = `
+      <strong>
+        ${escapeHTML(plan.stay.strategy || "")}
+      </strong>
 
-  $("money").textContent =
-    `Total trip budget: $${trip.budget}`;
+      ${
+        Array.isArray(plan.stay.areas)
+          ? `
+            <br><br>
+            <b>Recommended areas:</b>
+            <br>
+            ${plan.stay.areas
+              .map((item) => `• ${escapeHTML(item)}`)
+              .join("<br>")}
+          `
+          : ""
+      }
 
-  $("daysOut").innerHTML = `
-    <div class="day">
-      <b>Your AI Travel Plan</b>
-      <p>${formatAIText(plan)}</p>
-    </div>
-  `;
+      ${
+        Array.isArray(plan.stay.tips)
+          ? `
+            <br><br>
+            <b>Tips:</b>
+            <br>
+            ${plan.stay.tips
+              .map((item) => `• ${escapeHTML(item)}`)
+              .join("<br>")}
+          `
+          : ""
+      }
+    `;
+
+  } else {
+
+    $("stay").textContent =
+      "Accommodation information is not available.";
+  }
+
+  /* ================================
+     TRANSPORT
+  ================================ */
+
+  if (plan.transport) {
+
+    $("transport").innerHTML = `
+      <strong>
+        ${escapeHTML(plan.transport.strategy || "")}
+      </strong>
+
+      ${
+        plan.transport.airport
+          ? `
+            <br><br>
+            <b>Airport:</b>
+            <br>
+            ${escapeHTML(plan.transport.airport)}
+          `
+          : ""
+      }
+
+      ${
+        Array.isArray(plan.transport.local)
+          ? `
+            <br><br>
+            <b>Local transportation:</b>
+            <br>
+            ${plan.transport.local
+              .map((item) => `• ${escapeHTML(item)}`)
+              .join("<br>")}
+          `
+          : ""
+      }
+    `;
+
+  } else {
+
+    $("transport").textContent =
+      "Transportation information is not available.";
+  }
+
+  /* ================================
+     EXPERIENCES
+  ================================ */
+
+  if (plan.experiences) {
+
+    $("experiences").innerHTML = `
+      ${
+        plan.experiences.summary
+          ? escapeHTML(plan.experiences.summary)
+          : ""
+      }
+
+      ${
+        Array.isArray(plan.experiences.places)
+          ? `
+            <br><br>
+            <b>Places & attractions:</b>
+            <br>
+            ${plan.experiences.places
+              .map((item) => `• ${escapeHTML(item)}`)
+              .join("<br>")}
+          `
+          : ""
+      }
+
+      ${
+        Array.isArray(plan.experiences.food)
+          ? `
+            <br><br>
+            <b>Food experiences:</b>
+            <br>
+            ${plan.experiences.food
+              .map((item) => `• ${escapeHTML(item)}`)
+              .join("<br>")}
+          `
+          : ""
+      }
+    `;
+
+  } else {
+
+    $("experiences").textContent =
+      "Experience information is not available.";
+  }
+
+  /* ================================
+     BUDGET
+  ================================ */
+
+  if (plan.budget) {
+
+    $("money").innerHTML = `
+      <b>Estimated Budget</b>
+      <br><br>
+
+      🏨 Accommodation:
+      $${Number(plan.budget.accommodation || 0)}
+      <br>
+
+      🚆 Transportation:
+      $${Number(plan.budget.transportation || 0)}
+      <br>
+
+      🍴 Food:
+      $${Number(plan.budget.food || 0)}
+      <br>
+
+      🎟️ Activities:
+      $${Number(plan.budget.activities || 0)}
+      <br>
+
+      💵 Other:
+      $${Number(plan.budget.other || 0)}
+      <br><br>
+
+      <b>
+        Estimated Total:
+        $${Number(plan.budget.total || 0)}
+      </b>
+
+      ${
+        plan.budget.strategy
+          ? `
+            <br><br>
+            ${escapeHTML(plan.budget.strategy)}
+          `
+          : ""
+      }
+    `;
+
+  } else {
+
+    $("money").textContent =
+      `Total trip budget: $${trip.budget}`;
+  }
+
+  /* ================================
+     DAY-BY-DAY ITINERARY
+  ================================ */
+
+  if (Array.isArray(plan.days) && plan.days.length) {
+
+    $("daysOut").innerHTML = plan.days
+      .map(
+        (day) => `
+          <div class="day">
+
+            <b>
+              Day ${Number(day.day || 0)}:
+              ${escapeHTML(day.title || "")}
+            </b>
+
+            <p>
+              <strong>Morning</strong>
+              <br>
+              ${escapeHTML(day.morning || "")}
+            </p>
+
+            <p>
+              <strong>Afternoon</strong>
+              <br>
+              ${escapeHTML(day.afternoon || "")}
+            </p>
+
+            <p>
+              <strong>Evening</strong>
+              <br>
+              ${escapeHTML(day.evening || "")}
+            </p>
+
+          </div>
+        `
+      )
+      .join("");
+
+  } else {
+
+    $("daysOut").innerHTML = `
+      <div class="day">
+        <b>Day-by-Day Itinerary</b>
+        <p>No itinerary was generated.</p>
+      </div>
+    `;
+  }
 }
 
 /* ================================
-   FORMAT AI TEXT
+   ESCAPE HTML
 ================================ */
 
-function formatAIText(text) {
-  return String(text)
+function escapeHTML(text) {
+  return String(text || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\n\n/g, "<br><br>")
-    .replace(/\n/g, "<br>");
-        }
+    .replace(/>/g, "&gt;");
+    }
