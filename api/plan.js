@@ -33,12 +33,13 @@ export default async function handler(req, res) {
     const prompt = `
 You are an expert AI travel planner.
 
-Create a personalized travel plan for the user.
+Create a personalized travel plan based on the user's information.
 
+TRIP DETAILS:
 Destination: ${destination}
 Start date: ${start || "Not specified"}
 Number of days: ${days}
-Budget: $${budget} USD
+Total budget: $${budget} USD
 Travelers: ${travelers || 1}
 Interests: ${
       Array.isArray(interests) && interests.length
@@ -47,32 +48,57 @@ Interests: ${
     }
 Additional notes: ${notes || "None"}
 
-Create:
-1. Trip overview
-2. Accommodation strategy
-3. Transportation strategy
-4. Food recommendations
-5. Activities and attractions
-6. Day-by-day itinerary
-7. Budget breakdown
+Create a useful and realistic travel plan containing:
 
-Important:
-- Respect the user's total budget.
-- Keep recommendations practical.
+1. TRIP OVERVIEW
+Give a short overview of the trip and the recommended travel style.
+
+2. STAY
+Recommend the best accommodation strategy for this budget.
+Mention suitable areas or neighborhoods.
+Do not claim that a specific hotel has availability.
+
+3. GETTING AROUND
+Explain the best transportation strategy.
+Include airport/local transportation when relevant.
+
+4. EXPERIENCES
+Recommend attractions, activities, food experiences and things worth doing.
+
+5. DAY-BY-DAY ITINERARY
+Create a practical itinerary for every day of the trip.
+Organize morning, afternoon and evening.
+
+6. BUDGET STRATEGY
+Break the total budget into:
+- Accommodation
+- Transportation
+- Food
+- Activities
+- Other/Buffer
+
+Make sure the estimated categories stay within the user's total budget.
+
+IMPORTANT RULES:
 - Do not claim live availability.
 - Do not invent exact current prices.
-- Clearly explain that prices are estimates when necessary.
-- Make the itinerary useful and realistic.
+- Prices should be described as estimates.
+- Do not pretend that you have live booking access.
+- Prioritize practical recommendations.
+- Respect the user's total budget.
+- Make the plan easy to read.
 `;
 
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" +
         encodeURIComponent(apiKey),
       {
         method: "POST",
+
         headers: {
           "Content-Type": "application/json"
         },
+
         body: JSON.stringify({
           contents: [
             {
@@ -125,4 +151,4 @@ Important:
       message: error.message
     });
   }
-}
+      }
