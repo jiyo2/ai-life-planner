@@ -6,6 +6,16 @@ export default async function handler(req, res) {
   }
 
   try {
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      console.error("OPENAI_API_KEY is missing");
+
+      return res.status(500).json({
+        error: "OPENAI_API_KEY is not configured"
+      });
+    }
+
     const {
       destination,
       start,
@@ -25,40 +35,48 @@ export default async function handler(req, res) {
     const prompt = `
 You are an expert AI travel planner.
 
-Create a practical personalized travel plan using the following information:
+Create a personalized travel plan using these details:
 
 Destination: ${destination}
 Start date: ${start || "Not specified"}
 Number of days: ${days}
 Budget: $${budget} USD
 Travelers: ${travelers || 1}
-Interests: ${(interests || []).join(", ") || "General sightseeing"}
+Interests: ${
+      Array.isArray(interests) && interests.length
+        ? interests.join(", ")
+        : "General sightseeing"
+    }
 Additional notes: ${notes || "None"}
 
-Create:
-1. A short trip overview.
-2. Accommodation strategy.
-3. Transportation strategy.
-4. Food recommendations.
-5. Activities and attractions.
-6. A day-by-day itinerary.
-7. A realistic budget breakdown.
+Create a useful, realistic travel plan containing:
 
-Important:
-- Respect the user's total budget.
-- Keep recommendations practical.
-- Do not invent live prices or claim real-time availability.
-- Make the plan easy to read.
+1. Trip overview
+2. Accommodation strategy
+3. Transportation strategy
+4. Food recommendations
+5. Activities and attractions
+6. Day-by-day itinerary
+7. Budget breakdown
+
+Rules:
+- Respect the total budget.
+- Make the itinerary practical.
+- Do not claim live availability.
+- Do not invent exact current prices.
+- Keep the response easy to read.
 `;
 
     const response = await fetch(
       "https://api.openai.com/v1/responses",
       {
         method: "POST",
+
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+          "Authorization": `Bearer ${apiKey}`
         },
+
         body: JSON.stringify({
           model: "gpt-5-mini",
           input: prompt
@@ -68,24 +86,43 @@ Important:
 
     const data = await response.json();
 
+    console.log("OpenAI status:", response.status);
+
     if (!response.ok) {
-      console.error("OpenAI API error:", data);
+      console.error("OpenAI error:", data);
 
       return res.status(500).json({
         error: "OpenAI request failed",
-        details: data
+        openai_error: data.error || data
+      });
+    }
+
+    const plan =
+      data.output_text ||
+      (Array.isArray(data.output)
+        ? data.output
+            .flatMap((item) => item.content || [])
+            .map((item) => item.text || "")
+            .filter(Boolean)
+            .join("\n")
+        : "");
+
+    if (!plan) {
+      return res.status(500).json({
+        error: "OpenAI returned an empty plan"
       });
     }
 
     return res.status(200).json({
-      plan: data.output_text || "No plan was generated."
+      plan
     });
 
   } catch (error) {
     console.error("Server error:", error);
 
     return res.status(500).json({
-      error: "Server error"
+      error: "Server error",
+      message: error.message
     });
   }
-}
+      }
