@@ -1,5 +1,5 @@
 /* =========================================
-   AI LIFE PLANNER — MODERN UI
+   AI LIFE PLANNER — MODERN UI V2
 ========================================= */
 
 * {
@@ -26,7 +26,7 @@ body {
     radial-gradient(
       circle at top left,
       #eef4ff 0%,
-      #f7f9fc 40%,
+      #f7f9fc 42%,
       #ffffff 100%
     );
 
@@ -114,7 +114,7 @@ a {
 ========================================= */
 
 .card {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
 
   border: 1px solid #e7ebf2;
   border-radius: 28px;
@@ -211,8 +211,7 @@ textarea {
   font-size: 14px;
   font-weight: 650;
 
-  transition:
-    all 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .chip:hover {
@@ -343,7 +342,7 @@ textarea {
   width: 100%;
   min-height: 100vh;
 
-  padding: 25px 18px 70px;
+  padding: 25px 18px 80px;
 }
 
 .plan-container {
@@ -358,4 +357,207 @@ textarea {
 ========================================= */
 
 .plan-header {
-  display:
+  text-align: center;
+
+  padding: 45px 20px 30px;
+}
+
+.plan-header h1,
+#planTitle {
+  font-size: clamp(32px, 5vw, 52px);
+
+  line-height: 1.1;
+
+  letter-spacing: -1.8px;
+
+  margin-bottom: 15px;
+
+  font-weight: 850;
+}
+
+.plan-header p,
+#planIntro {
+  max-width: 720px;
+
+  margin: 0 auto;
+
+  color: #697386;
+
+  font-size: 17px;
+}
+
+/* =========================================
+   PLAN NAVIGATION
+========================================= */
+
+.plan-navigation {
+  display: grid;
+
+  grid-template-columns:
+    repeat(5, minmax(0, 1fr));
+
+  gap: 10px;
+
+  margin: 15px auto 25px;
+
+  max-width: 1050px;
+}
+
+.plan-navigation button {
+  border: 1px solid #e2e6ed;
+
+  background: rgba(255, 255, 255, 0.9);
+
+  color: #4b5568;
+
+  border-radius: 18px;
+
+  padding: 16px 10px;
+
+  font-weight: 750;
+
+  font-size: 14px;
+
+  min-height: 70px;
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+
+.plan-navigation button:hover {
+  transform: translateY(-2px);
+
+  border-color: #aeb9ff;
+
+  box-shadow:
+    0 10px 25px rgba(30, 45, 80, 0.07);
+}
+
+.plan-navigation button.active {
+  background: #172033;
+
+  color: #ffffff;
+
+  border-color: #172033;
+
+  box-shadow:
+    0 12px 28px rgba(23, 32, 51, 0.18);
+}
+
+/* =========================================
+   PLAN CONTENT CARD
+========================================= */
+
+.plan-content {
+  background: rgba(255, 255, 255, 0.96);
+
+  border: 1px solid #e6eaf0;
+
+  border-radius: 28px;
+
+  padding: 32px;
+
+  box-shadow:
+    0 20px 60px rgba(26, 39, 64, 0.08);
+}
+
+/* =========================================
+   SECTION VISIBILITY
+========================================= */
+
+.plan-section-hidden {
+  display: none !important;
+}
+
+.plan-section-visible {
+  display: block;
+
+  animation: planFadeIn 0.3s ease;
+}
+
+@keyframes planFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================
+   PLAN MAIN TEXT
+========================================= */
+
+.plan-main-text {
+  font-size: 17px;
+
+  color: #394357;
+
+  line-height: 1.8;
+
+  margin-bottom: 25px;
+}
+
+/* =========================================
+   PLAN SUBSECTIONS
+========================================= */
+
+.plan-subsection {
+  margin-top: 25px;
+
+  padding-top: 22px;
+
+  border-top: 1px solid #edf0f4;
+}
+
+.plan-subsection h4 {
+  font-size: 17px;
+
+  color: #172033;
+
+  margin-bottom: 12px;
+
+  font-weight: 800;
+}
+
+.plan-subsection p {
+  color: #596579;
+
+  line-height: 1.75;
+}
+
+.plan-subsection ul {
+  list-style: none;
+
+  display: grid;
+
+  gap: 10px;
+}
+
+.plan-subsection li {
+  position: relative;
+
+  padding: 12px 15px 12px 38px;
+
+  background: #f8f9fb;
+
+  border: 1px solid #edf0f4;
+
+  border-radius: 13px;
+
+  color: #4b5669;
+}
+
+.plan-subsection li::before {
+  content: "✓";
+
+  position: absolute;
+
+  left:
