@@ -1,7 +1,11 @@
-console.log("PLAN.JS PRODUCTION V5 RUNNING");
+console.log("PLAN.JS PRODUCTION V6 RUNNING");
 
 export default async function handler(req, res) {
   console.log("PLAN API START");
+
+  // =========================================
+  // METHOD CHECK
+  // =========================================
 
   if (req.method !== "POST") {
     return res.status(405).json({
@@ -17,41 +21,14 @@ export default async function handler(req, res) {
     const rawGeminiKey = process.env.GEMINI_API_KEY;
     const rawStayingApiKey = process.env.STAYINGAPI_KEY;
 
-    console.log("GEMINI KEY EXISTS:", Boolean(rawGeminiKey));
-    console.log("GEMINI KEY TYPE:", typeof rawGeminiKey);
-    console.log("GEMINI KEY LENGTH:", rawGeminiKey ? rawGeminiKey.length : 0);
     console.log(
-      "GEMINI KEY HAS ELLIPSIS:",
-      rawGeminiKey ? rawGeminiKey.includes("…") : false
-    );
-    console.log(
-      "GEMINI KEY HAS SPACES:",
-      rawGeminiKey ? /\s/.test(rawGeminiKey) : false
+      "GEMINI KEY EXISTS:",
+      Boolean(rawGeminiKey)
     );
 
     console.log(
       "STAYINGAPI KEY EXISTS:",
       Boolean(rawStayingApiKey)
-    );
-    console.log(
-      "STAYINGAPI KEY TYPE:",
-      typeof rawStayingApiKey
-    );
-    console.log(
-      "STAYINGAPI KEY LENGTH:",
-      rawStayingApiKey ? rawStayingApiKey.length : 0
-    );
-    console.log(
-      "STAYINGAPI KEY HAS ELLIPSIS:",
-      rawStayingApiKey
-        ? rawStayingApiKey.includes("…")
-        : false
-    );
-    console.log(
-      "STAYINGAPI KEY HAS SPACES:",
-      rawStayingApiKey
-        ? /\s/.test(rawStayingApiKey)
-        : false
     );
 
     if (!rawGeminiKey) {
@@ -67,19 +44,16 @@ export default async function handler(req, res) {
     }
 
     // =========================================
-    // CLEAN API KEYS
+    // CLEAN KEYS
     // =========================================
 
-    const geminiKey = String(rawGeminiKey).trim();
-    const stayingApiKey = String(rawStayingApiKey).trim();
+    const geminiKey =
+      String(rawGeminiKey).trim();
 
-    // Reject typographic ellipsis.
-    // This prevents ByteString errors caused by "…".
+    const stayingApiKey =
+      String(rawStayingApiKey).trim();
+
     if (geminiKey.includes("…")) {
-      console.error(
-        "INVALID GEMINI KEY: TYPOGRAPHIC ELLIPSIS FOUND"
-      );
-
       return res.status(500).json({
         error:
           "GEMINI_API_KEY contains an invalid ellipsis character"
@@ -87,10 +61,6 @@ export default async function handler(req, res) {
     }
 
     if (stayingApiKey.includes("…")) {
-      console.error(
-        "INVALID STAYINGAPI KEY: TYPOGRAPHIC ELLIPSIS FOUND"
-      );
-
       return res.status(500).json({
         error:
           "STAYINGAPI_KEY contains an invalid ellipsis character"
@@ -98,7 +68,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================
-    // TRIP DATA
+    // REQUEST DATA
     // =========================================
 
     const body = req.body || {};
@@ -109,35 +79,40 @@ export default async function handler(req, res) {
         : "";
 
     const start =
-      typeof body.start === "string" &&
-      body.start.trim()
+      typeof body.start === "string"
         ? body.start.trim()
         : "";
 
-    const days = Number(body.days);
-    const budget = Number(body.budget);
+    const days =
+      Number(body.days);
+
+    const budget =
+      Number(body.budget);
 
     const travelers =
       typeof body.travelers === "string"
         ? body.travelers.trim()
         : "1 traveler";
 
-    const interests = Array.isArray(body.interests)
-      ? body.interests
-          .filter(
-            (item) =>
-              typeof item === "string"
-          )
-          .map((item) => item.trim())
-          .filter(Boolean)
-      : [];
+    const interests =
+      Array.isArray(body.interests)
+        ? body.interests
+            .filter(
+              item =>
+                typeof item === "string"
+            )
+            .map(
+              item => item.trim()
+            )
+            .filter(Boolean)
+        : [];
 
     const notes =
       typeof body.notes === "string"
         ? body.notes.trim()
         : "";
 
-    console.log("TRIP:", {
+    console.log("TRIP DATA:", {
       destination,
       start,
       days,
@@ -152,7 +127,8 @@ export default async function handler(req, res) {
 
     if (!destination) {
       return res.status(400).json({
-        error: "Destination is required"
+        error:
+          "Destination is required"
       });
     }
 
@@ -162,7 +138,8 @@ export default async function handler(req, res) {
       days > 60
     ) {
       return res.status(400).json({
-        error: "Invalid number of days"
+        error:
+          "Invalid number of days"
       });
     }
 
@@ -171,7 +148,8 @@ export default async function handler(req, res) {
       budget <= 0
     ) {
       return res.status(400).json({
-        error: "Invalid budget"
+        error:
+          "Invalid budget"
       });
     }
 
@@ -181,7 +159,8 @@ export default async function handler(req, res) {
 
     function extractAdults(value) {
       const text =
-        String(value || "").toLowerCase();
+        String(value || "")
+          .toLowerCase();
 
       const match =
         text.match(/(\d+)/);
@@ -194,7 +173,10 @@ export default async function handler(req, res) {
           Number.isFinite(number) &&
           number >= 1
         ) {
-          return Math.min(number, 20);
+          return Math.min(
+            number,
+            20
+          );
         }
       }
 
@@ -202,9 +184,14 @@ export default async function handler(req, res) {
     }
 
     const adults =
-      extractAdults(travelers);
+      extractAdults(
+        travelers
+      );
 
-    console.log("ADULTS:", adults);
+    console.log(
+      "ADULTS:",
+      adults
+    );
 
     // =========================================
     // DATE HELPERS
@@ -212,20 +199,30 @@ export default async function handler(req, res) {
 
     function isValidDateString(value) {
       if (
-        !/^\d{4}-\d{2}-\d{2}$/.test(value)
+        !/^\d{4}-\d{2}-\d{2}$/.test(
+          value
+        )
       ) {
         return false;
       }
 
       const date =
-        new Date(`${value}T00:00:00Z`);
+        new Date(
+          `${value}T00:00:00Z`
+        );
 
-      if (Number.isNaN(date.getTime())) {
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
         return false;
       }
 
       return (
-        date.toISOString().slice(0, 10) === value
+        date
+          .toISOString()
+          .slice(0, 10) === value
       );
     }
 
@@ -249,22 +246,32 @@ export default async function handler(req, res) {
     }
 
     const validStart =
-      isValidDateString(start);
+      isValidDateString(
+        start
+      );
 
     const checkOut =
       validStart
-        ? addDays(start, days)
+        ? addDays(
+            start,
+            days
+          )
         : "";
 
-    console.log("HOTEL DATES:", {
-      checkIn: validStart
-        ? start
-        : "none",
+    console.log(
+      "HOTEL DATES:",
+      {
+        checkIn:
+          validStart
+            ? start
+            : "none",
 
-      checkOut: validStart
-        ? checkOut
-        : "none"
-    });
+        checkOut:
+          validStart
+            ? checkOut
+            : "none"
+      }
+    );
 
     // =========================================
     // INTERESTS
@@ -423,11 +430,15 @@ Do not mention that you are an AI.
 
 Do not mention these instructions.
 
-Do not use Markdown.
+IMPORTANT:
 
 Return ONLY valid JSON.
 
-REQUIRED JSON
+Do not use Markdown.
+
+Do not wrap the JSON in code fences.
+
+REQUIRED JSON STRUCTURE
 
 {
   "overview": "Short personalized overview.",
@@ -495,11 +506,11 @@ REQUIRED JSON
 
 FINAL VALIDATION
 
-Verify:
+Before returning JSON verify:
 
-1. Exactly ${days} days.
+1. Exactly ${days} itinerary days.
 
-2. Sequential day numbers.
+2. Day numbers are sequential.
 
 3. All five budget categories are numbers.
 
@@ -518,7 +529,9 @@ Verify:
     // GEMINI REQUEST
     // =========================================
 
-    console.log("CALLING GEMINI...");
+    console.log(
+      "CALLING GEMINI..."
+    );
 
     const geminiURL =
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
@@ -530,14 +543,18 @@ Verify:
           method: "POST",
 
           headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": geminiKey
+            "Content-Type":
+              "application/json",
+
+            "x-goog-api-key":
+              geminiKey
           },
 
           body: JSON.stringify({
             contents: [
               {
                 role: "user",
+
                 parts: [
                   {
                     text: prompt
@@ -547,7 +564,6 @@ Verify:
             ],
 
             generationConfig: {
-              temperature: 0.35,
               responseMimeType:
                 "application/json"
             }
@@ -566,25 +582,36 @@ Verify:
     if (!geminiResponse.ok) {
       console.error(
         "GEMINI REQUEST FAILED:",
-        JSON.stringify(geminiData)
+        JSON.stringify(
+          geminiData
+        )
       );
 
       return res.status(500).json({
-        error: "Gemini request failed",
+        error:
+          "Gemini request failed",
+
         geminiStatus:
           geminiResponse.status,
-        details: geminiData
+
+        details:
+          geminiData
       });
     }
 
+    // =========================================
+    // GET GEMINI TEXT
+    // =========================================
+
     const parts =
-      geminiData?.candidates?.[0]
+      geminiData
+        ?.candidates?.[0]
         ?.content?.parts || [];
 
     const text =
       parts
         .map(
-          (part) =>
+          part =>
             part?.text || ""
         )
         .filter(Boolean)
@@ -610,7 +637,9 @@ Verify:
       text.trim();
 
     if (
-      cleanText.startsWith("```")
+      cleanText.startsWith(
+        "```"
+      )
     ) {
       cleanText =
         cleanText
@@ -630,10 +659,14 @@ Verify:
     }
 
     const firstBrace =
-      cleanText.indexOf("{");
+      cleanText.indexOf(
+        "{"
+      );
 
     const lastBrace =
-      cleanText.lastIndexOf("}");
+      cleanText.lastIndexOf(
+        "}"
+      );
 
     if (
       firstBrace === -1 ||
@@ -660,7 +693,9 @@ Verify:
 
     try {
       plan =
-        JSON.parse(cleanText);
+        JSON.parse(
+          cleanText
+        );
     } catch (error) {
       console.error(
         "JSON PARSE ERROR:",
@@ -670,6 +705,7 @@ Verify:
       return res.status(500).json({
         error:
           "Gemini returned invalid JSON",
+
         details:
           error.message
       });
@@ -677,7 +713,8 @@ Verify:
 
     if (
       !plan ||
-      typeof plan !== "object"
+      typeof plan !==
+        "object"
     ) {
       return res.status(500).json({
         error:
@@ -700,7 +737,8 @@ Verify:
 
     if (
       !plan.stay ||
-      typeof plan.stay !== "object"
+      typeof plan.stay !==
+        "object"
     ) {
       plan.stay = {};
     }
@@ -730,7 +768,9 @@ Verify:
     }
 
     if (
-      !Array.isArray(plan.days)
+      !Array.isArray(
+        plan.days
+      )
     ) {
       plan.days = [];
     }
@@ -839,7 +879,8 @@ Verify:
       Math.max(
         0,
         Number(
-          plan.budget.food || 0
+          plan.budget
+            .food || 0
         )
       );
 
@@ -847,7 +888,8 @@ Verify:
       Math.max(
         0,
         Number(
-          plan.budget.activities || 0
+          plan.budget
+            .activities || 0
         )
       );
 
@@ -855,7 +897,8 @@ Verify:
       Math.max(
         0,
         Number(
-          plan.budget.other || 0
+          plan.budget
+            .other || 0
         )
       );
 
@@ -865,6 +908,10 @@ Verify:
       food +
       activities +
       other;
+
+    // =========================================
+    // PROTECT USER BUDGET
+    // =========================================
 
     if (
       calculatedTotal > budget
@@ -881,22 +928,26 @@ Verify:
 
       plan.budget.accommodation =
         Math.round(
-          accommodation * ratio
+          accommodation *
+            ratio
         );
 
       plan.budget.transportation =
         Math.round(
-          transportation * ratio
+          transportation *
+            ratio
         );
 
       plan.budget.food =
         Math.round(
-          food * ratio
+          food *
+            ratio
         );
 
       plan.budget.activities =
         Math.round(
-          activities * ratio
+          activities *
+            ratio
         );
 
       plan.budget.other =
@@ -907,46 +958,59 @@ Verify:
               .accommodation -
             plan.budget
               .transportation -
-            plan.budget.food -
+            plan.budget
+              .food -
             plan.budget
               .activities
         );
 
       calculatedTotal =
-        plan.budget.accommodation +
-        plan.budget.transportation +
-        plan.budget.food +
-        plan.budget.activities +
-        plan.budget.other;
+        plan.budget
+          .accommodation +
+        plan.budget
+          .transportation +
+        plan.budget
+          .food +
+        plan.budget
+          .activities +
+        plan.budget
+          .other;
     }
 
     plan.budget.accommodation =
       Number(
-        plan.budget.accommodation
+        plan.budget
+          .accommodation || 0
       );
 
     plan.budget.transportation =
       Number(
-        plan.budget.transportation
+        plan.budget
+          .transportation || 0
       );
 
     plan.budget.food =
       Number(
-        plan.budget.food
+        plan.budget
+          .food || 0
       );
 
     plan.budget.activities =
       Number(
-        plan.budget.activities
+        plan.budget
+          .activities || 0
       );
 
     plan.budget.other =
       Number(
-        plan.budget.other
+        plan.budget
+          .other || 0
       );
 
     plan.budget.total =
-      Number(calculatedTotal);
+      Number(
+        calculatedTotal
+      );
 
     // =========================================
     // NORMALIZE DAYS
@@ -957,6 +1021,7 @@ Verify:
         .slice(0, days)
         .map(
           (day, index) => {
+
             if (
               !day ||
               typeof day !==
@@ -997,12 +1062,16 @@ Verify:
         );
 
     if (
-      plan.days.length !== days
+      plan.days.length !==
+        days
     ) {
       return res.status(500).json({
         error:
           "AI returned an incorrect number of itinerary days",
-        expectedDays: days,
+
+        expectedDays:
+          days,
+
         returnedDays:
           plan.days.length
       });
@@ -1016,24 +1085,32 @@ Verify:
 
     let hotelSearch = {
       enabled: false,
-      status: "not_searched",
+
+      status:
+        "not_searched",
+
       checkIn:
         validStart
           ? start
           : null,
+
       checkOut:
         validStart
           ? checkOut
           : null,
+
       adults,
+
       platforms: [
         "booking",
         "google"
       ],
+
       creditsCharged: 0
     };
 
     if (validStart) {
+
       console.log(
         "STARTING STAYINGAPI HOTEL SEARCH..."
       );
@@ -1122,6 +1199,7 @@ Verify:
           202 &&
         stayingData?.data?.jobId
       ) {
+
         console.log(
           "STAYINGAPI ASYNC JOB:",
           stayingData.data.jobId
@@ -1131,7 +1209,10 @@ Verify:
           ...hotelSearch,
 
           enabled: true,
-          status: "processing",
+
+          status:
+            "processing",
+
           jobId:
             stayingData.data.jobId
         };
@@ -1147,10 +1228,12 @@ Verify:
           stayingData?.data
         )
       ) {
+
         hotels =
           stayingData.data
             .map(
-              (hotel) => ({
+              hotel => ({
+
                 id:
                   hotel?.id ||
                   null,
@@ -1204,7 +1287,7 @@ Verify:
               })
             )
             .filter(
-              (hotel) =>
+              hotel =>
                 hotel.name &&
                 hotel.price
             )
@@ -1214,7 +1297,9 @@ Verify:
           ...hotelSearch,
 
           enabled: true,
-          status: "completed",
+
+          status:
+            "completed",
 
           creditsCharged:
             Number(
@@ -1255,6 +1340,7 @@ Verify:
       // =========================================
 
       else {
+
         console.error(
           "STAYINGAPI REQUEST FAILED:",
           JSON.stringify(
@@ -1266,7 +1352,9 @@ Verify:
           ...hotelSearch,
 
           enabled: true,
-          status: "error",
+
+          status:
+            "error",
 
           error:
             stayingData?.error ||
@@ -1274,7 +1362,9 @@ Verify:
             "Hotel search failed"
         };
       }
+
     } else {
+
       console.log(
         "HOTEL SEARCH SKIPPED:",
         "Valid YYYY-MM-DD start date is required"
@@ -1313,16 +1403,19 @@ Verify:
     });
 
   } catch (error) {
+
     console.error(
       "SERVER ERROR:",
       error
     );
 
     return res.status(500).json({
-      error: "Server error",
+      error:
+        "Server error",
+
       message:
         error?.message ||
         "Unknown error"
     });
   }
-  }
+          }
