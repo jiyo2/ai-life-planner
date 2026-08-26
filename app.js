@@ -63,7 +63,7 @@ if (typeof Paddle !== "undefined") {
   Paddle.Environment.set("sandbox");
 
   Paddle.Initialize({
-    token: "test_2611717af9e5bf12fda",
+    token: "test_2611717af9e5bf12fda64319b8b",
 
     eventCallback: function (event) {
       console.log("PADDLE EVENT:", event);
@@ -297,4 +297,4 @@ function formatAIText(text) {
     .replace(/>/g, "&gt;")
     .replace(/\n\n/g, "<br><br>")
     .replace(/\n/g, "<br>");
-}
+        }
