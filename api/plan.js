@@ -33,9 +33,8 @@ export default async function handler(req, res) {
     const prompt = `
 You are an expert AI travel planner.
 
-Create a personalized travel plan based on the user's information.
+Create a personalized travel plan using the following trip information:
 
-TRIP DETAILS:
 Destination: ${destination}
 Start date: ${start || "Not specified"}
 Number of days: ${days}
@@ -48,45 +47,63 @@ Interests: ${
     }
 Additional notes: ${notes || "None"}
 
-Create a useful and realistic travel plan containing:
+Return ONLY valid JSON.
+Do not use markdown.
+Do not use code fences.
 
-1. TRIP OVERVIEW
-Give a short overview of the trip and the recommended travel style.
+Use exactly this structure:
 
-2. STAY
-Recommend the best accommodation strategy for this budget.
-Mention suitable areas or neighborhoods.
-Do not claim that a specific hotel has availability.
+{
+  "overview": "Short personalized trip overview",
 
-3. GETTING AROUND
-Explain the best transportation strategy.
-Include airport/local transportation when relevant.
+  "stay": {
+    "strategy": "Accommodation strategy",
+    "areas": ["Area 1", "Area 2", "Area 3"],
+    "tips": ["Tip 1", "Tip 2"]
+  },
 
-4. EXPERIENCES
-Recommend attractions, activities, food experiences and things worth doing.
+  "transport": {
+    "strategy": "Transportation strategy",
+    "airport": "Airport transfer recommendation",
+    "local": ["Local transport option 1", "Local transport option 2"]
+  },
 
-5. DAY-BY-DAY ITINERARY
-Create a practical itinerary for every day of the trip.
-Organize morning, afternoon and evening.
+  "experiences": {
+    "summary": "Short description",
+    "places": ["Place or attraction 1", "Place or attraction 2"],
+    "food": ["Food experience 1", "Food experience 2"]
+  },
 
-6. BUDGET STRATEGY
-Break the total budget into:
-- Accommodation
-- Transportation
-- Food
-- Activities
-- Other/Buffer
+  "budget": {
+    "accommodation": 0,
+    "transportation": 0,
+    "food": 0,
+    "activities": 0,
+    "other": 0,
+    "total": 0,
+    "strategy": "Budget strategy"
+  },
 
-Make sure the estimated categories stay within the user's total budget.
+  "days": [
+    {
+      "day": 1,
+      "title": "Day title",
+      "morning": "Morning plan",
+      "afternoon": "Afternoon plan",
+      "evening": "Evening plan"
+    }
+  ]
+}
 
-IMPORTANT RULES:
+IMPORTANT:
+- Create exactly ${days} day objects.
+- Budget values must be numerical USD estimates.
+- The budget total must not exceed $${budget}.
+- Keep recommendations practical.
 - Do not claim live availability.
 - Do not invent exact current prices.
-- Prices should be described as estimates.
-- Do not pretend that you have live booking access.
-- Prioritize practical recommendations.
-- Respect the user's total budget.
-- Make the plan easy to read.
+- Treat prices as estimates.
+- Make the itinerary realistic for the destination.
 `;
 
     const response = await fetch(
@@ -94,11 +111,9 @@ IMPORTANT RULES:
         encodeURIComponent(apiKey),
       {
         method: "POST",
-
         headers: {
           "Content-Type": "application/json"
         },
-
         body: JSON.stringify({
           contents: [
             {
@@ -126,16 +141,38 @@ IMPORTANT RULES:
       });
     }
 
-    const plan =
+    const text =
       data?.candidates?.[0]?.content?.parts
         ?.map((part) => part.text || "")
         .filter(Boolean)
         .join("\n") || "";
 
-    if (!plan) {
+    if (!text) {
       return res.status(500).json({
-        error: "Gemini returned no text",
-        details: data
+        error: "Gemini returned no text"
+      });
+    }
+
+    let cleanText = text.trim();
+
+    if (cleanText.startsWith("```")) {
+      cleanText = cleanText
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+    }
+
+    let plan;
+
+    try {
+      plan = JSON.parse(cleanText);
+    } catch (parseError) {
+      console.error("JSON PARSE ERROR:", parseError);
+      console.error("GEMINI TEXT:", text);
+
+      return res.status(500).json({
+        error: "Gemini returned invalid JSON"
       });
     }
 
@@ -151,4 +188,4 @@ IMPORTANT RULES:
       message: error.message
     });
   }
-      }
+              }
