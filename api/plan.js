@@ -1,6 +1,6 @@
 console.log("PLAN.JS NEW VERSION RUNNING");
 
-export default async function handler(req, res) {export default async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({
       error: "Method not allowed"
@@ -58,39 +58,21 @@ Use exactly this structure:
 
 {
   "overview": "Short personalized trip overview",
-
   "stay": {
     "strategy": "Accommodation strategy",
     "areas": ["Area 1", "Area 2", "Area 3"],
     "tips": ["Tip 1", "Tip 2", "Tip 3"]
   },
-
   "transport": {
     "strategy": "Transportation strategy",
     "airport": "Airport transportation recommendation",
-    "local": [
-      "Local transportation option 1",
-      "Local transportation option 2",
-      "Local transportation option 3"
-    ]
+    "local": ["Local option 1", "Local option 2", "Local option 3"]
   },
-
   "experiences": {
-    "summary": "Short description of experiences",
-    "places": [
-      "Attraction 1",
-      "Attraction 2",
-      "Attraction 3",
-      "Attraction 4",
-      "Attraction 5"
-    ],
-    "food": [
-      "Food experience 1",
-      "Food experience 2",
-      "Food experience 3"
-    ]
+    "summary": "Short description",
+    "places": ["Place 1", "Place 2", "Place 3", "Place 4", "Place 5"],
+    "food": ["Food experience 1", "Food experience 2", "Food experience 3"]
   },
-
   "budget": {
     "accommodation": 0,
     "transportation": 0,
@@ -100,7 +82,6 @@ Use exactly this structure:
     "total": 0,
     "strategy": "Budget strategy"
   },
-
   "days": [
     {
       "day": 1,
@@ -116,7 +97,7 @@ Rules:
 
 - Create exactly ${days} day objects.
 - Budget values must be numbers.
-- Total budget must not exceed $${budget}.
+- Budget total must not exceed $${budget}.
 - Make the itinerary realistic.
 - Consider the user's interests.
 - Do not claim live availability.
@@ -229,4 +210,4 @@ Rules:
       message: error.message
     });
   }
-      }
+          }
