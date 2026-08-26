@@ -972,6 +972,7 @@ function renderHotels(
   );
 
   if (!$("stay")) {
+
     console.error(
       "STAY CONTAINER NOT FOUND"
     );
@@ -1156,36 +1157,77 @@ function renderHotelCard(
 
   const name =
     hotel?.name ||
+    hotel?.title ||
     "Unnamed property";
 
   const platform =
     hotel?.platform ||
-    "";
+    hotel?.provider ||
+    "Booking.com";
 
   const starRating =
-    hotel?.starRating;
+    hotel?.starRating ??
+    hotel?.stars ??
+    null;
 
   const guestRating =
-    hotel?.guestRating;
+    hotel?.guestRating ??
+    hotel?.rating ??
+    null;
 
   const reviewCount =
-    hotel?.reviewCount;
+    hotel?.reviewCount ??
+    hotel?.reviews ??
+    null;
 
   const location =
-    hotel?.location;
+    hotel?.location ||
+    hotel?.address ||
+    null;
+
+  /*
+    Booking URL can be returned directly
+    or inside the price object.
+  */
 
   const url =
-    hotel?.url;
+    hotel?.url ||
+    hotel?.bookingUrl ||
+    hotel?.bookingURL ||
+    hotel?.price?.url ||
+    "";
 
-  const price =
-    formatHotelPrice(
-      hotel?.price
-    );
+  /*
+    StayingAPI price structure.
+  */
+
+  const priceData =
+    (
+      hotel?.price &&
+      typeof hotel.price === "object"
+    )
+      ? hotel.price
+      : {};
+
+  const totalPrice =
+    priceData?.totalPrice ??
+    hotel?.totalPrice ??
+    null;
+
+  const nightlyPrice =
+    priceData?.nightlyPrice ??
+    hotel?.nightlyPrice ??
+    null;
+
+  const currency =
+    priceData?.currency ||
+    priceData?.currencyCode ||
+    hotel?.currency ||
+    hotel?.currencyCode ||
+    "USD";
 
   const amenities =
-    Array.isArray(
-      hotel?.amenities
-    )
+    Array.isArray(hotel?.amenities)
       ? hotel.amenities
       : [];
 
@@ -1215,9 +1257,7 @@ function renderHotelCard(
               ? `
                 <div class="hotel-location">
                   📍 ${escapeHTML(
-                    formatHotelLocation(
-                      location
-                    )
+                    formatHotelLocation(location)
                   )}
                 </div>
               `
@@ -1260,39 +1300,56 @@ function renderHotelCard(
 
       </div>
 
-      <div class="hotel-card-bottom">
+      <!-- =================================
+           HOTEL PRICE
+      ================================== -->
 
-        <div class="hotel-price">
+      ${
+        totalPrice !== null &&
+        totalPrice !== undefined
+          ? `
+            <div class="hotel-price">
 
-          ${
-            price
-              ? `
-                <strong>
-                  ${escapeHTML(price)}
-                </strong>
-              `
-              : `
-                <span>
-                  Price available on booking
-                </span>
-              `
-          }
+              <strong>
+                ${escapeHTML(currency)}
+                ${formatNumber(totalPrice)}
+              </strong>
 
-        </div>
+              ${
+                nightlyPrice !== null &&
+                nightlyPrice !== undefined
+                  ? `
+                    <span class="hotel-nightly">
+                      ${escapeHTML(currency)}
+                      ${formatNumber(nightlyPrice)}
+                      / night
+                    </span>
+                  `
+                  : ""
+              }
 
-        ${
-          platform
-            ? `
-              <div class="hotel-platform">
-                ${escapeHTML(
-                  String(platform)
-                )}
-              </div>
-            `
-            : ""
-        }
+            </div>
+          `
+          : `
+            <div class="hotel-price">
+              <span>
+                Price available on booking
+              </span>
+            </div>
+          `
+      }
 
-      </div>
+      ${
+        platform
+          ? `
+            <div class="hotel-platform">
+              ${escapeHTML(
+                String(platform)
+              )}
+            </div>
+          `
+          : ""
+      }
 
       ${
         amenities.length
@@ -1341,93 +1398,6 @@ function renderHotelCard(
 }
 
 /* =========================================
-   FORMAT HOTEL PRICE
-========================================= */
-
-function formatHotelPrice(
-  price
-) {
-
-  if (
-    price === null ||
-    price === undefined
-  ) {
-    return "";
-  }
-
-  if (
-    typeof price === "number"
-  ) {
-
-    return `$${price}`;
-  }
-
-  if (
-    typeof price === "string"
-  ) {
-
-    return price.trim();
-  }
-
-  if (
-    typeof price === "object"
-  ) {
-
-    const amount =
-      price.amount ??
-      price.value ??
-      price.total ??
-      price.price ??
-      price.minPrice ??
-      null;
-
-    const currency =
-      price.currency ||
-      price.currencyCode ||
-      "USD";
-
-    if (
-      amount !== null &&
-      amount !== undefined
-    ) {
-
-      return `${currency} ${amount}`;
-    }
-
-    if (
-      price.formatted
-    ) {
-
-      return String(
-        price.formatted
-      );
-    }
-
-    if (
-      price.display
-    ) {
-
-      return String(
-        price.display
-      );
-    }
-
-    try {
-
-      return JSON.stringify(
-        price
-      );
-
-    } catch {
-
-      return "";
-    }
-  }
-
-  return "";
-}
-
-/* =========================================
    FORMAT HOTEL LOCATION
 ========================================= */
 
@@ -1452,6 +1422,7 @@ function formatHotelLocation(
 
   const parts = [
     location.address,
+    location.street,
     location.area,
     location.city,
     location.country
@@ -1499,6 +1470,29 @@ function formatAmenity(
 }
 
 /* =========================================
+   FORMAT NUMBER
+========================================= */
+
+function formatNumber(
+  value
+) {
+
+  const number =
+    Number(value);
+
+  if (
+    Number.isNaN(number)
+  ) {
+
+    return escapeHTML(
+      String(value)
+    );
+  }
+
+  return number.toFixed(2);
+}
+
+/* =========================================
    SAFE URL CHECK
 ========================================= */
 
@@ -1519,10 +1513,8 @@ function isSafeHttpUrl(
       new URL(value);
 
     return (
-      url.protocol ===
-        "https:" ||
-      url.protocol ===
-        "http:"
+      url.protocol === "https:" ||
+      url.protocol === "http:"
     );
 
   } catch {
@@ -1555,7 +1547,9 @@ function setupPlanNavigation() {
   });
 
   document
-    .querySelectorAll("[data-plan-section]")
+    .querySelectorAll(
+      "[data-plan-section]"
+    )
     .forEach((button) => {
 
       button.addEventListener(
@@ -1583,7 +1577,9 @@ function setupPlanNavigation() {
    SHOW PLAN SECTION
 ========================================= */
 
-function showPlanSection(sectionName) {
+function showPlanSection(
+  sectionName
+) {
 
   console.log(
     "SHOW PLAN SECTION:",
@@ -1609,57 +1605,92 @@ function showPlanSection(sectionName) {
       "[data-plan-section]"
     );
 
-  Object.keys(sections).forEach((key) => {
+  Object.keys(sections).forEach(
+    (key) => {
 
-    const section =
-      sections[key];
+      const section =
+        sections[key];
 
-    if (!section) {
-      return;
-    }
+      if (!section) {
+        return;
+      }
 
-    if (key === sectionName) {
+      if (
+        key === sectionName
+      ) {
 
-      section.classList.add("active");
+        section.classList.add(
+          "active"
+        );
 
-    } else {
+      } else {
 
-      section.classList.remove("active");
+        section.classList.remove(
+          "active"
+        );
 
-    }
-
-  });
-
-  buttons.forEach((button) => {
-
-    const key =
-      button.getAttribute(
-        "data-plan-section"
-      );
-
-    if (key === sectionName) {
-
-      button.classList.add("active");
-
-    } else {
-
-      button.classList.remove("active");
+      }
 
     }
+  );
 
-  });
+  buttons.forEach(
+    (button) => {
+
+      const key =
+        button.getAttribute(
+          "data-plan-section"
+        );
+
+      if (
+        key === sectionName
+      ) {
+
+        button.classList.add(
+          "active"
+        );
+
+      } else {
+
+        button.classList.remove(
+          "active"
+        );
+
+      }
+
+    }
+  );
 }
 
 /* =========================================
    ESCAPE HTML
 ========================================= */
 
-function escapeHTML(text) {
+function escapeHTML(
+  text
+) {
 
-  return String(text ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-      }
+  return String(
+    text ?? ""
+  )
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+    .replace(
+      /</g,
+      "&lt;"
+    )
+    .replace(
+      />/g,
+      "&gt;"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+    .replace(
+      /'/g,
+      "&#039;"
+    );
+}
