@@ -6,11 +6,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return res.status(500).json({
-        error: "OPENAI_API_KEY is missing in Vercel"
+        error: "GEMINI_API_KEY is missing in Vercel"
       });
     }
 
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     const prompt = `
 You are an expert AI travel planner.
 
-Create a personalized travel plan.
+Create a personalized travel plan for the user.
 
 Destination: ${destination}
 Start date: ${start || "Not specified"}
@@ -56,53 +56,59 @@ Create:
 6. Day-by-day itinerary
 7. Budget breakdown
 
-Respect the total budget.
-Keep recommendations practical.
-Do not claim live availability.
-Do not invent exact current prices.
+Important:
+- Respect the user's total budget.
+- Keep recommendations practical.
+- Do not claim live availability.
+- Do not invent exact current prices.
+- Clearly explain that prices are estimates when necessary.
+- Make the itinerary useful and realistic.
 `;
 
     const response = await fetch(
-      "https://api.openai.com/v1/responses",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
+        encodeURIComponent(apiKey),
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "gpt-5-mini",
-          input: prompt
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ]
         })
       }
     );
 
     const data = await response.json();
 
-    console.log("OPENAI STATUS:", response.status);
-    console.log("OPENAI RESPONSE:", data);
+    console.log("GEMINI STATUS:", response.status);
+    console.log("GEMINI RESPONSE:", data);
 
     if (!response.ok) {
       return res.status(500).json({
-        error: "OpenAI request failed",
-        openai_status: response.status,
+        error: "Gemini request failed",
+        gemini_status: response.status,
         details: data
       });
     }
 
-    let plan = data.output_text || "";
-
-    if (!plan && Array.isArray(data.output)) {
-      plan = data.output
-        .flatMap((item) => item.content || [])
-        .map((item) => item.text || "")
+    const plan =
+      data?.candidates?.[0]?.content?.parts
+        ?.map((part) => part.text || "")
         .filter(Boolean)
-        .join("\n");
-    }
+        .join("\n") || "";
 
     if (!plan) {
       return res.status(500).json({
-        error: "OpenAI returned no text",
+        error: "Gemini returned no text",
         details: data
       });
     }
@@ -119,4 +125,4 @@ Do not invent exact current prices.
       message: error.message
     });
   }
-          }
+}
