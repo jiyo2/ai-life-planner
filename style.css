@@ -1,6 +1,6 @@
 /* =========================================
-   AI LIFE PLANNER — MODERN UI V3
-   Complete stylesheet
+   AI LIFE PLANNER — MODERN UI V4
+   COMPLETE RESPONSIVE STYLESHEET
 ========================================= */
 
 * {
@@ -11,6 +11,7 @@
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -34,6 +35,7 @@ body {
   color: #172033;
   min-height: 100vh;
   line-height: 1.6;
+  overflow-x: hidden;
 }
 
 /* =========================================
@@ -53,6 +55,7 @@ select {
 
 button {
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 a {
@@ -63,6 +66,18 @@ a {
 img {
   max-width: 100%;
   display: block;
+}
+
+p,
+li,
+h1,
+h2,
+h3,
+h4,
+h5,
+span,
+strong {
+  overflow-wrap: anywhere;
 }
 
 /* =========================================
@@ -121,6 +136,8 @@ img {
 ========================================= */
 
 .card {
+  width: 100%;
+
   background: rgba(255, 255, 255, 0.94);
 
   border: 1px solid #e7ebf2;
@@ -162,6 +179,7 @@ input,
 textarea,
 select {
   width: 100%;
+  max-width: 100%;
 
   border: 1px solid #dfe4ec;
   border-radius: 14px;
@@ -205,6 +223,9 @@ textarea {
 }
 
 .chip {
+  appearance: none;
+  -webkit-appearance: none;
+
   border: 1px solid #dfe4ec;
 
   background: #ffffff;
@@ -218,19 +239,47 @@ textarea {
   font-size: 14px;
   font-weight: 650;
 
-  transition: all 0.2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+
+  user-select: none;
+  -webkit-user-select: none;
+
+  touch-action: manipulation;
+
+  position: relative;
+  z-index: 2;
 }
 
 .chip:hover {
   transform: translateY(-1px);
-
   border-color: #aeb9ff;
+}
+
+.chip:active {
+  transform: scale(0.97);
+}
+
+.chip:focus-visible {
+  outline: none;
+
+  border-color: #7185ff;
+
+  box-shadow:
+    0 0 0 4px rgba(113, 133, 255, 0.15);
 }
 
 .chip.active {
   background: #172033;
   color: #ffffff;
   border-color: #172033;
+
+  box-shadow:
+    0 5px 14px rgba(23, 32, 51, 0.14);
 }
 
 /* =========================================
@@ -258,6 +307,8 @@ textarea {
     transform 0.2s ease,
     box-shadow 0.2s ease,
     opacity 0.2s ease;
+
+  touch-action: manipulation;
 }
 
 .primary-button:hover {
@@ -303,6 +354,7 @@ textarea {
 
 .review-card h2 {
   font-size: 32px;
+  line-height: 1.2;
   margin-bottom: 22px;
 }
 
@@ -339,6 +391,8 @@ textarea {
   font-weight: 700;
 
   color: #3c4658;
+
+  min-height: 52px;
 }
 
 /* =========================================
@@ -433,6 +487,8 @@ textarea {
     background 0.2s ease,
     box-shadow 0.2s ease,
     color 0.2s ease;
+
+  touch-action: manipulation;
 }
 
 .plan-navigation button:hover {
@@ -460,6 +516,8 @@ textarea {
 ========================================= */
 
 .plan-content {
+  width: 100%;
+
   background: rgba(255, 255, 255, 0.96);
 
   border: 1px solid #e6eaf0;
@@ -487,11 +545,6 @@ textarea {
 
   animation: planFadeIn 0.3s ease;
 }
-
-/*
-   JS uses .active on plan sections.
-   These rules support that system.
-*/
 
 .plan-section {
   display: none;
@@ -533,6 +586,8 @@ textarea {
 ========================================= */
 
 .plan-subsection {
+  width: 100%;
+
   margin-top: 25px;
 
   padding-top: 22px;
@@ -576,6 +631,8 @@ textarea {
   border-radius: 13px;
 
   color: #4b5669;
+
+  overflow-wrap: anywhere;
 }
 
 .plan-subsection li::before {
@@ -621,6 +678,8 @@ textarea {
   border: 1px solid #edf0f4;
 
   border-radius: 15px;
+
+  min-width: 0;
 }
 
 .budget-item span {
@@ -664,6 +723,7 @@ textarea {
 
 .budget-total strong {
   font-size: 24px;
+  white-space: nowrap;
 }
 
 /* =========================================
@@ -674,9 +734,13 @@ textarea {
   display: grid;
 
   gap: 18px;
+
+  width: 100%;
 }
 
 .day-card {
+  width: 100%;
+
   background: #ffffff;
 
   border: 1px solid #e5e9ef;
@@ -749,6 +813,8 @@ textarea {
 ========================================= */
 
 #liveHotelsSection {
+  width: 100%;
+
   margin-top: 30px;
 
   padding-top: 28px;
@@ -758,6 +824,7 @@ textarea {
 
 .hotel-results {
   width: 100%;
+  min-width: 0;
 }
 
 .hotel-results h4 {
@@ -781,6 +848,30 @@ textarea {
 }
 
 /* =========================================
+   HOTEL STATUS
+========================================= */
+
+.hotel-status {
+  padding: 15px 17px;
+
+  background: #f7f8fb;
+
+  border: 1px solid #e8ebf1;
+
+  border-radius: 14px;
+
+  color: #4b5669;
+
+  font-weight: 650;
+
+  margin-bottom: 12px;
+}
+
+.hotel-results > p:not(.hotel-results-intro) {
+  color: #697386;
+}
+
+/* =========================================
    HOTEL LIST
 ========================================= */
 
@@ -793,6 +884,8 @@ textarea {
   gap: 18px;
 
   width: 100%;
+
+  min-width: 0;
 }
 
 /* =========================================
@@ -825,6 +918,8 @@ textarea {
     transform 0.2s ease,
     box-shadow 0.2s ease,
     border-color 0.2s ease;
+
+  overflow: hidden;
 }
 
 .hotel-card:hover {
@@ -857,4 +952,808 @@ textarea {
 
   color: #172033;
 
- 
+  font-size: 13px;
+  font-weight: 800;
+
+  flex-shrink: 0;
+}
+
+/* =========================================
+   HOTEL NAME
+========================================= */
+
+.hotel-name {
+  font-size: 19px;
+
+  line-height: 1.35;
+
+  color: #172033;
+
+  margin-bottom: 10px;
+
+  font-weight: 800;
+
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* =========================================
+   HOTEL LOCATION
+========================================= */
+
+.hotel-location {
+  color: #697386;
+
+  font-size: 14px;
+
+  line-height: 1.55;
+
+  margin-bottom: 9px;
+
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* =========================================
+   HOTEL STAR RATING
+========================================= */
+
+.hotel-rating {
+  color: #4b5669;
+
+  font-size: 14px;
+
+  margin-bottom: 7px;
+
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   HOTEL GUEST RATING
+========================================= */
+
+.hotel-guest-rating {
+  display: flex;
+
+  align-items: center;
+
+  flex-wrap: wrap;
+
+  gap: 4px;
+
+  color: #4b5669;
+
+  font-size: 14px;
+
+  margin-bottom: 10px;
+}
+
+.hotel-guest-rating strong {
+  color: #172033;
+
+  font-size: 16px;
+}
+
+.hotel-guest-rating span {
+  color: #697386;
+}
+
+/* =========================================
+   HOTEL PRICE
+========================================= */
+
+.hotel-price {
+  display: flex;
+
+  align-items: baseline;
+
+  flex-wrap: wrap;
+
+  gap: 7px;
+
+  margin: 7px 0 12px;
+
+  color: #172033;
+
+  overflow-wrap: anywhere;
+}
+
+.hotel-price strong {
+  font-size: 20px;
+
+  font-weight: 850;
+
+  overflow-wrap: anywhere;
+}
+
+.hotel-nightly {
+  color: #697386;
+
+  font-size: 13px;
+
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   HOTEL PLATFORM
+========================================= */
+
+.hotel-platform {
+  display: inline-flex;
+
+  align-self: flex-start;
+
+  margin-bottom: 14px;
+
+  padding: 5px 9px;
+
+  background: #f3f5f8;
+
+  border-radius: 8px;
+
+  color: #596579;
+
+  font-size: 12px;
+
+  font-weight: 750;
+
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   HOTEL AMENITIES
+========================================= */
+
+.hotel-amenities {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 7px;
+
+  width: 100%;
+
+  margin-bottom: 18px;
+}
+
+.hotel-amenity {
+  display: inline-flex;
+
+  align-items: center;
+
+  max-width: 100%;
+
+  padding: 6px 9px;
+
+  background: #f8f9fb;
+
+  border: 1px solid #edf0f4;
+
+  border-radius: 8px;
+
+  color: #596579;
+
+  font-size: 12px;
+
+  line-height: 1.35;
+
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* =========================================
+   HOTEL BUTTON
+========================================= */
+
+.hotel-button {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+
+  min-height: 46px;
+
+  margin-top: auto;
+
+  padding: 11px 15px;
+
+  background: #172033;
+
+  color: #ffffff;
+
+  border-radius: 12px;
+
+  font-size: 14px;
+
+  font-weight: 800;
+
+  text-align: center;
+
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    box-shadow 0.2s ease;
+
+  touch-action: manipulation;
+}
+
+.hotel-button:hover {
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 8px 20px rgba(23, 32, 51, 0.16);
+}
+
+.hotel-button:active {
+  transform: translateY(0);
+}
+
+.hotel-button.disabled {
+  background: #eef0f4;
+
+  color: #8a93a3;
+
+  cursor: default;
+
+  box-shadow: none;
+}
+
+/* =========================================
+   HOTEL NOTE
+========================================= */
+
+.hotel-note {
+  margin-top: 15px;
+
+  color: #7a8494;
+
+  font-size: 13px;
+
+  line-height: 1.6;
+
+  padding: 12px 14px;
+
+  background: #f8f9fb;
+
+  border-radius: 10px;
+}
+
+/* =========================================
+   RESPONSIVE — TABLET
+========================================= */
+
+@media (max-width: 850px) {
+
+  #app {
+    padding: 30px 16px 70px;
+  }
+
+  .hero {
+    padding: 45px 15px 30px;
+  }
+
+  .card {
+    padding: 28px;
+  }
+
+  .plan-navigation {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .plan-content {
+    padding: 26px;
+  }
+
+  .hotel-list {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* =========================================
+   RESPONSIVE — MOBILE
+========================================= */
+
+@media (max-width: 700px) {
+
+  body {
+    font-size: 15px;
+  }
+
+  #app {
+    padding: 18px 10px 55px;
+  }
+
+  /* -----------------------------------------
+     HERO
+  ----------------------------------------- */
+
+  .hero {
+    padding: 32px 8px 25px;
+  }
+
+  .hero h1 {
+    font-size: 38px;
+
+    letter-spacing: -1.7px;
+
+    line-height: 1.05;
+  }
+
+  .hero p {
+    font-size: 15px;
+
+    line-height: 1.65;
+  }
+
+  /* -----------------------------------------
+     FORM CARD
+  ----------------------------------------- */
+
+  .card {
+    padding: 20px 16px;
+
+    border-radius: 22px;
+  }
+
+  .field {
+    margin-bottom: 20px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+
+    gap: 0;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* -----------------------------------------
+     INTEREST CHIPS
+  ----------------------------------------- */
+
+  .chips {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 8px;
+
+    width: 100%;
+  }
+
+  .chip {
+    min-height: 42px;
+
+    padding: 9px 13px;
+
+    font-size: 13px;
+
+    touch-action: manipulation;
+
+    user-select: none;
+    -webkit-user-select: none;
+
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* -----------------------------------------
+     REVIEW
+  ----------------------------------------- */
+
+  #review {
+    padding: 20px 10px;
+
+    align-items: flex-start;
+  }
+
+  .review-card {
+    padding: 22px 17px;
+
+    border-radius: 22px;
+  }
+
+  .review-card h2 {
+    font-size: 27px;
+  }
+
+  .review-actions {
+    grid-template-columns: 1fr;
+
+    gap: 10px;
+  }
+
+  .review-actions > button:first-child {
+    min-height: 48px;
+  }
+
+  /* -----------------------------------------
+     PLAN
+  ----------------------------------------- */
+
+  #plan {
+    padding: 10px 8px 55px;
+  }
+
+  .plan-container {
+    width: 100%;
+  }
+
+  .plan-header {
+    padding: 30px 8px 22px;
+  }
+
+  .plan-header h1,
+  #planTitle {
+    font-size: 32px;
+
+    line-height: 1.1;
+
+    letter-spacing: -1px;
+  }
+
+  .plan-header p,
+  #planIntro {
+    font-size: 15px;
+
+    line-height: 1.65;
+  }
+
+  /* -----------------------------------------
+     PLAN NAVIGATION
+  ----------------------------------------- */
+
+  .plan-navigation {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+
+    gap: 8px;
+
+    margin-bottom: 18px;
+  }
+
+  .plan-navigation button {
+    min-height: 58px;
+
+    padding: 11px 7px;
+
+    border-radius: 14px;
+
+    font-size: 12px;
+
+    line-height: 1.35;
+  }
+
+  /* -----------------------------------------
+     PLAN CONTENT
+  ----------------------------------------- */
+
+  .plan-content {
+    padding: 19px 15px;
+
+    border-radius: 22px;
+  }
+
+  .plan-main-text {
+    font-size: 15px;
+
+    line-height: 1.75;
+  }
+
+  .plan-subsection {
+    margin-top: 21px;
+
+    padding-top: 19px;
+  }
+
+  .plan-subsection h4 {
+    font-size: 16px;
+  }
+
+  .plan-subsection li {
+    padding: 11px 12px 11px 34px;
+
+    font-size: 14px;
+  }
+
+  .plan-subsection li::before {
+    left: 12px;
+  }
+
+  /* -----------------------------------------
+     BUDGET
+  ----------------------------------------- */
+
+  .budget-grid {
+    grid-template-columns: 1fr;
+
+    gap: 9px;
+  }
+
+  .budget-item {
+    padding: 14px;
+
+    gap: 10px;
+  }
+
+  .budget-item span {
+    font-size: 13px;
+  }
+
+  .budget-item strong {
+    font-size: 15px;
+  }
+
+  .budget-total {
+    padding: 17px;
+
+    gap: 12px;
+
+    border-radius: 15px;
+  }
+
+  .budget-total span {
+    font-size: 14px;
+  }
+
+  .budget-total strong {
+    font-size: 20px;
+  }
+
+  /* -----------------------------------------
+     DAYS
+  ----------------------------------------- */
+
+  #daysOut {
+    gap: 13px;
+  }
+
+  .day-card {
+    padding: 18px;
+
+    border-radius: 17px;
+  }
+
+  .day-card h3 {
+    font-size: 20px;
+
+    line-height: 1.35;
+
+    margin-bottom: 16px;
+  }
+
+  .day-period {
+    padding: 13px 0;
+  }
+
+  .day-period span {
+    font-size: 13px;
+  }
+
+  .day-period p {
+    font-size: 14px;
+
+    line-height: 1.65;
+  }
+
+  /* -----------------------------------------
+     LIVE HOTELS
+  ----------------------------------------- */
+
+  #liveHotelsSection {
+    margin-top: 24px;
+
+    padding-top: 22px;
+  }
+
+  .hotel-results h4 {
+    font-size: 19px;
+
+    line-height: 1.35;
+  }
+
+  .hotel-results-intro {
+    font-size: 14px;
+
+    margin-bottom: 17px;
+  }
+
+  /*
+     IMPORTANT:
+     ONE HOTEL CARD PER ROW ON MOBILE
+  */
+
+  .hotel-list {
+    display: grid;
+
+    grid-template-columns: 1fr !important;
+
+    gap: 14px;
+
+    width: 100%;
+  }
+
+  .hotel-card {
+    width: 100%;
+
+    min-width: 0;
+
+    padding: 18px;
+
+    border-radius: 18px;
+  }
+
+  .hotel-name {
+    font-size: 18px;
+
+    line-height: 1.35;
+
+    margin-bottom: 9px;
+
+    overflow-wrap: anywhere;
+
+    word-break: break-word;
+  }
+
+  .hotel-location {
+    font-size: 13px;
+
+    line-height: 1.55;
+
+    overflow-wrap: anywhere;
+
+    word-break: break-word;
+  }
+
+  .hotel-rating {
+    font-size: 13px;
+  }
+
+  .hotel-guest-rating {
+    font-size: 13px;
+  }
+
+  .hotel-price strong {
+    font-size: 19px;
+  }
+
+  .hotel-platform {
+    font-size: 11px;
+  }
+
+  .hotel-amenities {
+    gap: 6px;
+
+    margin-bottom: 15px;
+  }
+
+  .hotel-amenity {
+    font-size: 11px;
+
+    padding: 6px 8px;
+  }
+
+  .hotel-button {
+    width: 100%;
+
+    min-height: 46px;
+
+    font-size: 14px;
+  }
+}
+
+/* =========================================
+   RESPONSIVE — SMALL PHONES
+========================================= */
+
+@media (max-width: 400px) {
+
+  #app {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .hero h1 {
+    font-size: 34px;
+  }
+
+  .card {
+    padding: 18px 14px;
+  }
+
+  .chip {
+    font-size: 12px;
+
+    padding: 8px 11px;
+
+    min-height: 40px;
+  }
+
+  .plan-navigation button {
+    font-size: 11px;
+
+    min-height: 55px;
+  }
+
+  .plan-content {
+    padding: 17px 13px;
+  }
+
+  .hotel-card {
+    padding: 16px;
+
+    border-radius: 16px;
+  }
+
+  .hotel-name {
+    font-size: 17px;
+  }
+
+  .hotel-results h4 {
+    font-size: 18px;
+  }
+
+  .budget-total strong {
+    font-size: 18px;
+  }
+}
+
+/* =========================================
+   ACCESSIBILITY
+========================================= */
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(113, 133, 255, 0.35);
+
+  outline-offset: 2px;
+}
+
+/* =========================================
+   TOUCH DEVICES
+========================================= */
+
+@media (hover: none) {
+
+  .chip:hover,
+  .primary-button:hover,
+  .hotel-card:hover,
+  .hotel-button:hover,
+  .plan-navigation button:hover {
+    transform: none;
+  }
+
+  .chip:active {
+    transform: scale(0.97);
+  }
+}
+
+/* =========================================
+   PREVENT HORIZONTAL OVERFLOW
+========================================= */
+
+#app,
+#review,
+#plan,
+.plan-container,
+.plan-content,
+.plan-section,
+.hotel-results,
+.hotel-list,
+.hotel-card {
+  max-width: 100%;
+}
+
+/* =========================================
+   END
+========================================= */
