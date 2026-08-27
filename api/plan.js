@@ -1,4 +1,4 @@
-console.log("PLAN.JS PRODUCTION V9 RUNNING");
+console.log("PLAN.JS PRODUCTION V10 RUNNING");
 
 export default async function handler(req, res) {
   console.log("PLAN API START");
@@ -18,11 +18,8 @@ export default async function handler(req, res) {
     // API KEYS
     // =========================================================
 
-    const rawGeminiKey =
-      process.env.GEMINI_API_KEY;
-
-    const rawStayingApiKey =
-      process.env.STAYINGAPI_KEY;
+    const rawGeminiKey = process.env.GEMINI_API_KEY;
+    const rawStayingApiKey = process.env.STAYINGAPI_KEY;
 
     console.log(
       "GEMINI KEY EXISTS:",
@@ -36,55 +33,42 @@ export default async function handler(req, res) {
 
     if (!rawGeminiKey) {
       return res.status(500).json({
-        error:
-          "GEMINI_API_KEY is missing in Vercel"
+        error: "GEMINI_API_KEY is missing in Vercel"
       });
     }
 
     if (!rawStayingApiKey) {
       return res.status(500).json({
-        error:
-          "STAYINGAPI_KEY is missing in Vercel"
+        error: "STAYINGAPI_KEY is missing in Vercel"
       });
     }
 
-    const geminiKey =
-      String(rawGeminiKey).trim();
-
-    const stayingApiKey =
-      String(rawStayingApiKey).trim();
+    const geminiKey = String(rawGeminiKey).trim();
+    const stayingApiKey = String(rawStayingApiKey).trim();
 
     if (!geminiKey) {
       return res.status(500).json({
-        error:
-          "GEMINI_API_KEY is empty"
+        error: "GEMINI_API_KEY is empty"
       });
     }
 
     if (!stayingApiKey) {
       return res.status(500).json({
-        error:
-          "STAYINGAPI_KEY is empty"
+        error: "STAYINGAPI_KEY is empty"
       });
     }
 
-    if (
-      geminiKey.includes("…") ||
-      geminiKey.includes("...")
-    ) {
+    if (geminiKey.includes("…")) {
       return res.status(500).json({
         error:
-          "GEMINI_API_KEY contains invalid placeholder characters"
+          "GEMINI_API_KEY contains an invalid ellipsis character"
       });
     }
 
-    if (
-      stayingApiKey.includes("…") ||
-      stayingApiKey.includes("...")
-    ) {
+    if (stayingApiKey.includes("…")) {
       return res.status(500).json({
         error:
-          "STAYINGAPI_KEY contains invalid placeholder characters"
+          "STAYINGAPI_KEY contains an invalid ellipsis character"
       });
     }
 
@@ -92,8 +76,7 @@ export default async function handler(req, res) {
     // REQUEST DATA
     // =========================================================
 
-    const body =
-      req.body || {};
+    const body = req.body || {};
 
     const destination =
       typeof body.destination === "string"
@@ -105,11 +88,9 @@ export default async function handler(req, res) {
         ? body.start.trim()
         : "";
 
-    const days =
-      Number(body.days);
+    const days = Number(body.days);
 
-    const budget =
-      Number(body.budget);
+    const budget = Number(body.budget);
 
     const travelers =
       typeof body.travelers === "string"
@@ -135,18 +116,15 @@ export default async function handler(req, res) {
         ? body.notes.trim()
         : "";
 
-    console.log(
-      "TRIP DATA:",
-      {
-        destination,
-        start,
-        days,
-        budget,
-        travelers,
-        interests,
-        notes
-      }
-    );
+    console.log("TRIP DATA:", {
+      destination,
+      start,
+      days,
+      budget,
+      travelers,
+      interests,
+      notes
+    });
 
     // =========================================================
     // VALIDATION
@@ -154,8 +132,7 @@ export default async function handler(req, res) {
 
     if (!destination) {
       return res.status(400).json({
-        error:
-          "Destination is required"
+        error: "Destination is required"
       });
     }
 
@@ -165,8 +142,7 @@ export default async function handler(req, res) {
       days > 60
     ) {
       return res.status(400).json({
-        error:
-          "Invalid number of days"
+        error: "Invalid number of days"
       });
     }
 
@@ -175,8 +151,7 @@ export default async function handler(req, res) {
       budget <= 0
     ) {
       return res.status(400).json({
-        error:
-          "Invalid budget"
+        error: "Invalid budget"
       });
     }
 
@@ -224,9 +199,7 @@ export default async function handler(req, res) {
     // DATE HELPERS
     // =========================================================
 
-    function isValidDateString(
-      value
-    ) {
+    function isValidDateString(value) {
       if (
         !/^\d{4}-\d{2}-\d{2}$/.test(
           value
@@ -403,7 +376,7 @@ Consider:
 
 Do not claim that a particular hotel is available.
 
-The application separately searches live hotel inventory.
+The system separately searches live hotel inventory.
 
 TRANSPORTATION
 
@@ -433,20 +406,9 @@ Do not invent businesses.
 
 RESTAURANTS
 
-IMPORTANT:
-
 Recommend real, established restaurants or food venues in ${destination}.
 
 Return up to 8 restaurant recommendations when possible.
-
-Prioritize restaurants that are:
-
-- well-known
-- established
-- relevant to the destination
-- relevant to the user's interests
-- geographically useful for the itinerary
-- suitable for the user's budget
 
 Do NOT invent restaurant names.
 
@@ -474,10 +436,6 @@ priceLevel must be one of:
 "$$"
 "$$$"
 "$$$$"
-
-The description must be a short recommendation, not a claim of live data.
-
-The application will create a Google Maps search link automatically.
 
 DAY QUALITY
 
@@ -628,51 +586,82 @@ Before returning JSON verify:
     const geminiURL =
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
 
-    const geminiResponse =
-      await fetch(
-        geminiURL,
-        {
-          method: "POST",
+    let geminiResponse;
 
-          headers: {
-            "Content-Type":
-              "application/json",
+    try {
+      geminiResponse =
+        await fetch(
+          geminiURL,
+          {
+            method: "POST",
 
-            "x-goog-api-key":
-              geminiKey
-          },
+            headers: {
+              "Content-Type":
+                "application/json",
 
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
+              "x-goog-api-key":
+                geminiKey
+            },
 
-                parts: [
-                  {
-                    text:
-                      prompt
-                  }
-                ]
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: "user",
+
+                  parts: [
+                    {
+                      text:
+                        prompt
+                    }
+                  ]
+                }
+              ],
+
+              generationConfig: {
+                temperature: 0.25,
+
+                responseMimeType:
+                  "application/json"
               }
-            ],
-
-            generationConfig: {
-              temperature: 0.25,
-
-              responseMimeType:
-                "application/json"
-            }
-          })
-        }
+            })
+          }
+        );
+    } catch (error) {
+      console.error(
+        "GEMINI FETCH ERROR:",
+        error
       );
+
+      return res.status(500).json({
+        error:
+          "Unable to connect to Gemini",
+        message:
+          error?.message ||
+          "Gemini connection failed"
+      });
+    }
 
     console.log(
       "GEMINI STATUS:",
       geminiResponse.status
     );
 
-    const geminiData =
-      await geminiResponse.json();
+    let geminiData = {};
+
+    try {
+      geminiData =
+        await geminiResponse.json();
+    } catch (error) {
+      console.error(
+        "GEMINI JSON ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          "Gemini returned invalid JSON response"
+      });
+    }
 
     if (!geminiResponse.ok) {
       console.error(
@@ -754,20 +743,21 @@ Before returning JSON verify:
     }
 
     const firstBrace =
-      cleanText.indexOf(
-        "{"
-      );
+      cleanText.indexOf("{");
 
     const lastBrace =
-      cleanText.lastIndexOf(
-        "}"
-      );
+      cleanText.lastIndexOf("}");
 
     if (
       firstBrace === -1 ||
       lastBrace === -1 ||
       lastBrace <= firstBrace
     ) {
+      console.error(
+        "INVALID GEMINI JSON TEXT:",
+        cleanText.slice(0, 1000)
+      );
+
       return res.status(500).json({
         error:
           "Gemini returned invalid JSON"
@@ -949,7 +939,6 @@ Before returning JSON verify:
       return data
         .map(
           restaurant => {
-
             if (
               !restaurant ||
               typeof restaurant !==
@@ -1111,8 +1100,7 @@ Before returning JSON verify:
       Math.max(
         0,
         Number(
-          plan.budget
-            .accommodation || 0
+          plan.budget.accommodation || 0
         )
       );
 
@@ -1120,8 +1108,7 @@ Before returning JSON verify:
       Math.max(
         0,
         Number(
-          plan.budget
-            .transportation || 0
+          plan.budget.transportation || 0
         )
       );
 
@@ -1129,8 +1116,7 @@ Before returning JSON verify:
       Math.max(
         0,
         Number(
-          plan.budget
-            .food || 0
+          plan.budget.food || 0
         )
       );
 
@@ -1138,8 +1124,7 @@ Before returning JSON verify:
       Math.max(
         0,
         Number(
-          plan.budget
-            .activities || 0
+          plan.budget.activities || 0
         )
       );
 
@@ -1147,8 +1132,7 @@ Before returning JSON verify:
       Math.max(
         0,
         Number(
-          plan.budget
-            .other || 0
+          plan.budget.other || 0
         )
       );
 
@@ -1229,38 +1213,35 @@ Before returning JSON verify:
 
     plan.budget.accommodation =
       Number(
-        plan.budget
-          .accommodation || 0
+        plan.budget.accommodation || 0
       );
 
     plan.budget.transportation =
       Number(
-        plan.budget
-          .transportation || 0
+        plan.budget.transportation || 0
       );
 
     plan.budget.food =
       Number(
-        plan.budget
-          .food || 0
+        plan.budget.food || 0
       );
 
     plan.budget.activities =
       Number(
-        plan.budget
-          .activities || 0
+        plan.budget.activities || 0
       );
 
     plan.budget.other =
       Number(
-        plan.budget
-          .other || 0
+        plan.budget.other || 0
       );
 
     plan.budget.total =
-      Number(
-        calculatedTotal
-      );
+      plan.budget.accommodation +
+      plan.budget.transportation +
+      plan.budget.food +
+      plan.budget.activities +
+      plan.budget.other;
 
     // =========================================================
     // NORMALIZE DAYS
@@ -1271,7 +1252,6 @@ Before returning JSON verify:
         .slice(0, days)
         .map(
           (day, index) => {
-
             if (
               !day ||
               typeof day !==
@@ -1286,8 +1266,9 @@ Before returning JSON verify:
 
               title:
                 typeof day.title ===
-                  "string"
-                  ? day.title
+                  "string" &&
+                day.title.trim()
+                  ? day.title.trim()
                   : `Day ${index + 1}`,
 
               morning:
@@ -1334,7 +1315,8 @@ Before returning JSON verify:
     let hotels = [];
 
     let hotelSearch = {
-      enabled: false,
+      enabled:
+        false,
 
       status:
         "not_searched",
@@ -1351,43 +1333,17 @@ Before returning JSON verify:
 
       adults,
 
-      children: 0,
-
       platforms: [
         "booking",
         "google"
       ],
 
-      creditsCharged: 0,
+      creditsCharged:
+        0,
 
-      partial: false,
-
-      warnings: []
+      count:
+        0
     };
-
-    // =========================================================
-    // HOTEL SEARCH FALLBACK URL
-    // =========================================================
-
-    function createHotelSearchUrl() {
-      const query =
-        [
-          destination,
-          "hotels"
-        ]
-          .filter(Boolean)
-          .join(" ");
-
-      return (
-        "https://www.google.com/search?q=" +
-        encodeURIComponent(
-          query
-        )
-      );
-    }
-
-    hotelSearch.searchUrl =
-      createHotelSearchUrl();
 
     // =========================================================
     // HOTEL NORMALIZER
@@ -1414,218 +1370,156 @@ Before returning JSON verify:
               return null;
             }
 
-            const name =
-              typeof hotel.name ===
-                "string"
-                ? hotel.name.trim()
-                : "";
-
-            if (!name) {
-              return null;
-            }
-
-            const rawPrice =
-              hotel.price ??
-              null;
-
-            return {
+            const normalized = {
               id:
-                hotel.id ||
+                hotel?.id ||
                 null,
 
               platform:
-                hotel.platform ||
+                hotel?.platform ||
                 null,
 
               platformListingId:
-                hotel.platformListingId ||
+                hotel?.platformListingId ||
                 null,
 
-              name,
+              name:
+                typeof hotel?.name ===
+                  "string"
+                  ? hotel.name.trim()
+                  : "Unnamed property",
 
               propertyType:
-                hotel.propertyType ||
+                hotel?.propertyType ||
                 null,
 
               url:
-                hotel.url ||
+                hotel?.url ||
                 null,
 
               location:
-                hotel.location ||
+                hotel?.location ||
                 null,
 
               starRating:
-                hotel.starRating ??
+                hotel?.starRating ??
                 null,
 
               guestRating:
-                hotel.guestRating ??
+                hotel?.guestRating ??
                 null,
 
               ratingScale:
-                hotel.ratingScale ??
+                hotel?.ratingScale ??
                 null,
 
               reviewCount:
-                hotel.reviewCount ??
+                hotel?.reviewCount ??
                 null,
 
               amenities:
                 Array.isArray(
-                  hotel.amenities
+                  hotel?.amenities
                 )
                   ? hotel.amenities
                   : [],
 
               price:
-                rawPrice
+                hotel?.price ||
+                null
             };
+
+            if (
+              !normalized.name ||
+              !normalized.price
+            ) {
+              return null;
+            }
+
+            return normalized;
           }
         )
-        .filter(
-          hotel =>
-            hotel &&
-            hotel.name
-        )
+        .filter(Boolean)
         .slice(0, 10);
     }
 
     // =========================================================
-    // EXTRACT HOTEL DATA FROM STAYINGAPI
+    // STAYINGAPI ERROR PARSER
     // =========================================================
 
-    function extractHotelResult(
-      payload
+    function getStayingApiError(
+      data,
+      status
     ) {
-      if (!payload) {
-        return {
-          data: [],
-          meta: {}
-        };
-      }
+      const errorObject =
+        data?.error;
 
-      // Standard synchronous response:
-      // { data: [...], meta: {...} }
+      const errorCode =
+        errorObject?.code ||
+        null;
 
-      if (
-        Array.isArray(
-          payload.data
-        )
-      ) {
-        return {
-          data:
-            payload.data,
+      const errorType =
+        errorObject?.type ||
+        null;
 
-          meta:
-            payload.meta ||
-            {}
-        };
-      }
-
-      // Job completed:
-      // { data: { status:"completed", result:[...] } }
-
-      if (
-        Array.isArray(
-          payload?.data?.result
-        )
-      ) {
-        return {
-          data:
-            payload.data.result,
-
-          meta:
-            payload.meta ||
-            {}
-        };
-      }
-
-      // Job completed:
-      // { data: { status:"completed", result:{data:[...],meta:{...}}}}
-
-      if (
-        Array.isArray(
-          payload?.data?.result?.data
-        )
-      ) {
-        return {
-          data:
-            payload.data.result.data,
-
-          meta:
-            payload.data.result.meta ||
-            payload.meta ||
-            {}
-        };
-      }
-
-      // Alternative:
-      // { result: [...] }
-
-      if (
-        Array.isArray(
-          payload.result
-        )
-      ) {
-        return {
-          data:
-            payload.result,
-
-          meta:
-            payload.meta ||
-            {}
-        };
-      }
-
-      // Alternative:
-      // { result: { data:[...] } }
-
-      if (
-        Array.isArray(
-          payload?.result?.data
-        )
-      ) {
-        return {
-          data:
-            payload.result.data,
-
-          meta:
-            payload.result.meta ||
-            payload.meta ||
-            {}
-        };
-      }
+      const errorMessage =
+        errorObject?.message ||
+        data?.message ||
+        (
+          typeof errorObject ===
+          "string"
+            ? errorObject
+            : null
+        ) ||
+        "Hotel search failed";
 
       return {
-        data: [],
-        meta:
-          payload.meta ||
-          {}
+        type:
+          errorType,
+
+        code:
+          errorCode,
+
+        message:
+          errorMessage,
+
+        status,
+
+        retryable:
+          Boolean(
+            errorObject?.retryable
+          ),
+
+        requestId:
+          errorObject?.requestId ||
+          null,
+
+        creditsCharged:
+          Number(
+            errorObject?.creditsCharged ||
+            data?.meta?.creditsCharged ||
+            0
+          ),
+
+        docUrl:
+          errorObject?.docUrl ||
+          null
       };
     }
 
     // =========================================================
-    // POLL STAYINGAPI JOB
+    // STAYINGAPI JOB POLLING
     // =========================================================
 
     async function pollStayingJob(
       jobId,
       apiKey
     ) {
-      /*
-       * StayingAPI documents that live calls can return 202
-       * and the job may take tens of seconds or longer.
-       *
-       * We intentionally keep this server-side wait bounded
-       * so Vercel does not unnecessarily hold the function.
-       */
-
       const maxWaitMs =
-        50000;
+        150000;
 
       const intervalMs =
-        3000;
+        4000;
 
       const startedAt =
         Date.now();
@@ -1662,18 +1556,18 @@ Before returning JSON verify:
                 method: "GET",
 
                 headers: {
-                  "Authorization":
+                  Authorization:
                     `Bearer ${apiKey}`,
 
-                  "Accept":
+                  Accept:
                     "application/json"
                 }
               }
             );
-        } catch (fetchError) {
+        } catch (error) {
           console.error(
             "STAYINGAPI JOB FETCH ERROR:",
-            fetchError
+            error
           );
 
           throw new Error(
@@ -1691,41 +1585,16 @@ Before returning JSON verify:
         try {
           jobData =
             await jobResponse.json();
-        } catch (jsonError) {
-          console.error(
-            "STAYINGAPI JOB JSON ERROR:",
-            jsonError
-          );
-
+        } catch (error) {
           throw new Error(
             "StayingAPI returned invalid job response"
           );
         }
 
-        console.log(
-          "STAYINGAPI JOB RESPONSE:",
-          JSON.stringify(
-            jobData
-          ).slice(0, 4000)
-        );
-
-        if (
-          !jobResponse.ok
-        ) {
-          throw new Error(
-            jobData?.data?.error ||
-            jobData?.error ||
-            jobData?.message ||
-            "StayingAPI job request failed"
-          );
-        }
-
         const jobStatus =
-          String(
-            jobData?.data?.status ||
-            jobData?.status ||
-            ""
-          ).toLowerCase();
+          jobData?.data?.status ||
+          jobData?.status ||
+          "";
 
         console.log(
           "STAYINGAPI JOB STATE:",
@@ -1734,34 +1603,67 @@ Before returning JSON verify:
         );
 
         if (
+          !jobResponse.ok
+        ) {
+          const parsedError =
+            getStayingApiError(
+              jobData,
+              jobResponse.status
+            );
+
+          throw new Error(
+            parsedError.message
+          );
+        }
+
+        if (
           jobStatus ===
-            "completed" ||
-          jobStatus ===
-            "complete" ||
-          jobStatus ===
-            "success" ||
-          jobStatus ===
-            "succeeded" ||
-          jobStatus ===
-            "done"
+          "completed"
         ) {
           console.log(
             "STAYINGAPI JOB COMPLETED"
           );
 
-          const extracted =
-            extractHotelResult(
-              jobData
-            );
+          const result =
+            jobData?.data?.result;
+
+          if (
+            Array.isArray(
+              result
+            )
+          ) {
+            return {
+              data:
+                result,
+
+              meta:
+                jobData?.meta ||
+                {}
+            };
+          }
+
+          if (
+            Array.isArray(
+              result?.data
+            )
+          ) {
+            return {
+              data:
+                result.data,
+
+              meta:
+                result.meta ||
+                jobData?.meta ||
+                {}
+            };
+          }
 
           return {
-            timeout: false,
-
-            data:
-              extracted.data,
+            data: [],
 
             meta:
-              extracted.meta
+              jobData?.meta ||
+              {}
           };
         }
 
@@ -1769,24 +1671,16 @@ Before returning JSON verify:
           jobStatus ===
             "failed" ||
           jobStatus ===
-            "error" ||
-          jobStatus ===
-            "cancelled" ||
-          jobStatus ===
-            "canceled"
+            "error"
         ) {
-          console.error(
-            "STAYINGAPI JOB FAILED:",
-            JSON.stringify(
-              jobData
-            )
-          );
+          const parsedError =
+            getStayingApiError(
+              jobData,
+              jobResponse.status
+            );
 
           throw new Error(
-            jobData?.data?.error ||
-            jobData?.error ||
-            jobData?.message ||
-            "StayingAPI hotel search job failed"
+            parsedError.message
           );
         }
 
@@ -1804,7 +1698,8 @@ Before returning JSON verify:
       );
 
       return {
-        timeout: true,
+        timeout:
+          true,
 
         data: [],
 
@@ -1813,7 +1708,7 @@ Before returning JSON verify:
     }
 
     // =========================================================
-    // START HOTEL SEARCH
+    // START REAL HOTEL SEARCH
     // =========================================================
 
     if (validStart) {
@@ -1878,11 +1773,7 @@ Before returning JSON verify:
         stayingURL
       );
 
-      let stayingResponse =
-        null;
-
-      let stayingData =
-        null;
+      let stayingResponse;
 
       try {
 
@@ -1893,37 +1784,47 @@ Before returning JSON verify:
               method: "GET",
 
               headers: {
-                "Authorization":
+                Authorization:
                   `Bearer ${stayingApiKey}`,
 
-                "Accept":
+                Accept:
                   "application/json"
               }
             }
           );
 
-      } catch (fetchError) {
+      } catch (error) {
 
         console.error(
           "STAYINGAPI SEARCH FETCH ERROR:",
-          fetchError
+          error
         );
 
         hotelSearch = {
           ...hotelSearch,
 
-          enabled: true,
+          enabled:
+            true,
 
           status:
             "error",
 
           error:
-            "Unable to connect to StayingAPI"
+            {
+              code:
+                "connection_error",
+
+              message:
+                "Unable to connect to the live hotel search service.",
+
+              retryable:
+                true
+            }
         };
       }
 
       // =======================================================
-      // RESPONSE EXISTS
+      // PROCESS STAYINGAPI RESPONSE
       // =======================================================
 
       if (stayingResponse) {
@@ -1933,40 +1834,51 @@ Before returning JSON verify:
           stayingResponse.status
         );
 
+        let stayingData = {};
+
         try {
 
           stayingData =
             await stayingResponse.json();
 
-        } catch (jsonError) {
+        } catch (error) {
 
           console.error(
             "STAYINGAPI JSON ERROR:",
-            jsonError
+            error
           );
 
           hotelSearch = {
             ...hotelSearch,
 
-            enabled: true,
+            enabled:
+              true,
 
             status:
               "error",
 
             error:
-              "StayingAPI returned invalid JSON"
+              {
+                code:
+                  "invalid_response",
+
+                message:
+                  "StayingAPI returned an invalid response.",
+
+                retryable:
+                  true
+              }
           };
         }
-
-        // =====================================================
-        // LOG RESPONSE
-        // =====================================================
 
         console.log(
           "STAYINGAPI RESPONSE PREVIEW:",
           JSON.stringify(
             stayingData
-          ).slice(0, 5000)
+          ).slice(
+            0,
+            2000
+          )
         );
 
         // =====================================================
@@ -1990,15 +1902,13 @@ Before returning JSON verify:
           hotelSearch = {
             ...hotelSearch,
 
-            enabled: true,
+            enabled:
+              true,
 
             status:
               "processing",
 
-            jobId,
-
-            message:
-              "Hotel search is processing"
+            jobId
           };
 
           try {
@@ -2013,30 +1923,18 @@ Before returning JSON verify:
               jobResult.timeout
             ) {
 
-              /*
-               * Do NOT destroy the whole travel plan.
-               *
-               * The plan itself is already valid.
-               * We report that the live hotel search
-               * is still processing.
-               */
-
               hotelSearch = {
                 ...hotelSearch,
-
-                enabled: true,
 
                 status:
                   "processing",
 
-                message:
-                  "Hotel search is still processing. Please search accommodation manually if needed."
-              };
+                count:
+                  0,
 
-              console.warn(
-                "HOTEL SEARCH STILL PROCESSING:",
-                jobId
-              );
+                message:
+                  "Hotel search is still processing."
+              };
 
             } else {
 
@@ -2048,10 +1946,16 @@ Before returning JSON verify:
               hotelSearch = {
                 ...hotelSearch,
 
-                enabled: true,
+                enabled:
+                  true,
 
                 status:
-                  "completed",
+                  hotels.length > 0
+                    ? "completed"
+                    : "no_results",
+
+                count:
+                  hotels.length,
 
                 creditsCharged:
                   Number(
@@ -2076,10 +1980,7 @@ Before returning JSON verify:
                   )
                     ? jobResult.meta
                         .warnings
-                    : [],
-
-                count:
-                  hotels.length
+                    : []
               };
 
               console.log(
@@ -2088,81 +1989,92 @@ Before returning JSON verify:
               );
             }
 
-          } catch (jobError) {
+          } catch (error) {
 
             console.error(
               "STAYINGAPI POLLING ERROR:",
-              jobError
+              error
             );
 
             hotelSearch = {
               ...hotelSearch,
 
-              enabled: true,
+              enabled:
+                true,
 
               status:
                 "error",
 
+              count:
+                0,
+
               error:
-                jobError?.message ||
-                "Hotel search job failed"
+                {
+                  code:
+                    "job_failed",
+
+                  message:
+                    error?.message ||
+                    "StayingAPI hotel search job failed.",
+
+                  retryable:
+                    false
+                }
             };
           }
         }
 
         // =====================================================
-        // SYNCHRONOUS RESULT
+        // SYNCHRONOUS SUCCESS
         // =====================================================
 
         else if (
-          stayingResponse.ok
+          stayingResponse.ok &&
+          Array.isArray(
+            stayingData?.data
+          )
         ) {
-
-          const extracted =
-            extractHotelResult(
-              stayingData
-            );
 
           hotels =
             normalizeHotels(
-              extracted.data
+              stayingData.data
             );
 
           hotelSearch = {
             ...hotelSearch,
 
-            enabled: true,
+            enabled:
+              true,
 
             status:
-              "completed",
+              hotels.length > 0
+                ? "completed"
+                : "no_results",
+
+            count:
+              hotels.length,
 
             creditsCharged:
               Number(
-                extracted
-                  ?.meta
+                stayingData?.meta
                   ?.creditsCharged ||
                 0
               ),
 
             partial:
               Boolean(
-                extracted
-                  ?.meta
+                stayingData?.meta
                   ?.partial
               ),
 
             warnings:
               Array.isArray(
-                extracted
-                  ?.meta
+                stayingData?.meta
                   ?.warnings
               )
-                ? extracted.meta
+                ? stayingData.meta
                     .warnings
-                : [],
-
-            count:
-              hotels.length
+                : []
           };
 
           console.log(
@@ -2172,10 +2084,18 @@ Before returning JSON verify:
         }
 
         // =====================================================
-        // API ERROR
+        // STAYINGAPI ERROR
         // =====================================================
 
-        else {
+        else if (
+          !stayingResponse.ok
+        ) {
+
+          const parsedError =
+            getStayingApiError(
+              stayingData,
+              stayingResponse.status
+            );
 
           console.error(
             "STAYINGAPI REQUEST FAILED:",
@@ -2184,20 +2104,73 @@ Before returning JSON verify:
             )
           );
 
-          hotelSearch = {
-            ...hotelSearch,
+          // Special handling for actor_blocked.
+          if (
+            parsedError.code ===
+            "actor_blocked"
+          ) {
 
-            enabled: true,
+            hotelSearch = {
+              ...hotelSearch,
 
-            status:
-              "error",
+              enabled:
+                true,
 
-            error:
-              stayingData?.error ||
-              stayingData?.message ||
-              stayingData?.data?.error ||
-              "Hotel search failed"
-          };
+              status:
+                "provider_blocked",
+
+              count:
+                0,
+
+              error:
+                {
+                  type:
+                    parsedError.type,
+
+                  code:
+                    parsedError.code,
+
+                  message:
+                    "Live hotel search is temporarily unavailable because the upstream provider has reached its free-tier limit.",
+
+                  retryable:
+                    false,
+
+                  creditsCharged:
+                    parsedError.creditsCharged,
+
+                  requestId:
+                    parsedError.requestId,
+
+                  docUrl:
+                    parsedError.docUrl
+                }
+            };
+
+            console.warn(
+              "STAYINGAPI PROVIDER BLOCKED:",
+              parsedError.message
+            );
+          }
+
+          else {
+
+            hotelSearch = {
+              ...hotelSearch,
+
+              enabled:
+                true,
+
+              status:
+                "error",
+
+              count:
+                0,
+
+              error:
+                parsedError
+            };
+          }
         }
       }
 
@@ -2211,18 +2184,19 @@ Before returning JSON verify:
       hotelSearch = {
         ...hotelSearch,
 
-        enabled: false,
+        enabled:
+          false,
 
         status:
-          "skipped",
+          "date_required",
 
         message:
-          "A valid YYYY-MM-DD start date is required"
+          "A valid YYYY-MM-DD start date is required for live hotel search."
       };
     }
 
     // =========================================================
-    // FINAL HOTEL NORMALIZATION
+    // FINAL HOTEL SAFETY
     // =========================================================
 
     hotels =
@@ -2261,12 +2235,6 @@ Before returning JSON verify:
     console.log(
       "HOTEL SEARCH STATUS:",
       hotelSearch.status
-    );
-
-    console.log(
-      "HOTEL SEARCH ERROR:",
-      hotelSearch.error ||
-        "none"
     );
 
     console.log(
