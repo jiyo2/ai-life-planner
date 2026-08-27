@@ -1,4 +1,4 @@
-console.log("PLAN.JS PRODUCTION V7 RUNNING");
+console.log("PLAN.JS PRODUCTION V8 RUNNING");
 
 export default async function handler(req, res) {
   console.log("PLAN API START");
@@ -30,32 +30,8 @@ export default async function handler(req, res) {
     );
 
     console.log(
-      "GEMINI KEY TYPE:",
-      typeof rawGeminiKey
-    );
-
-    console.log(
-      "GEMINI KEY LENGTH:",
-      rawGeminiKey
-        ? rawGeminiKey.length
-        : 0
-    );
-
-    console.log(
       "STAYINGAPI KEY EXISTS:",
       Boolean(rawStayingApiKey)
-    );
-
-    console.log(
-      "STAYINGAPI KEY TYPE:",
-      typeof rawStayingApiKey
-    );
-
-    console.log(
-      "STAYINGAPI KEY LENGTH:",
-      rawStayingApiKey
-        ? rawStayingApiKey.length
-        : 0
     );
 
     if (!rawGeminiKey) {
@@ -71,10 +47,6 @@ export default async function handler(req, res) {
           "STAYINGAPI_KEY is missing in Vercel"
       });
     }
-
-    // =========================================
-    // CLEAN API KEYS
-    // =========================================
 
     const geminiKey =
       String(rawGeminiKey).trim();
@@ -438,6 +410,54 @@ Prioritize:
 
 Do not invent businesses.
 
+RESTAURANTS
+
+IMPORTANT:
+
+Recommend real, established restaurants or food venues in ${destination}.
+
+Return 8 restaurant recommendations when possible.
+
+Prioritize restaurants that are:
+
+- well-known
+- established
+- relevant to the destination
+- relevant to the user's interests
+- geographically useful for the itinerary
+- suitable for the user's budget
+
+Do NOT invent restaurant names.
+
+Do NOT invent ratings.
+
+Do NOT invent review counts.
+
+Do NOT invent opening hours.
+
+Do NOT claim live availability.
+
+If you are not sufficiently confident that a restaurant exists, do not include it.
+
+For each restaurant return:
+
+- name
+- cuisine
+- location
+- priceLevel
+- description
+
+priceLevel must be one of:
+
+"$"
+"$$"
+"$$$"
+"$$$$"
+
+The description must be a short recommendation, not a claim of live data.
+
+The application will create a Google Maps search link automatically.
+
 DAY QUALITY
 
 Each day must feel coherent.
@@ -520,6 +540,16 @@ REQUIRED JSON STRUCTURE
     ]
   },
 
+  "restaurants": [
+    {
+      "name": "Real restaurant name",
+      "cuisine": "Cuisine type",
+      "location": "Neighborhood or area",
+      "priceLevel": "$$",
+      "description": "Short recommendation."
+    }
+  ],
+
   "budget": {
     "accommodation": 0,
     "transportation": 0,
@@ -559,7 +589,11 @@ Before returning JSON verify:
 
 7. No null budget values.
 
-8. Return JSON only.
+8. Restaurant names should be real and established.
+
+9. Do not fabricate ratings, reviews or opening hours.
+
+10. Return JSON only.
 `;
 
     // =========================================
@@ -602,7 +636,7 @@ Before returning JSON verify:
             ],
 
             generationConfig: {
-              temperature: 0.35,
+              temperature: 0.25,
 
               responseMimeType:
                 "application/json"
@@ -858,6 +892,168 @@ Before returning JSON verify:
     ) {
       plan.experiences.food = [];
     }
+
+    // =========================================
+    // NORMALIZE RESTAURANTS
+    // =========================================
+
+    function createGoogleMapsSearchUrl(
+      restaurantName,
+      restaurantLocation
+    ) {
+      const query =
+        [
+          restaurantName,
+          restaurantLocation,
+          destination
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+      return (
+        "https://www.google.com/maps/search/?api=1&query=" +
+        encodeURIComponent(query)
+      );
+    }
+
+    function normalizeRestaurants(
+      data
+    ) {
+      if (
+        !Array.isArray(data)
+      ) {
+        return [];
+      }
+
+      return data
+        .map(
+          restaurant => {
+
+            if (
+              !restaurant ||
+              typeof restaurant !==
+                "object"
+            ) {
+              return null;
+            }
+
+            const name =
+              typeof restaurant.name ===
+                "string"
+                ? restaurant.name.trim()
+                : "";
+
+            if (!name) {
+              return null;
+            }
+
+            const cuisine =
+              typeof restaurant.cuisine ===
+                "string"
+                ? restaurant.cuisine.trim()
+                : "";
+
+            const location =
+              typeof restaurant.location ===
+                "string"
+                ? restaurant.location.trim()
+                : "";
+
+            const priceLevel =
+              [
+                "$",
+                "$$",
+                "$$$",
+                "$$$$"
+              ].includes(
+                restaurant.priceLevel
+              )
+                ? restaurant.priceLevel
+                : "$$";
+
+            const description =
+              typeof restaurant.description ===
+                "string"
+                ? restaurant.description.trim()
+                : "";
+
+            const url =
+              createGoogleMapsSearchUrl(
+                name,
+                location
+              );
+
+            return {
+              id:
+                `restaurant-${Math.random()
+                  .toString(36)
+                  .slice(2, 10)}`,
+
+              name,
+
+              cuisine,
+
+              location,
+
+              priceLevel,
+
+              description,
+
+              platform:
+                "Google Maps",
+
+              url,
+
+              rating:
+                null,
+
+              reviewCount:
+                null,
+
+              openingHours:
+                null
+            };
+          }
+        )
+        .filter(Boolean)
+        .slice(0, 8);
+    }
+
+    const restaurants =
+      normalizeRestaurants(
+        plan.restaurants
+      );
+
+    const restaurantSearch = {
+      enabled:
+        restaurants.length > 0,
+
+      status:
+        restaurants.length > 0
+          ? "recommended"
+          : "no_results",
+
+      source:
+        "AI restaurant recommendations",
+
+      liveAvailability:
+        false,
+
+      count:
+        restaurants.length,
+
+      destination
+    };
+
+    console.log(
+      "RESTAURANTS RETURNED:",
+      restaurants.length
+    );
+
+    console.log(
+      "RESTAURANT SEARCH STATUS:",
+      restaurantSearch.status
+    );
 
     // =========================================
     // DEFAULT STRINGS
@@ -1345,10 +1541,6 @@ Before returning JSON verify:
           jobData?.status ||
           "";
 
-        // =====================================
-        // COMPLETED
-        // =====================================
-
         if (
           jobStatus ===
           "completed"
@@ -1390,13 +1582,6 @@ Before returning JSON verify:
             };
           }
 
-          console.warn(
-            "STAYINGAPI JOB COMPLETED BUT RESULT FORMAT IS DIFFERENT:",
-            JSON.stringify(
-              jobData
-            )
-          );
-
           return {
             data: [],
 
@@ -1405,10 +1590,6 @@ Before returning JSON verify:
               {}
           };
         }
-
-        // =====================================
-        // FAILED
-        // =====================================
 
         if (
           jobStatus ===
@@ -1431,10 +1612,6 @@ Before returning JSON verify:
           );
         }
 
-        // =====================================
-        // WAIT
-        // =====================================
-
         await new Promise(
           resolve =>
             setTimeout(
@@ -1443,10 +1620,6 @@ Before returning JSON verify:
             )
         );
       }
-
-      // =======================================
-      // TIMEOUT
-      // =======================================
 
       console.warn(
         "STAYINGAPI JOB POLLING TIMEOUT"
@@ -1633,10 +1806,6 @@ Before returning JSON verify:
               jobResult.timeout
             ) {
 
-              console.warn(
-                "STAYINGAPI SEARCH STILL PROCESSING AFTER TIMEOUT"
-              );
-
               hotelSearch = {
                 ...hotelSearch,
 
@@ -1689,12 +1858,6 @@ Before returning JSON verify:
               console.log(
                 "HOTELS FOUND AFTER POLLING:",
                 hotels.length
-              );
-
-              console.log(
-                "STAYINGAPI CREDITS:",
-                hotelSearch
-                  .creditsCharged
               );
             }
 
@@ -1769,12 +1932,6 @@ Before returning JSON verify:
             "HOTELS FOUND:",
             hotels.length
           );
-
-          console.log(
-            "STAYINGAPI CREDITS:",
-            hotelSearch
-              .creditsCharged
-          );
         }
 
         // =====================================
@@ -1847,6 +2004,16 @@ Before returning JSON verify:
       hotelSearch.status
     );
 
+    console.log(
+      "RESTAURANTS RETURNED:",
+      restaurants.length
+    );
+
+    console.log(
+      "RESTAURANT SEARCH STATUS:",
+      restaurantSearch.status
+    );
+
     // =========================================
     // SUCCESS RESPONSE
     // =========================================
@@ -1856,7 +2023,11 @@ Before returning JSON verify:
 
       hotels,
 
-      hotelSearch
+      hotelSearch,
+
+      restaurants,
+
+      restaurantSearch
     });
 
   } catch (error) {
@@ -1875,4 +2046,4 @@ Before returning JSON verify:
         "Unknown error"
     });
   }
-      }
+  }
