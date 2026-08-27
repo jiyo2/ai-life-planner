@@ -54,17 +54,37 @@ export default async function handler(req, res) {
     const stayingApiKey =
       String(rawStayingApiKey).trim();
 
-    if (geminiKey.includes("…")) {
+    if (!geminiKey) {
       return res.status(500).json({
         error:
-          "GEMINI_API_KEY contains an invalid ellipsis character"
+          "GEMINI_API_KEY is empty"
       });
     }
 
-    if (stayingApiKey.includes("…")) {
+    if (!stayingApiKey) {
       return res.status(500).json({
         error:
-          "STAYINGAPI_KEY contains an invalid ellipsis character"
+          "STAYINGAPI_KEY is empty"
+      });
+    }
+
+    if (
+      geminiKey.includes("…") ||
+      geminiKey.includes("...")
+    ) {
+      return res.status(500).json({
+        error:
+          "GEMINI_API_KEY contains invalid placeholder characters"
+      });
+    }
+
+    if (
+      stayingApiKey.includes("…") ||
+      stayingApiKey.includes("...")
+    ) {
+      return res.status(500).json({
+        error:
+          "STAYINGAPI_KEY contains invalid placeholder characters"
       });
     }
 
@@ -123,7 +143,8 @@ export default async function handler(req, res) {
         days,
         budget,
         travelers,
-        interests
+        interests,
+        notes
       }
     );
 
@@ -160,7 +181,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================
-    // TRAVELERS
+    // TRAVELER PARSING
     // =========================================================
 
     function extractAdults(value) {
@@ -382,7 +403,7 @@ Consider:
 
 Do not claim that a particular hotel is available.
 
-The system separately searches live hotel inventory.
+The application separately searches live hotel inventory.
 
 TRANSPORTATION
 
@@ -416,7 +437,7 @@ IMPORTANT:
 
 Recommend real, established restaurants or food venues in ${destination}.
 
-Return 8 restaurant recommendations when possible.
+Return up to 8 restaurant recommendations when possible.
 
 Prioritize restaurants that are:
 
@@ -457,6 +478,22 @@ priceLevel must be one of:
 The description must be a short recommendation, not a claim of live data.
 
 The application will create a Google Maps search link automatically.
+
+DAY QUALITY
+
+Each day must feel coherent.
+
+Morning:
+One or two related activities.
+
+Afternoon:
+Nearby attractions, lunch or another experience.
+
+Evening:
+Dinner, neighborhood exploration, scenic activity,
+relaxation or nightlife depending on the user.
+
+Include realistic downtime.
 
 FINAL DAY
 
@@ -833,6 +870,10 @@ Before returning JSON verify:
       plan.days = [];
     }
 
+    // =========================================================
+    // DEFAULT ARRAYS
+    // =========================================================
+
     if (
       !Array.isArray(
         plan.stay.areas
@@ -959,7 +1000,6 @@ Before returning JSON verify:
 
             return {
               id:
-                restaurant.id ||
                 `restaurant-${Math.random()
                   .toString(36)
                   .slice(2, 10)}`,
@@ -1067,43 +1107,48 @@ Before returning JSON verify:
     // NORMALIZE BUDGET
     // =========================================================
 
-    let accommodation =
+    const accommodation =
       Math.max(
         0,
         Number(
-          plan.budget.accommodation || 0
+          plan.budget
+            .accommodation || 0
         )
       );
 
-    let transportation =
+    const transportation =
       Math.max(
         0,
         Number(
-          plan.budget.transportation || 0
+          plan.budget
+            .transportation || 0
         )
       );
 
-    let food =
+    const food =
       Math.max(
         0,
         Number(
-          plan.budget.food || 0
+          plan.budget
+            .food || 0
         )
       );
 
-    let activities =
+    const activities =
       Math.max(
         0,
         Number(
-          plan.budget.activities || 0
+          plan.budget
+            .activities || 0
         )
       );
 
-    let other =
+    const other =
       Math.max(
         0,
         Number(
-          plan.budget.other || 0
+          plan.budget
+            .other || 0
         )
       );
 
@@ -1113,6 +1158,10 @@ Before returning JSON verify:
       food +
       activities +
       other;
+
+    // =========================================================
+    // PROTECT USER BUDGET
+    // =========================================================
 
     if (
       calculatedTotal > budget
@@ -1127,65 +1176,91 @@ Before returning JSON verify:
         budget /
         calculatedTotal;
 
-      accommodation =
+      plan.budget.accommodation =
         Math.floor(
           accommodation *
             ratio
         );
 
-      transportation =
+      plan.budget.transportation =
         Math.floor(
           transportation *
             ratio
         );
 
-      food =
+      plan.budget.food =
         Math.floor(
           food *
             ratio
         );
 
-      activities =
+      plan.budget.activities =
         Math.floor(
           activities *
             ratio
         );
 
-      other =
+      plan.budget.other =
         Math.max(
           0,
           budget -
-            accommodation -
-            transportation -
-            food -
-            activities
+            plan.budget
+              .accommodation -
+            plan.budget
+              .transportation -
+            plan.budget
+              .food -
+            plan.budget
+              .activities
         );
 
       calculatedTotal =
-        accommodation +
-        transportation +
-        food +
-        activities +
-        other;
+        plan.budget
+          .accommodation +
+        plan.budget
+          .transportation +
+        plan.budget
+          .food +
+        plan.budget
+          .activities +
+        plan.budget
+          .other;
     }
 
     plan.budget.accommodation =
-      Number(accommodation);
+      Number(
+        plan.budget
+          .accommodation || 0
+      );
 
     plan.budget.transportation =
-      Number(transportation);
+      Number(
+        plan.budget
+          .transportation || 0
+      );
 
     plan.budget.food =
-      Number(food);
+      Number(
+        plan.budget
+          .food || 0
+      );
 
     plan.budget.activities =
-      Number(activities);
+      Number(
+        plan.budget
+          .activities || 0
+      );
 
     plan.budget.other =
-      Number(other);
+      Number(
+        plan.budget
+          .other || 0
+      );
 
     plan.budget.total =
-      Number(calculatedTotal);
+      Number(
+        calculatedTotal
+      );
 
     // =========================================================
     // NORMALIZE DAYS
@@ -1253,7 +1328,7 @@ Before returning JSON verify:
     }
 
     // =========================================================
-    // HOTEL SEARCH INITIAL STATE
+    // HOTEL SEARCH
     // =========================================================
 
     let hotels = [];
@@ -1276,6 +1351,8 @@ Before returning JSON verify:
 
       adults,
 
+      children: 0,
+
       platforms: [
         "booking",
         "google"
@@ -1283,353 +1360,38 @@ Before returning JSON verify:
 
       creditsCharged: 0,
 
-      count: 0
+      partial: false,
+
+      warnings: []
     };
 
     // =========================================================
-    // HOTEL NORMALIZATION
+    // HOTEL SEARCH FALLBACK URL
     // =========================================================
 
-    function getFirstValue(
-      object,
-      keys
-    ) {
-      for (
-        const key of keys
-      ) {
-        if (
-          object &&
-          object[key] !==
-            undefined &&
-          object[key] !==
-            null &&
-          object[key] !== ""
-        ) {
-          return object[key];
-        }
-      }
+    function createHotelSearchUrl() {
+      const query =
+        [
+          destination,
+          "hotels"
+        ]
+          .filter(Boolean)
+          .join(" ");
 
-      return null;
-    }
-
-    function normalizeHotelPrice(
-      price
-    ) {
-      if (
-        price === null ||
-        price === undefined ||
-        price === ""
-      ) {
-        return null;
-      }
-
-      if (
-        typeof price ===
-          "number"
-      ) {
-        return {
-          amount: price,
-
-          currency:
-            "USD"
-        };
-      }
-
-      if (
-        typeof price ===
-          "string"
-      ) {
-        return {
-          formatted:
-            price
-        };
-      }
-
-      if (
-        typeof price !==
-          "object"
-      ) {
-        return null;
-      }
-
-      const total =
-        getFirstValue(
-          price,
-          [
-            "total",
-            "totalPrice",
-            "amount",
-            "value",
-            "price"
-          ]
-        );
-
-      const nightly =
-        getFirstValue(
-          price,
-          [
-            "nightly",
-            "nightlyPrice",
-            "perNight",
-            "night"
-          ]
-        );
-
-      const currency =
-        getFirstValue(
-          price,
-          [
-            "currency",
-            "currencyCode"
-          ]
-        ) ||
-        "USD";
-
-      const formatted =
-        getFirstValue(
-          price,
-          [
-            "formatted",
-            "display"
-          ]
-        );
-
-      const normalized = {
-        currency
-      };
-
-      if (
-        total !== null
-      ) {
-        normalized.total =
-          total;
-      }
-
-      if (
-        nightly !== null
-      ) {
-        normalized.nightly =
-          nightly;
-      }
-
-      if (
-        formatted
-      ) {
-        normalized.formatted =
-          String(
-            formatted
-          );
-      }
-
-      if (
-        normalized.total !==
-          undefined ||
-        normalized.nightly !==
-          undefined ||
-        normalized.formatted
-      ) {
-        return normalized;
-      }
-
-      return null;
-    }
-
-    function normalizeHotel(
-      hotel,
-      index
-    ) {
-      if (
-        !hotel ||
-        typeof hotel !==
-          "object"
-      ) {
-        return null;
-      }
-
-      const name =
-        getFirstValue(
-          hotel,
-          [
-            "name",
-            "hotelName",
-            "propertyName",
-            "title"
-          ]
-        );
-
-      if (!name) {
-        return null;
-      }
-
-      const location =
-        getFirstValue(
-          hotel,
-          [
-            "location",
-            "address",
-            "area"
-          ]
-        );
-
-      const url =
-        getFirstValue(
-          hotel,
-          [
-            "url",
-            "bookingUrl",
-            "website",
-            "webUrl",
-            "link"
-          ]
-        );
-
-      const platform =
-        getFirstValue(
-          hotel,
-          [
-            "platform",
-            "source",
-            "provider"
-          ]
-        );
-
-      const starRating =
-        getFirstValue(
-          hotel,
-          [
-            "starRating",
-            "stars",
-            "hotelStars"
-          ]
-        );
-
-      const guestRating =
-        getFirstValue(
-          hotel,
-          [
-            "guestRating",
-            "rating",
-            "reviewRating"
-          ]
-        );
-
-      const reviewCount =
-        getFirstValue(
-          hotel,
-          [
-            "reviewCount",
-            "reviews",
-            "numberOfReviews"
-          ]
-        );
-
-      let amenities =
-        getFirstValue(
-          hotel,
-          [
-            "amenities",
-            "features"
-          ]
-        );
-
-      if (
-        !Array.isArray(
-          amenities
+      return (
+        "https://www.google.com/search?q=" +
+        encodeURIComponent(
+          query
         )
-      ) {
-        amenities = [];
-      }
-
-      const rawPrice =
-        getFirstValue(
-          hotel,
-          [
-            "price",
-            "pricing",
-            "rate"
-          ]
-        );
-
-      const price =
-        normalizeHotelPrice(
-          rawPrice
-        );
-
-      /*
-       * IMPORTANT:
-       *
-       * Do not remove hotels simply because
-       * price is missing.
-       *
-       * StayingAPI can return useful hotel
-       * inventory even when one field is absent.
-       */
-
-      return {
-        id:
-          getFirstValue(
-            hotel,
-            [
-              "id",
-              "hotelId",
-              "propertyId"
-            ]
-          ) ||
-          `hotel-${index + 1}`,
-
-        platform:
-          platform
-            ? String(platform)
-            : null,
-
-        platformListingId:
-          getFirstValue(
-            hotel,
-            [
-              "platformListingId",
-              "listingId"
-            ]
-          ),
-
-        name:
-          String(name),
-
-        propertyType:
-          getFirstValue(
-            hotel,
-            [
-              "propertyType",
-              "type"
-            ]
-          ),
-
-        url:
-          url
-            ? String(url)
-            : null,
-
-        location,
-
-        starRating,
-
-        guestRating,
-
-        ratingScale:
-          getFirstValue(
-            hotel,
-            [
-              "ratingScale",
-              "ratingMax"
-            ]
-          ),
-
-        reviewCount,
-
-        amenities,
-
-        price
-      };
+      );
     }
+
+    hotelSearch.searchUrl =
+      createHotelSearchUrl();
+
+    // =========================================================
+    // HOTEL NORMALIZER
+    // =========================================================
 
     function normalizeHotels(
       data
@@ -1642,194 +1404,205 @@ Before returning JSON verify:
 
       return data
         .map(
-          normalizeHotel
+          hotel => {
+
+            if (
+              !hotel ||
+              typeof hotel !==
+                "object"
+            ) {
+              return null;
+            }
+
+            const name =
+              typeof hotel.name ===
+                "string"
+                ? hotel.name.trim()
+                : "";
+
+            if (!name) {
+              return null;
+            }
+
+            const rawPrice =
+              hotel.price ??
+              null;
+
+            return {
+              id:
+                hotel.id ||
+                null,
+
+              platform:
+                hotel.platform ||
+                null,
+
+              platformListingId:
+                hotel.platformListingId ||
+                null,
+
+              name,
+
+              propertyType:
+                hotel.propertyType ||
+                null,
+
+              url:
+                hotel.url ||
+                null,
+
+              location:
+                hotel.location ||
+                null,
+
+              starRating:
+                hotel.starRating ??
+                null,
+
+              guestRating:
+                hotel.guestRating ??
+                null,
+
+              ratingScale:
+                hotel.ratingScale ??
+                null,
+
+              reviewCount:
+                hotel.reviewCount ??
+                null,
+
+              amenities:
+                Array.isArray(
+                  hotel.amenities
+                )
+                  ? hotel.amenities
+                  : [],
+
+              price:
+                rawPrice
+            };
+          }
         )
-        .filter(Boolean)
+        .filter(
+          hotel =>
+            hotel &&
+            hotel.name
+        )
         .slice(0, 10);
     }
 
     // =========================================================
-    // EXTRACT HOTEL ARRAY FROM ANY STAYINGAPI RESPONSE
+    // EXTRACT HOTEL DATA FROM STAYINGAPI
     // =========================================================
 
-    function extractHotelArray(
+    function extractHotelResult(
       payload
     ) {
-      console.log(
-        "EXTRACTING STAYINGAPI HOTELS..."
-      );
-
-      if (
-        !payload
-      ) {
-        return [];
+      if (!payload) {
+        return {
+          data: [],
+          meta: {}
+        };
       }
 
-      /*
-       * Direct array
-       */
+      // Standard synchronous response:
+      // { data: [...], meta: {...} }
 
       if (
         Array.isArray(
-          payload
+          payload.data
         )
       ) {
-        console.log(
-          "HOTEL DATA FORMAT: DIRECT ARRAY"
-        );
+        return {
+          data:
+            payload.data,
 
-        return payload;
+          meta:
+            payload.meta ||
+            {}
+        };
       }
 
-      /*
-       * data[]
-       */
-
-      if (
-        Array.isArray(
-          payload?.data
-        )
-      ) {
-        console.log(
-          "HOTEL DATA FORMAT: payload.data[]"
-        );
-
-        return payload.data;
-      }
-
-      /*
-       * result[]
-       */
-
-      if (
-        Array.isArray(
-          payload?.result
-        )
-      ) {
-        console.log(
-          "HOTEL DATA FORMAT: payload.result[]"
-        );
-
-        return payload.result;
-      }
-
-      /*
-       * result.data[]
-       */
-
-      if (
-        Array.isArray(
-          payload?.result?.data
-        )
-      ) {
-        console.log(
-          "HOTEL DATA FORMAT: payload.result.data[]"
-        );
-
-        return payload.result.data;
-      }
-
-      /*
-       * data.result[]
-       */
+      // Job completed:
+      // { data: { status:"completed", result:[...] } }
 
       if (
         Array.isArray(
           payload?.data?.result
         )
       ) {
-        console.log(
-          "HOTEL DATA FORMAT: payload.data.result[]"
-        );
+        return {
+          data:
+            payload.data.result,
 
-        return payload.data.result;
+          meta:
+            payload.meta ||
+            {}
+        };
       }
 
-      /*
-       * data.result.data[]
-       */
+      // Job completed:
+      // { data: { status:"completed", result:{data:[...],meta:{...}}}}
 
       if (
         Array.isArray(
           payload?.data?.result?.data
         )
       ) {
-        console.log(
-          "HOTEL DATA FORMAT: payload.data.result.data[]"
-        );
+        return {
+          data:
+            payload.data.result.data,
 
-        return payload.data.result.data;
+          meta:
+            payload.data.result.meta ||
+            payload.meta ||
+            {}
+        };
       }
 
-      /*
-       * hotels[]
-       */
+      // Alternative:
+      // { result: [...] }
 
       if (
         Array.isArray(
-          payload?.hotels
+          payload.result
         )
       ) {
-        console.log(
-          "HOTEL DATA FORMAT: payload.hotels[]"
-        );
+        return {
+          data:
+            payload.result,
 
-        return payload.hotels;
+          meta:
+            payload.meta ||
+            {}
+        };
       }
 
-      /*
-       * data.hotels[]
-       */
+      // Alternative:
+      // { result: { data:[...] } }
 
       if (
         Array.isArray(
-          payload?.data?.hotels
+          payload?.result?.data
         )
       ) {
-        console.log(
-          "HOTEL DATA FORMAT: payload.data.hotels[]"
-        );
+        return {
+          data:
+            payload.result.data,
 
-        return payload.data.hotels;
+          meta:
+            payload.result.meta ||
+            payload.meta ||
+            {}
+        };
       }
 
-      /*
-       * result.hotels[]
-       */
-
-      if (
-        Array.isArray(
-          payload?.result?.hotels
-        )
-      ) {
-        console.log(
-          "HOTEL DATA FORMAT: payload.result.hotels[]"
-        );
-
-        return payload.result.hotels;
-      }
-
-      /*
-       * data.result.hotels[]
-       */
-
-      if (
-        Array.isArray(
-          payload?.data?.result?.hotels
-        )
-      ) {
-        console.log(
-          "HOTEL DATA FORMAT: payload.data.result.hotels[]"
-        );
-
-        return payload.data.result.hotels;
-      }
-
-      console.warn(
-        "NO HOTEL ARRAY FOUND IN STAYINGAPI RESPONSE"
-      );
-
-      return [];
+      return {
+        data: [],
+        meta:
+          payload.meta ||
+          {}
+      };
     }
 
     // =========================================================
@@ -1841,15 +1614,18 @@ Before returning JSON verify:
       apiKey
     ) {
       /*
-       * Keep the polling inside a reasonable
-       * Vercel execution window.
+       * StayingAPI documents that live calls can return 202
+       * and the job may take tens of seconds or longer.
+       *
+       * We intentionally keep this server-side wait bounded
+       * so Vercel does not unnecessarily hold the function.
        */
 
       const maxWaitMs =
-        240000;
+        50000;
 
       const intervalMs =
-        4000;
+        3000;
 
       const startedAt =
         Date.now();
@@ -1894,9 +1670,7 @@ Before returning JSON verify:
                 }
               }
             );
-        } catch (
-          fetchError
-        ) {
+        } catch (fetchError) {
           console.error(
             "STAYINGAPI JOB FETCH ERROR:",
             fetchError
@@ -1917,9 +1691,7 @@ Before returning JSON verify:
         try {
           jobData =
             await jobResponse.json();
-        } catch (
-          jsonError
-        ) {
+        } catch (jsonError) {
           console.error(
             "STAYINGAPI JOB JSON ERROR:",
             jsonError
@@ -1931,35 +1703,15 @@ Before returning JSON verify:
         }
 
         console.log(
-          "STAYINGAPI JOB RESPONSE KEYS:",
-          Object.keys(
-            jobData || {}
-          )
-        );
-
-        const jobStatus =
-          jobData?.data?.status ||
-          jobData?.status ||
-          jobData?.data?.state ||
-          jobData?.state ||
-          "";
-
-        console.log(
-          "STAYINGAPI JOB STATE:",
-          jobStatus ||
-            "unknown"
+          "STAYINGAPI JOB RESPONSE:",
+          JSON.stringify(
+            jobData
+          ).slice(0, 4000)
         );
 
         if (
           !jobResponse.ok
         ) {
-          console.error(
-            "STAYINGAPI JOB REQUEST FAILED:",
-            JSON.stringify(
-              jobData
-            )
-          );
-
           throw new Error(
             jobData?.data?.error ||
             jobData?.error ||
@@ -1968,9 +1720,18 @@ Before returning JSON verify:
           );
         }
 
-        /*
-         * COMPLETED
-         */
+        const jobStatus =
+          String(
+            jobData?.data?.status ||
+            jobData?.status ||
+            ""
+          ).toLowerCase();
+
+        console.log(
+          "STAYINGAPI JOB STATE:",
+          jobStatus ||
+            "unknown"
+        );
 
         if (
           jobStatus ===
@@ -1980,46 +1741,29 @@ Before returning JSON verify:
           jobStatus ===
             "success" ||
           jobStatus ===
-            "succeeded"
+            "succeeded" ||
+          jobStatus ===
+            "done"
         ) {
           console.log(
             "STAYINGAPI JOB COMPLETED"
           );
 
-          const resultPayload =
-            jobData?.data?.result ??
-            jobData?.result ??
-            jobData?.data ??
-            jobData;
-
-          const rawHotels =
-            extractHotelArray(
-              resultPayload
+          const extracted =
+            extractHotelResult(
+              jobData
             );
 
-          console.log(
-            "HOTELS EXTRACTED FROM JOB:",
-            rawHotels.length
-          );
-
           return {
+            timeout: false,
+
             data:
-              rawHotels,
+              extracted.data,
 
             meta:
-              jobData?.data?.result?.meta ||
-              jobData?.data?.meta ||
-              jobData?.meta ||
-              {},
-
-            raw:
-              jobData
+              extracted.meta
           };
         }
-
-        /*
-         * FAILED
-         */
 
         if (
           jobStatus ===
@@ -2027,7 +1771,9 @@ Before returning JSON verify:
           jobStatus ===
             "error" ||
           jobStatus ===
-            "cancelled"
+            "cancelled" ||
+          jobStatus ===
+            "canceled"
         ) {
           console.error(
             "STAYINGAPI JOB FAILED:",
@@ -2043,10 +1789,6 @@ Before returning JSON verify:
             "StayingAPI hotel search job failed"
           );
         }
-
-        /*
-         * Continue polling
-         */
 
         await new Promise(
           resolve =>
@@ -2077,15 +1819,7 @@ Before returning JSON verify:
     if (validStart) {
 
       console.log(
-        "================================================="
-      );
-
-      console.log(
-        "STARTING STAYINGAPI HOTEL SEARCH"
-      );
-
-      console.log(
-        "================================================="
+        "STARTING STAYINGAPI HOTEL SEARCH..."
       );
 
       const params =
@@ -2142,17 +1876,13 @@ Before returning JSON verify:
       console.log(
         "STAYINGAPI REQUEST URL:",
         stayingURL
-          .replace(
-            /([?&])location=[^&]*/i,
-            "$1location=[hidden]"
-          )
       );
 
       let stayingResponse =
         null;
 
       let stayingData =
-        {};
+        null;
 
       try {
 
@@ -2172,9 +1902,7 @@ Before returning JSON verify:
             }
           );
 
-      } catch (
-        fetchError
-      ) {
+      } catch (fetchError) {
 
         console.error(
           "STAYINGAPI SEARCH FETCH ERROR:",
@@ -2194,9 +1922,11 @@ Before returning JSON verify:
         };
       }
 
-      if (
-        stayingResponse
-      ) {
+      // =======================================================
+      // RESPONSE EXISTS
+      // =======================================================
+
+      if (stayingResponse) {
 
         console.log(
           "STAYINGAPI STATUS:",
@@ -2208,9 +1938,7 @@ Before returning JSON verify:
           stayingData =
             await stayingResponse.json();
 
-        } catch (
-          jsonError
-        ) {
+        } catch (jsonError) {
 
           console.error(
             "STAYINGAPI JSON ERROR:",
@@ -2230,31 +1958,20 @@ Before returning JSON verify:
           };
         }
 
-        /*
-         * Log only the structure, not the API key.
-         */
+        // =====================================================
+        // LOG RESPONSE
+        // =====================================================
 
         console.log(
-          "STAYINGAPI RESPONSE TOP LEVEL KEYS:",
-          Object.keys(
-            stayingData || {}
-          )
+          "STAYINGAPI RESPONSE PREVIEW:",
+          JSON.stringify(
+            stayingData
+          ).slice(0, 5000)
         );
 
-        console.log(
-          "STAYINGAPI RESPONSE DATA TYPE:",
-          Array.isArray(
-            stayingData?.data
-          )
-            ? "array"
-            : typeof stayingData?.data
-        );
-
-        /*
-         * =====================================================
-         * ASYNC JOB
-         * =====================================================
-         */
+        // =====================================================
+        // ASYNC JOB
+        // =====================================================
 
         if (
           stayingResponse.status ===
@@ -2278,7 +1995,10 @@ Before returning JSON verify:
             status:
               "processing",
 
-            jobId
+            jobId,
+
+            message:
+              "Hotel search is processing"
           };
 
           try {
@@ -2294,21 +2014,29 @@ Before returning JSON verify:
             ) {
 
               /*
-               * Important:
+               * Do NOT destroy the whole travel plan.
                *
-               * Do not call this an error.
-               * The frontend will show processing.
+               * The plan itself is already valid.
+               * We report that the live hotel search
+               * is still processing.
                */
 
               hotelSearch = {
                 ...hotelSearch,
 
+                enabled: true,
+
                 status:
                   "processing",
 
                 message:
-                  "Hotel search is still processing"
+                  "Hotel search is still processing. Please search accommodation manually if needed."
               };
+
+              console.warn(
+                "HOTEL SEARCH STILL PROCESSING:",
+                jobId
+              );
 
             } else {
 
@@ -2320,10 +2048,10 @@ Before returning JSON verify:
               hotelSearch = {
                 ...hotelSearch,
 
+                enabled: true,
+
                 status:
-                  hotels.length > 0
-                    ? "completed"
-                    : "completed",
+                  "completed",
 
                 creditsCharged:
                   Number(
@@ -2346,8 +2074,7 @@ Before returning JSON verify:
                       ?.meta
                       ?.warnings
                   )
-                    ? jobResult
-                        .meta
+                    ? jobResult.meta
                         .warnings
                     : [],
 
@@ -2359,24 +2086,9 @@ Before returning JSON verify:
                 "HOTELS FOUND AFTER POLLING:",
                 hotels.length
               );
-
-              /*
-               * Useful diagnostic:
-               */
-
-              if (
-                hotels.length ===
-                  0
-              ) {
-                console.warn(
-                  "STAYINGAPI JOB COMPLETED BUT RETURNED ZERO HOTELS"
-                );
-              }
             }
 
-          } catch (
-            jobError
-          ) {
+          } catch (jobError) {
 
             console.error(
               "STAYINGAPI POLLING ERROR:",
@@ -2385,6 +2097,8 @@ Before returning JSON verify:
 
             hotelSearch = {
               ...hotelSearch,
+
+              enabled: true,
 
               status:
                 "error",
@@ -2396,29 +2110,22 @@ Before returning JSON verify:
           }
         }
 
-        /*
-         * =====================================================
-         * SYNCHRONOUS RESULT
-         * =====================================================
-         */
+        // =====================================================
+        // SYNCHRONOUS RESULT
+        // =====================================================
 
         else if (
           stayingResponse.ok
         ) {
 
-          const rawHotels =
-            extractHotelArray(
+          const extracted =
+            extractHotelResult(
               stayingData
             );
 
-          console.log(
-            "RAW SYNCHRONOUS HOTELS:",
-            rawHotels.length
-          );
-
           hotels =
             normalizeHotels(
-              rawHotels
+              extracted.data
             );
 
           hotelSearch = {
@@ -2431,35 +2138,28 @@ Before returning JSON verify:
 
             creditsCharged:
               Number(
-                stayingData?.meta
-                  ?.creditsCharged ||
-                stayingData?.data?.meta
+                extracted
+                  ?.meta
                   ?.creditsCharged ||
                 0
               ),
 
             partial:
               Boolean(
-                stayingData?.meta
-                  ?.partial ||
-                stayingData?.data?.meta
+                extracted
+                  ?.meta
                   ?.partial
               ),
 
             warnings:
               Array.isArray(
-                stayingData?.meta
+                extracted
+                  ?.meta
                   ?.warnings
               )
-                ? stayingData.meta
+                ? extracted.meta
                     .warnings
-                : Array.isArray(
-                    stayingData?.data?.meta
-                      ?.warnings
-                  )
-                  ? stayingData.data.meta
-                      .warnings
-                  : [],
+                : [],
 
             count:
               hotels.length
@@ -2471,11 +2171,9 @@ Before returning JSON verify:
           );
         }
 
-        /*
-         * =====================================================
-         * API ERROR
-         * =====================================================
-         */
+        // =====================================================
+        // API ERROR
+        // =====================================================
 
         else {
 
@@ -2516,10 +2214,10 @@ Before returning JSON verify:
         enabled: false,
 
         status:
-          "not_searched",
+          "skipped",
 
         message:
-          "A valid start date is required to search live hotel availability."
+          "A valid YYYY-MM-DD start date is required"
       };
     }
 
@@ -2527,56 +2225,17 @@ Before returning JSON verify:
     // FINAL HOTEL NORMALIZATION
     // =========================================================
 
-    if (
-      !Array.isArray(
-        hotels
-      )
-    ) {
-      hotels = [];
-    }
-
     hotels =
-      hotels
-        .map(
-          (hotel, index) =>
-            normalizeHotel(
-              hotel,
-              index
-            )
-        )
-        .filter(Boolean)
-        .slice(0, 10);
+      normalizeHotels(
+        hotels
+      );
 
     hotelSearch.count =
       hotels.length;
 
-    /*
-     * CRITICAL:
-     *
-     * If real hotel data exists,
-     * NEVER return status=error.
-     *
-     * The frontend always prioritizes
-     * the actual hotels array.
-     */
-
-    if (
-      hotels.length > 0
-    ) {
-      hotelSearch.enabled =
-        true;
-
-      hotelSearch.status =
-        "completed";
-    }
-
     // =========================================================
     // FINAL LOGS
     // =========================================================
-
-    console.log(
-      "================================================="
-    );
 
     console.log(
       "PLAN CREATED SUCCESSFULLY"
@@ -2605,8 +2264,9 @@ Before returning JSON verify:
     );
 
     console.log(
-      "HOTEL SEARCH COUNT:",
-      hotelSearch.count
+      "HOTEL SEARCH ERROR:",
+      hotelSearch.error ||
+        "none"
     );
 
     console.log(
@@ -2617,10 +2277,6 @@ Before returning JSON verify:
     console.log(
       "RESTAURANT SEARCH STATUS:",
       restaurantSearch.status
-    );
-
-    console.log(
-      "================================================="
     );
 
     // =========================================================
@@ -2639,9 +2295,7 @@ Before returning JSON verify:
       restaurantSearch
     });
 
-  } catch (
-    error
-  ) {
+  } catch (error) {
 
     console.error(
       "SERVER ERROR:",
@@ -2657,4 +2311,4 @@ Before returning JSON verify:
         "Unknown error"
     });
   }
-              }
+      }
