@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 module.exports = async (req, res) => {
-    // Enable CORS manually to prevent serverless endpoint blocking
+    // Enable CORS to prevent browser domain blocking issues
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -17,7 +17,7 @@ module.exports = async (req, res) => {
     const { destination, days, budget, travelers, interests, notes } = req.body;
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     
-    // Stable and fast model route for serverless environments
+    // Using official Google Gemini API Endpoint
     const GEMINI_URL = `https://googleapis.com{GEMINI_API_KEY}`;
 
     const prompt = `You are an expert travel planner. Create an optimized trip strategy in English for ${days} days in ${destination} with a maximum spending cap of $${budget} for ${travelers} traveler(s). 
@@ -47,13 +47,15 @@ module.exports = async (req, res) => {
             }
         });
 
-        // 🛠️ CRITICAL FIX: Safe deep extraction using precise array bracket indexes 🛠 &&
+        // 🛠️ THE ABSOLUTE FIX: Safely parse Google's deep nested array payload structure 🛠️
         if (response.data && response.data.candidates && response.data.candidates[0] && response.data.candidates[0].content && response.data.candidates[0].content.parts && response.data.candidates[0].content.parts[0]) {
+            
             const rawText = response.data.candidates[0].content.parts[0].text.trim();
             const travelData = JSON.parse(rawText);
             return res.status(200).json(travelData);
+            
         } else {
-            throw new Error("Failed to map the structural candidate data from Gemini layout object.");
+            throw new Error("Gemini response returned empty or structural candidates array was blocked.");
         }
 
     } catch (error) {
