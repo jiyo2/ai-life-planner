@@ -58,48 +58,58 @@ document.addEventListener('DOMContentLoaded', () => {
         appScreen.classList.remove('hidden');
     });
 
-    // --- MOCK DATA FOR DESIGN AND LAYOUT TESTING ---
+    // --- STRIPE PAYMENT REDIRECTION ---
     payBtn.addEventListener('click', () => {
-        reviewScreen.classList.add('hidden');
-        planScreen.classList.remove('hidden');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        localStorage.setItem('pendingTripData', JSON.stringify(formData));
+        localStorage.setItem('hasPaid', 'true'); 
 
-        const mockData = {
-            stay: `<ul>
-                    <li><strong>🌟 Luxury Option:</strong> Hilton Bosphorus (Approx. $180/night) - Great central location.</li>
-                    <li><strong>📉 Budget Option:</strong> Stay Inn Taksim Hostel (Approx. $35/night) - Highly rated for solo travelers.</li>
-                   </ul>`,
-            transport: `<p>🚌 <strong>Best Choice:</strong> Istanbul Kart (Public Metro & Tram) is highly recommended. It costs around $1.50 per ride.</p>
-                        <p>🚖 <strong>Taxis:</strong> Use BiTaksi app to avoid scams. Estimated budget for transit: $40 total.</p>`,
-            experiences: `<ul>
-                            <li><strong>🕌 Blue Mosque & Hagia Sophia:</strong> Free entry, best visited in the early morning.</li>
-                            <li><strong>🍴 Food Recommendation:</strong> Try Tarihi Sultanahmet Köftecisi for authentic local cuisine ($12 per person).</li>
-                          </ul>`,
-            money: `<p>💵 <strong>Daily Budget Allocation:</strong></p>
-                    <ul>
-                        <li>Food & Cafe: 40%</li>
-                        <li>Attractions & Entry Fees: 30%</li>
-                        <li>Local Transport: 15%</li>
-                        <li>Emergency / Shopping Cash: 15%</li>
-                    </ul>`,
-            daysPlan: `<ol>
-                        <li><strong>Day 1:</strong> Arrival, check-in at hotel, and evening walk around Taksim Square & Istiklal Street.</li>
-                        <li><strong>Day 2:</strong> Historic tour of Sultanahmet (Topkapi Palace, Hagia Sophia) and dinner by the Bosphorus.</li>
-                       </ol>`
-        };
-
-        // Inject data into the UI sections
-        document.getElementById('planTitle').textContent = `Your Trip to ${formData.destination}`;
-        document.getElementById('planIntro').textContent = `Customized strategy for ${formData.days} days with a $${formData.budget} budget.`;
-        
-        document.getElementById('stayContent').innerHTML = mockData.stay;
-        document.getElementById('transportContent').innerHTML = mockData.transport;
-        document.getElementById('experiencesContent').innerHTML = mockData.experiences;
-        document.getElementById('moneyContent').innerHTML = mockData.money;
-        document.getElementById('daysContent').innerHTML = mockData.daysPlan;
+        // ⚠️ REPLACE THIS LINK WITH YOUR LIVE STRIPE PAYMENT LINK ⚠️
+        window.location.href = "https://stripe.com"; 
     });
 
-    // --- TAB SWITCHER LOGIC ---
+    // --- VERIFY RETURN FLOW FROM STRIPE AND RENDER RESULT ---
+    window.addEventListener('load', async () => {
+        const hasPaid = localStorage.getItem('hasPaid');
+        const savedData = localStorage.getItem('pendingTripData');
+
+        if (hasPaid === 'true' && savedData) {
+            localStorage.removeItem('hasPaid');
+            localStorage.removeItem('pendingTripData');
+
+            appScreen.classList.add('hidden');
+            reviewScreen.classList.add('hidden');
+            planScreen.classList.remove('hidden');
+
+            try {
+                // Fixed fetch route pointing exactly to your /api/plan path
+                const response = await fetch('/api/plan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: savedData
+                });
+
+                if (!response.ok) throw new Error('Live generation stream failed.');
+                const data = await response.json();
+
+                const parsedData = JSON.parse(savedData);
+                document.getElementById('planTitle').textContent = `Your Trip to ${parsedData.destination}`;
+                document.getElementById('planIntro').textContent = `Customized strategy for ${parsedData.days} days with a $${parsedData.budget} budget.`;
+                
+                document.getElementById('stayContent').innerHTML = data.stay;
+                document.getElementById('transportContent').innerHTML = data.transport;
+                document.getElementById('experiencesContent').innerHTML = data.experiences;
+                document.getElementById('moneyContent').innerHTML = data.money;
+                document.getElementById('daysContent').innerHTML = data.daysPlan;
+
+            } catch (error) {
+                document.getElementById('planTitle').textContent = "Generation Error";
+                document.getElementById('planIntro').textContent = "Something went wrong communicating with Gemini. Please try again.";
+                console.error(error);
+            }
+        }
+    });
+
+    // --- TAB NAVIGATION SELECTION ENGINE ---
     const tabs = document.querySelectorAll('.plan-tab');
     const sections = document.querySelectorAll('.plan-section');
 
