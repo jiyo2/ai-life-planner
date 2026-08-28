@@ -1,4 +1,4 @@
-console.log("PLAN.JS PRODUCTION V11 SCRAPPA RUNNING");
+console.log("PLAN.JS SCRAPPA V1 RUNNING");
 
 export default async function handler(req, res) {
   console.log("PLAN API START");
@@ -165,11 +165,14 @@ export default async function handler(req, res) {
     // =========================================================
 
     function isValidDateString(value) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(value)
+      ) {
         return false;
       }
 
-      const date = new Date(`${value}T00:00:00Z`);
+      const date =
+        new Date(`${value}T00:00:00Z`);
 
       if (Number.isNaN(date.getTime())) {
         return false;
@@ -191,7 +194,8 @@ export default async function handler(req, res) {
       return date.toISOString().slice(0, 10);
     }
 
-    const validStart = isValidDateString(start);
+    const validStart =
+      isValidDateString(start);
 
     const checkOut =
       validStart
@@ -300,6 +304,8 @@ Consider:
 - practical value
 - proximity to attractions
 - general safety
+
+Do not claim that a particular hotel is available.
 
 The system separately searches live hotel inventory.
 
@@ -584,7 +590,8 @@ Before returning JSON verify:
       );
 
       return res.status(500).json({
-        error: "Gemini request failed",
+        error:
+          "Gemini request failed",
         geminiStatus:
           geminiResponse.status,
         details:
@@ -597,9 +604,7 @@ Before returning JSON verify:
     // =========================================================
 
     const parts =
-      geminiData
-        ?.candidates?.[0]
-        ?.content?.parts || [];
+      geminiData?.candidates?.[0]?.content?.parts || [];
 
     const text =
       parts
@@ -669,8 +674,7 @@ Before returning JSON verify:
     let plan;
 
     try {
-      plan =
-        JSON.parse(cleanText);
+      plan = JSON.parse(cleanText);
     } catch (error) {
       console.error(
         "JSON PARSE ERROR:",
@@ -820,12 +824,7 @@ Before returning JSON verify:
               : "";
 
           const priceLevel =
-            [
-              "$",
-              "$$",
-              "$$$",
-              "$$$$"
-            ].includes(
+            ["$", "$$", "$$$", "$$$$"].includes(
               restaurant.priceLevel
             )
               ? restaurant.priceLevel
@@ -930,44 +929,34 @@ Before returning JSON verify:
     // NORMALIZE BUDGET
     // =========================================================
 
-    const accommodation =
+    let accommodation =
       Math.max(
         0,
-        Number(
-          plan.budget.accommodation || 0
-        )
+        Number(plan.budget.accommodation || 0)
       );
 
-    const transportation =
+    let transportation =
       Math.max(
         0,
-        Number(
-          plan.budget.transportation || 0
-        )
+        Number(plan.budget.transportation || 0)
       );
 
-    const food =
+    let food =
       Math.max(
         0,
-        Number(
-          plan.budget.food || 0
-        )
+        Number(plan.budget.food || 0)
       );
 
-    const activities =
+    let activities =
       Math.max(
         0,
-        Number(
-          plan.budget.activities || 0
-        )
+        Number(plan.budget.activities || 0)
       );
 
-    const other =
+    let other =
       Math.max(
         0,
-        Number(
-          plan.budget.other || 0
-        )
+        Number(plan.budget.other || 0)
       );
 
     let calculatedTotal =
@@ -976,10 +965,6 @@ Before returning JSON verify:
       food +
       activities +
       other;
-
-    // =========================================================
-    // PROTECT USER BUDGET
-    // =========================================================
 
     if (calculatedTotal > budget) {
       console.warn(
@@ -991,68 +976,43 @@ Before returning JSON verify:
       const ratio =
         budget / calculatedTotal;
 
-      plan.budget.accommodation =
-        Math.floor(
-          accommodation * ratio
-        );
+      accommodation =
+        Math.floor(accommodation * ratio);
 
-      plan.budget.transportation =
-        Math.floor(
-          transportation * ratio
-        );
+      transportation =
+        Math.floor(transportation * ratio);
 
-      plan.budget.food =
-        Math.floor(
-          food * ratio
-        );
+      food =
+        Math.floor(food * ratio);
 
-      plan.budget.activities =
-        Math.floor(
-          activities * ratio
-        );
+      activities =
+        Math.floor(activities * ratio);
 
-      plan.budget.other =
+      other =
         Math.max(
           0,
           budget -
-            plan.budget.accommodation -
-            plan.budget.transportation -
-            plan.budget.food -
-            plan.budget.activities
+            accommodation -
+            transportation -
+            food -
+            activities
         );
-
-      calculatedTotal =
-        plan.budget.accommodation +
-        plan.budget.transportation +
-        plan.budget.food +
-        plan.budget.activities +
-        plan.budget.other;
     }
 
     plan.budget.accommodation =
-      Number(
-        plan.budget.accommodation || 0
-      );
+      Number(accommodation);
 
     plan.budget.transportation =
-      Number(
-        plan.budget.transportation || 0
-      );
+      Number(transportation);
 
     plan.budget.food =
-      Number(
-        plan.budget.food || 0
-      );
+      Number(food);
 
     plan.budget.activities =
-      Number(
-        plan.budget.activities || 0
-      );
+      Number(activities);
 
     plan.budget.other =
-      Number(
-        plan.budget.other || 0
-      );
+      Number(other);
 
     plan.budget.total =
       plan.budget.accommodation +
@@ -1116,7 +1076,7 @@ Before returning JSON verify:
     }
 
     // =========================================================
-    // HOTEL SEARCH — SCRAPPA GOOGLE HOTELS
+    // SCRAPPA HOTEL SEARCH
     // =========================================================
 
     let hotels = [];
@@ -1125,6 +1085,10 @@ Before returning JSON verify:
       enabled: false,
 
       status: "not_searched",
+
+      provider: "Scrappa",
+
+      source: "Google Hotels",
 
       checkIn:
         validStart
@@ -1138,9 +1102,9 @@ Before returning JSON verify:
 
       adults,
 
-      platforms: [
-        "Google Hotels"
-      ],
+      children: 0,
+
+      currency: "USD",
 
       creditsCharged: 0,
 
@@ -1165,156 +1129,90 @@ Before returning JSON verify:
             return null;
           }
 
-          const name =
-            typeof hotel.name === "string"
-              ? hotel.name.trim()
-              : typeof hotel.title === "string"
-                ? hotel.title.trim()
-                : "";
+          /*
+           * Scrappa Google Hotels can expose slightly
+           * different property names depending on the
+           * result. We normalize the common fields.
+           */
 
-          if (!name) {
+          const name =
+            hotel.name ||
+            hotel.title ||
+            hotel.property_name ||
+            hotel.hotel_name ||
+            "";
+
+          if (
+            typeof name !== "string" ||
+            !name.trim()
+          ) {
             return null;
           }
 
-          // Google Hotels / Scrappa can expose
-          // pricing in different nested structures.
-          let price = null;
-
-          if (hotel.price != null) {
-            price = hotel.price;
-          }
-
-          if (
-            price == null &&
-            hotel.price_per_night != null
-          ) {
-            price = hotel.price_per_night;
-          }
-
-          if (
-            price == null &&
-            hotel.pricePerNight != null
-          ) {
-            price = hotel.pricePerNight;
-          }
-
-          if (
-            price == null &&
-            hotel.total_price != null
-          ) {
-            price = hotel.total_price;
-          }
-
-          if (
-            price == null &&
-            hotel.totalPrice != null
-          ) {
-            price = hotel.totalPrice;
-          }
-
-          // Some responses contain booking options.
-          if (
-            price == null &&
-            Array.isArray(hotel.booking_options) &&
-            hotel.booking_options.length > 0
-          ) {
-            price =
-              hotel.booking_options[0]?.price ||
-              hotel.booking_options[0]?.price_text ||
-              null;
-          }
-
-          if (
-            price == null &&
-            Array.isArray(hotel.bookingOptions) &&
-            hotel.bookingOptions.length > 0
-          ) {
-            price =
-              hotel.bookingOptions[0]?.price ||
-              hotel.bookingOptions[0]?.priceText ||
-              null;
-          }
-
-          let url =
-            hotel.url ||
-            hotel.link ||
-            hotel.google_url ||
-            hotel.googleUrl ||
-            null;
-
-          let location =
+          const location =
             hotel.location ||
             hotel.address ||
-            hotel.neighborhood ||
+            hotel.city ||
+            destination;
+
+          const url =
+            hotel.url ||
+            hotel.link ||
+            hotel.property_url ||
             null;
 
-          let starRating =
+          const price =
+            hotel.price ||
+            hotel.total_price ||
+            hotel.price_per_night ||
+            hotel.rate ||
+            hotel.rate_per_night ||
+            null;
+
+          const starRating =
             hotel.star_rating ??
-            hotel.starRating ??
             hotel.stars ??
-            null;
-
-          let guestRating =
-            hotel.guest_rating ??
-            hotel.guestRating ??
             hotel.rating ??
             null;
 
-          let reviewCount =
-            hotel.review_count ??
-            hotel.reviewCount ??
-            hotel.reviews ??
+          const guestRating =
+            hotel.guest_rating ??
+            hotel.review_score ??
+            hotel.rating_score ??
             null;
 
-          let amenities =
+          const reviewCount =
+            hotel.review_count ??
+            hotel.reviews_count ??
+            null;
+
+          const amenities =
             Array.isArray(hotel.amenities)
               ? hotel.amenities
               : [];
-
-          // Booking options / platforms
-          let bookingOptions = [];
-
-          if (
-            Array.isArray(
-              hotel.booking_options
-            )
-          ) {
-            bookingOptions =
-              hotel.booking_options;
-          }
-
-          if (
-            Array.isArray(
-              hotel.bookingOptions
-            )
-          ) {
-            bookingOptions =
-              hotel.bookingOptions;
-          }
 
           return {
             id:
               hotel.id ||
               hotel.property_id ||
-              hotel.propertyId ||
-              `hotel-${index}-${Math.random()
-                .toString(36)
-                .slice(2, 8)}`,
+              `scrappa-hotel-${index + 1}`,
 
             platform:
+              hotel.platform ||
               "Google Hotels",
 
             platformListingId:
               hotel.property_id ||
-              hotel.propertyId ||
+              hotel.id ||
               null,
 
-            name,
+            name:
+              name.trim(),
 
             propertyType:
               hotel.property_type ||
               hotel.propertyType ||
-              null,
+              "Hotel",
 
             url,
 
@@ -1326,8 +1224,7 @@ Before returning JSON verify:
 
             ratingScale:
               hotel.rating_scale ||
-              hotel.ratingScale ||
-              5,
+              null,
 
             reviewCount,
 
@@ -1335,7 +1232,15 @@ Before returning JSON verify:
 
             price,
 
-            bookingOptions
+            currency:
+              hotel.currency ||
+              "USD",
+
+            image:
+              hotel.image ||
+              hotel.image_url ||
+              hotel.thumbnail ||
+              null
           };
         })
         .filter(Boolean)
@@ -1343,18 +1248,17 @@ Before returning JSON verify:
     }
 
     // =========================================================
-    // START SCRAPPA HOTEL SEARCH
+    // SCRAPPA SEARCH
     // =========================================================
 
     if (validStart) {
       console.log(
-        "STARTING SCRAPPA GOOGLE HOTELS SEARCH..."
+        "STARTING SCRAPPA HOTEL SEARCH..."
       );
 
       const params =
         new URLSearchParams();
 
-      // Required by Scrappa
       params.set(
         "q",
         destination
@@ -1370,7 +1274,6 @@ Before returning JSON verify:
         checkOut
       );
 
-      // Optional
       params.set(
         "adults",
         String(adults)
@@ -1386,11 +1289,15 @@ Before returning JSON verify:
         "USD"
       );
 
-      // Turkey / Google localization
-      params.set(
-        "gl",
-        "tr"
-      );
+      // Turkey locale when destination is Istanbul/Turkey.
+      // This does not affect the secret key.
+      if (
+        /turkey|türkiye|istanbul/i.test(
+          destination
+        )
+      ) {
+        params.set("gl", "tr");
+      }
 
       const scrappaURL =
         `https://scrappa.co/api/google-hotels/search?${params.toString()}`;
@@ -1431,8 +1338,6 @@ Before returning JSON verify:
 
           status: "error",
 
-          count: 0,
-
           error: {
             code:
               "connection_error",
@@ -1444,6 +1349,10 @@ Before returning JSON verify:
           }
         };
       }
+
+      // =======================================================
+      // PROCESS SCRAPPA RESPONSE
+      // =======================================================
 
       if (scrappaResponse) {
         console.log(
@@ -1469,8 +1378,6 @@ Before returning JSON verify:
 
             status: "error",
 
-            count: 0,
-
             error: {
               code:
                 "invalid_response",
@@ -1487,34 +1394,54 @@ Before returning JSON verify:
           "SCRAPPA RESPONSE PREVIEW:",
           JSON.stringify(
             scrappaData
-          ).slice(0, 4000)
+          ).slice(0, 3000)
         );
 
-        // =====================================================
-        // SUCCESS
-        // =====================================================
-
         if (scrappaResponse.ok) {
-          // Scrappa Google Hotels docs use
-          // { properties: [...] }
-          const rawProperties =
+          /*
+           * Google Hotels responses normally contain:
+           * { properties: [...] }
+           *
+           * We also support a few possible wrappers so
+           * the frontend remains stable if the API shape
+           * includes success/meta fields.
+           */
+
+          let rawHotels = [];
+
+          if (
             Array.isArray(
               scrappaData?.properties
             )
-              ? scrappaData.properties
-              : Array.isArray(
-                  scrappaData?.data?.properties
-                )
-                ? scrappaData.data.properties
-                : Array.isArray(
-                    scrappaData?.data
-                  )
-                  ? scrappaData.data
-                  : [];
+          ) {
+            rawHotels =
+              scrappaData.properties;
+          } else if (
+            Array.isArray(
+              scrappaData?.data?.properties
+            )
+          ) {
+            rawHotels =
+              scrappaData.data.properties;
+          } else if (
+            Array.isArray(
+              scrappaData?.data
+            )
+          ) {
+            rawHotels =
+              scrappaData.data;
+          } else if (
+            Array.isArray(
+              scrappaData?.results
+            )
+          ) {
+            rawHotels =
+              scrappaData.results;
+          }
 
           hotels =
             normalizeHotels(
-              rawProperties
+              rawHotels
             );
 
           hotelSearch = {
@@ -1530,58 +1457,43 @@ Before returning JSON verify:
             count:
               hotels.length,
 
-            creditsCharged: 1,
+            creditsCharged:
+              Number(
+                scrappaData?.creditsCharged ||
+                scrappaData?.meta?.creditsCharged ||
+                scrappaData?.usage?.credits ||
+                1
+              ),
 
             source:
               "Scrappa Google Hotels",
 
-            live:
-              true
+            provider:
+              "Scrappa"
           };
 
           console.log(
             "SCRAPPA HOTELS FOUND:",
             hotels.length
           );
-        }
+        } else {
+          const errorMessage =
+            scrappaData?.error?.message ||
+            scrappaData?.message ||
+            scrappaData?.error ||
+            "Scrappa hotel search failed.";
 
-        // =====================================================
-        // ERROR
-        // =====================================================
+          const errorCode =
+            scrappaData?.error?.code ||
+            scrappaData?.code ||
+            `http_${scrappaResponse.status}`;
 
-        else {
           console.error(
             "SCRAPPA REQUEST FAILED:",
             JSON.stringify(
               scrappaData
             )
           );
-
-          const status =
-            scrappaResponse.status;
-
-          let errorMessage =
-            "Scrappa hotel search failed.";
-
-          if (status === 401) {
-            errorMessage =
-              "Scrappa API key is invalid or missing.";
-          }
-
-          if (status === 403) {
-            errorMessage =
-              "Scrappa API access was denied.";
-          }
-
-          if (status === 429) {
-            errorMessage =
-              "Scrappa request limit was reached.";
-          }
-
-          if (status >= 500) {
-            errorMessage =
-              "Scrappa hotel service is temporarily unavailable.";
-          }
 
           hotelSearch = {
             ...hotelSearch,
@@ -1594,18 +1506,18 @@ Before returning JSON verify:
 
             error: {
               code:
-                scrappaData?.code ||
-                scrappaData?.error?.code ||
-                `http_${status}`,
+                errorCode,
 
               message:
-                scrappaData?.message ||
-                scrappaData?.error?.message ||
-                errorMessage,
+                typeof errorMessage === "string"
+                  ? errorMessage
+                  : "Scrappa hotel search failed.",
+
+              status:
+                scrappaResponse.status,
 
               retryable:
-                status >= 500 ||
-                status === 429
+                scrappaResponse.status >= 500
             }
           };
         }
@@ -1671,6 +1583,11 @@ Before returning JSON verify:
     );
 
     console.log(
+      "HOTEL PROVIDER:",
+      hotelSearch.provider
+    );
+
+    console.log(
       "RESTAURANTS RETURNED:",
       restaurants.length
     );
@@ -1711,4 +1628,4 @@ Before returning JSON verify:
         "Unknown error"
     });
   }
-    }
+        }
