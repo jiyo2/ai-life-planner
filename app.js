@@ -3,7 +3,7 @@ const $ = (id) => document.getElementById(id);
 let trip = null;
 let currentPlan = null;
 
-console.log("APP.JS PRODUCTION V12 — HOTEL PRICE + IMAGE FIX");
+console.log("APP.JS PRODUCTION V13 — HOTEL PRICE + IMAGE FIX");
 
 /* =========================================================
    DYNAMIC STYLES
@@ -122,7 +122,7 @@ console.log("APP.JS PRODUCTION V12 — HOTEL PRICE + IMAGE FIX");
 
     .hotel-image-wrapper {
       width: 100%;
-      height: 190px;
+      height: 210px;
       background: #f1f1f1;
       overflow: hidden;
       position: relative;
@@ -132,24 +132,32 @@ console.log("APP.JS PRODUCTION V12 — HOTEL PRICE + IMAGE FIX");
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: center;
       display: block;
     }
 
     .hotel-image-placeholder {
       width: 100%;
       height: 100%;
+      min-height: 180px;
+
       display: flex;
       align-items: center;
       justify-content: center;
+
       background:
         linear-gradient(
           135deg,
           #eeeeee,
           #dcdcdc
         );
+
       color: #777;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 600;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
     }
 
     .hotel-body {
@@ -353,7 +361,7 @@ console.log("APP.JS PRODUCTION V12 — HOTEL PRICE + IMAGE FIX");
       }
 
       .hotel-image-wrapper {
-        height: 210px;
+        height: 220px;
       }
 
       .plan-tabs {
@@ -387,17 +395,103 @@ function escapeHTML(value) {
     .replace(/'/g, "&#039;");
 }
 
-function formatUSD(value) {
-  const number = Number(value);
+/* =========================================================
+   SMART NUMBER
+========================================================= */
 
-  if (!Number.isFinite(number)) {
+function extractNumber(value) {
+
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string") {
+
+    const cleaned =
+      value
+        .replace(/,/g, "")
+        .replace(/[^\d.-]/g, "");
+
+    const number =
+      Number(cleaned);
+
+    return Number.isFinite(number)
+      ? number
+      : null;
+  }
+
+  if (typeof value === "object") {
+
+    const keys = [
+      "amount",
+      "value",
+      "price",
+      "total",
+      "totalPrice",
+      "total_price",
+      "perNight",
+      "per_night",
+      "nightly",
+      "nightlyPrice",
+      "nightly_price",
+      "min",
+      "max"
+    ];
+
+    for (const key of keys) {
+
+      if (
+        value[key] !== null &&
+        value[key] !== undefined
+      ) {
+
+        const result =
+          extractNumber(
+            value[key]
+          );
+
+        if (result !== null) {
+          return result;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/* =========================================================
+   USD FORMAT
+========================================================= */
+
+function formatUSD(value) {
+
+  const number =
+    extractNumber(value);
+
+  if (number === null) {
     return "$0";
   }
 
-  return "$" + number.toLocaleString("en-US");
+  return "$" +
+    number.toLocaleString(
+      "en-US",
+      {
+        maximumFractionDigits: 2
+      }
+    );
 }
 
+/* =========================================================
+   SHOW / HIDE
+========================================================= */
+
 function showElement(id) {
+
   const element = $(id);
 
   if (!element) return;
@@ -407,6 +501,7 @@ function showElement(id) {
 }
 
 function hideElement(id) {
+
   const element = $(id);
 
   if (!element) return;
@@ -414,23 +509,117 @@ function hideElement(id) {
   element.classList.add("hidden");
 }
 
+/* =========================================================
+   TEXT / HTML
+========================================================= */
+
 function setText(id, text) {
+
   const element = $(id);
 
   if (!element) return;
 
   element.textContent =
-    text === null || text === undefined
+    text === null ||
+    text === undefined
       ? ""
       : String(text);
 }
 
 function setHTML(id, html) {
+
   const element = $(id);
 
   if (!element) return;
 
-  element.innerHTML = html || "";
+  element.innerHTML =
+    html || "";
+}
+
+/* =========================================================
+   GENERIC VALUE EXTRACTOR
+   Prevents [object Object]
+========================================================= */
+
+function extractDisplayValue(value) {
+
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return "";
+  }
+
+  if (
+    typeof value === "string" ||
+    typeof value === "number"
+  ) {
+    return String(value);
+  }
+
+  if (
+    typeof value === "boolean"
+  ) {
+    return value
+      ? "Yes"
+      : "No";
+  }
+
+  if (
+    typeof value === "object"
+  ) {
+
+    const preferredKeys = [
+
+      "formatted",
+      "formattedPrice",
+      "display",
+      "displayValue",
+      "text",
+
+      "amount",
+      "value",
+      "price",
+      "total",
+      "totalPrice",
+      "total_price",
+
+      "perNight",
+      "per_night",
+      "nightly",
+      "nightlyPrice",
+      "nightly_price",
+
+      "name",
+      "title",
+      "label",
+      "description"
+    ];
+
+    for (
+      const key of preferredKeys
+    ) {
+
+      if (
+        value[key] !== null &&
+        value[key] !== undefined
+      ) {
+
+        const result =
+          extractDisplayValue(
+            value[key]
+          );
+
+        if (result) {
+          return result;
+        }
+      }
+    }
+
+    return "";
+  }
+
+  return "";
 }
 
 /* =========================================================
@@ -438,8 +627,11 @@ function setHTML(id, html) {
 ========================================================= */
 
 function setupInterestChips() {
+
   const chips =
-    document.querySelectorAll(".chip");
+    document.querySelectorAll(
+      ".chip"
+    );
 
   console.log(
     "INTEREST CHIPS FOUND:",
@@ -451,7 +643,9 @@ function setupInterestChips() {
     const cleanChip =
       chip.cloneNode(true);
 
-    chip.replaceWith(cleanChip);
+    chip.replaceWith(
+      cleanChip
+    );
 
     cleanChip.addEventListener(
       "click",
@@ -460,15 +654,23 @@ function setupInterestChips() {
         event.preventDefault();
         event.stopPropagation();
 
-        this.classList.toggle("selected");
-        this.classList.toggle("active");
+        this.classList.toggle(
+          "selected"
+        );
+
+        this.classList.toggle(
+          "active"
+        );
 
         console.log(
           "INTEREST CLICKED:",
           this.textContent.trim(),
           "SELECTED:",
-          this.classList.contains("selected")
+          this.classList.contains(
+            "selected"
+          )
         );
+
       },
       false
     );
@@ -493,7 +695,10 @@ function getSelectedInterests() {
 
     let text =
       chip.textContent
-        .replace(/^[^\p{L}\p{N}]*/u, "")
+        .replace(
+          /^[^\p{L}\p{N}]*/u,
+          ""
+        )
         .trim();
 
     text =
@@ -522,10 +727,12 @@ function getSelectedInterests() {
 function collectTripData() {
 
   const destination =
-    $("destination")?.value.trim() || "";
+    $("destination")?.value.trim() ||
+    "";
 
   const start =
-    $("startDate")?.value || "";
+    $("startDate")?.value ||
+    "";
 
   const days =
     Number(
@@ -542,7 +749,8 @@ function collectTripData() {
     "1 traveler";
 
   const notes =
-    $("notes")?.value.trim() || "";
+    $("notes")?.value.trim() ||
+    "";
 
   const interests =
     getSelectedInterests();
@@ -575,34 +783,48 @@ function createReviewSummary(data) {
       : "General sightseeing";
 
   summary.innerHTML = `
+
     <p>
       <strong>Destination:</strong>
-      ${escapeHTML(data.destination)}
+      ${escapeHTML(
+        data.destination
+      )}
     </p>
 
     <p>
       <strong>Start date:</strong>
-      ${escapeHTML(data.start || "Not specified")}
+      ${escapeHTML(
+        data.start ||
+        "Not specified"
+      )}
     </p>
 
     <p>
       <strong>Days:</strong>
-      ${escapeHTML(data.days)}
+      ${escapeHTML(
+        data.days
+      )}
     </p>
 
     <p>
       <strong>Budget:</strong>
-      ${formatUSD(data.budget)}
+      ${formatUSD(
+        data.budget
+      )}
     </p>
 
     <p>
       <strong>Travelers:</strong>
-      ${escapeHTML(data.travelers)}
+      ${escapeHTML(
+        data.travelers
+      )}
     </p>
 
     <p>
       <strong>Interests:</strong>
-      ${escapeHTML(interests)}
+      ${escapeHTML(
+        interests
+      )}
     </p>
 
     ${
@@ -610,11 +832,14 @@ function createReviewSummary(data) {
         ? `
           <p>
             <strong>Notes:</strong>
-            ${escapeHTML(data.notes)}
+            ${escapeHTML(
+              data.notes
+            )}
           </p>
         `
         : ""
     }
+
   `;
 }
 
@@ -625,10 +850,13 @@ function createReviewSummary(data) {
 function showReview() {
 
   if (!trip) {
-    trip = collectTripData();
+    trip =
+      collectTripData();
   }
 
-  createReviewSummary(trip);
+  createReviewSummary(
+    trip
+  );
 
   hideElement("app");
   showElement("review");
@@ -667,7 +895,9 @@ function setupPlanTabs() {
     const cleanTab =
       tab.cloneNode(true);
 
-    tab.replaceWith(cleanTab);
+    tab.replaceWith(
+      cleanTab
+    );
 
     cleanTab.addEventListener(
       "click",
@@ -682,24 +912,48 @@ function setupPlanTabs() {
         if (!target) return;
 
         document
-          .querySelectorAll(".plan-tab")
-          .forEach((item) => {
-            item.classList.remove("active");
-          });
+          .querySelectorAll(
+            ".plan-tab"
+          )
+          .forEach(
+            (item) => {
 
-        this.classList.add("active");
+              item.classList.remove(
+                "active"
+              );
+
+            }
+          );
+
+        this.classList.add(
+          "active"
+        );
 
         document
-          .querySelectorAll(".plan-section")
-          .forEach((section) => {
-            section.classList.remove("active");
-          });
+          .querySelectorAll(
+            ".plan-section"
+          )
+          .forEach(
+            (section) => {
+
+              section.classList.remove(
+                "active"
+              );
+
+            }
+          );
 
         const targetSection =
-          $(`${target}Section`);
+          $(
+            `${target}Section`
+          );
 
         if (targetSection) {
-          targetSection.classList.add("active");
+
+          targetSection.classList.add(
+            "active"
+          );
+
         }
 
       },
@@ -720,15 +974,25 @@ function activateDefaultPlanSection() {
       ".plan-section"
     );
 
-  sections.forEach((section) => {
-    section.classList.remove("active");
-  });
+  sections.forEach(
+    (section) => {
+
+      section.classList.remove(
+        "active"
+      );
+
+    }
+  );
 
   const stay =
     $("staySection");
 
   if (stay) {
-    stay.classList.add("active");
+
+    stay.classList.add(
+      "active"
+    );
+
   }
 
   const tabs =
@@ -736,9 +1000,15 @@ function activateDefaultPlanSection() {
       ".plan-tab"
     );
 
-  tabs.forEach((tab) => {
-    tab.classList.remove("active");
-  });
+  tabs.forEach(
+    (tab) => {
+
+      tab.classList.remove(
+        "active"
+      );
+
+    }
+  );
 
   const firstTab =
     document.querySelector(
@@ -746,7 +1016,11 @@ function activateDefaultPlanSection() {
     );
 
   if (firstTab) {
-    firstTab.classList.add("active");
+
+    firstTab.classList.add(
+      "active"
+    );
+
   }
 }
 
@@ -757,7 +1031,8 @@ function activateDefaultPlanSection() {
 async function createPlan() {
 
   if (!trip) {
-    trip = collectTripData();
+    trip =
+      collectTripData();
   }
 
   console.log(
@@ -766,29 +1041,39 @@ async function createPlan() {
   );
 
   if (!trip.destination) {
+
     alert(
       "Please enter a destination."
     );
+
     return;
   }
 
   if (
-    !Number.isFinite(trip.days) ||
+    !Number.isFinite(
+      trip.days
+    ) ||
     trip.days < 1
   ) {
+
     alert(
       "Please enter a valid number of days."
     );
+
     return;
   }
 
   if (
-    !Number.isFinite(trip.budget) ||
+    !Number.isFinite(
+      trip.budget
+    ) ||
     trip.budget <= 0
   ) {
+
     alert(
       "Please enter a valid budget."
     );
+
     return;
   }
 
@@ -834,13 +1119,20 @@ async function createPlan() {
   if (daysOut) {
 
     daysOut.innerHTML = `
+
       <div class="day">
-        <b>AI Travel Planner</b>
+
+        <b>
+          AI Travel Planner
+        </b>
+
         <p>
           Creating your personalized
           day-by-day itinerary...
         </p>
+
       </div>
+
     `;
   }
 
@@ -857,15 +1149,18 @@ async function createPlan() {
           method: "POST",
 
           headers: {
+
             "Content-Type":
               "application/json",
 
             "Accept":
               "application/json"
+
           },
 
           body:
             JSON.stringify({
+
               destination:
                 trip.destination,
 
@@ -886,7 +1181,9 @@ async function createPlan() {
 
               notes:
                 trip.notes
+
             })
+
         }
       );
 
@@ -912,6 +1209,7 @@ async function createPlan() {
       throw new Error(
         "The server returned an invalid response."
       );
+
     }
 
     console.log(
@@ -929,44 +1227,55 @@ async function createPlan() {
       throw new Error(
         serverMessage
       );
+
     }
 
     if (
       !data ||
       typeof data !== "object"
     ) {
+
       throw new Error(
         "The server returned an empty plan."
       );
+
     }
 
     if (
       !data.plan ||
       typeof data.plan !== "object"
     ) {
+
       throw new Error(
         "The AI plan data was not returned."
       );
+
     }
 
     currentPlan =
       data.plan;
 
     currentPlan.hotels =
-      Array.isArray(data.hotels)
+      Array.isArray(
+        data.hotels
+      )
         ? data.hotels
         : [];
 
     currentPlan.hotelSearch =
-      data.hotelSearch || {};
+      data.hotelSearch ||
+      {};
 
     currentPlan.restaurants =
-      Array.isArray(data.restaurants)
+      Array.isArray(
+        data.restaurants
+      )
         ? data.restaurants
         : [];
 
     currentPlan.restaurantSearch =
-      data.restaurantSearch || {};
+      data.restaurantSearch ||
+      {};
 
     console.log(
       "PLAN RECEIVED:",
@@ -993,6 +1302,7 @@ async function createPlan() {
       error?.message ||
       "We could not create your AI travel plan. Please try again."
     );
+
   }
 }
 
@@ -1014,7 +1324,9 @@ function showPlanError(message) {
 
   const html = `
     <div class="planner-error">
-      ${escapeHTML(message)}
+      ${escapeHTML(
+        message
+      )}
     </div>
   `;
 
@@ -1042,8 +1354,10 @@ function showPlanError(message) {
     $("daysOut");
 
   if (daysOut) {
+
     daysOut.innerHTML =
       html;
+
   }
 }
 
@@ -1092,20 +1406,27 @@ function renderPlan(plan) {
 function renderStay(plan) {
 
   const stay =
-    plan.stay || {};
+    plan.stay ||
+    {};
 
   const areas =
-    Array.isArray(stay.areas)
+    Array.isArray(
+      stay.areas
+    )
       ? stay.areas
       : [];
 
   const tips =
-    Array.isArray(stay.tips)
+    Array.isArray(
+      stay.tips
+    )
       ? stay.tips
       : [];
 
   const hotels =
-    Array.isArray(plan.hotels)
+    Array.isArray(
+      plan.hotels
+    )
       ? plan.hotels
       : [];
 
@@ -1115,7 +1436,9 @@ function renderStay(plan) {
 
     html += `
       <div class="planner-status">
-        ${escapeHTML(stay.strategy)}
+        ${escapeHTML(
+          stay.strategy
+        )}
       </div>
     `;
   }
@@ -1123,18 +1446,26 @@ function renderStay(plan) {
   if (areas.length) {
 
     html += `
-      <h3>Recommended Areas</h3>
+      <h3>
+        Recommended Areas
+      </h3>
 
       <ul>
+
         ${areas
           .map(
             area => `
               <li>
-                ${escapeHTML(area)}
+                ${escapeHTML(
+                  extractDisplayValue(
+                    area
+                  )
+                )}
               </li>
             `
           )
           .join("")}
+
       </ul>
     `;
   }
@@ -1142,18 +1473,26 @@ function renderStay(plan) {
   if (tips.length) {
 
     html += `
-      <h3>Accommodation Tips</h3>
+      <h3>
+        Accommodation Tips
+      </h3>
 
       <ul>
+
         ${tips
           .map(
             tip => `
               <li>
-                ${escapeHTML(tip)}
+                ${escapeHTML(
+                  extractDisplayValue(
+                    tip
+                  )
+                )}
               </li>
             `
           )
           .join("")}
+
       </ul>
     `;
   }
@@ -1173,9 +1512,13 @@ function renderStay(plan) {
 
     html += `
       <div class="hotels-grid">
+
         ${hotels
-          .map(renderHotelCard)
+          .map(
+            renderHotelCard
+          )
           .join("")}
+
       </div>
     `;
 
@@ -1217,6 +1560,7 @@ function renderStay(plan) {
           is still available above.
         </div>
       `;
+
     }
   }
 
@@ -1228,235 +1572,276 @@ function renderStay(plan) {
 }
 
 /* =========================================================
-   SMART VALUE EXTRACTOR
-   Fixes [object Object]
+   HOTEL IMAGE EXTRACTOR
+   Very flexible
 ========================================================= */
 
-function extractDisplayValue(value) {
+function extractHotelImage(hotel) {
 
   if (
-    value === null ||
-    value === undefined
+    !hotel ||
+    typeof hotel !== "object"
   ) {
-    return "";
+    return null;
+  }
+
+  /* -------------------------------------------------------
+     DIRECT IMAGE FIELDS
+  ------------------------------------------------------- */
+
+  const directFields = [
+
+    "image",
+    "image_url",
+    "imageUrl",
+
+    "thumbnail",
+    "thumbnail_url",
+    "thumbnailUrl",
+
+    "photo",
+    "photo_url",
+    "photoUrl",
+
+    "main_image",
+    "mainImage",
+
+    "cover_image",
+    "coverImage",
+
+    "picture",
+    "picture_url",
+    "pictureUrl",
+
+    "hero_image",
+    "heroImage",
+
+    "featured_image",
+    "featuredImage"
+
+  ];
+
+  for (
+    const field of directFields
+  ) {
+
+    const value =
+      hotel[field];
+
+    const found =
+      extractImageValue(
+        value
+      );
+
+    if (found) {
+      return found;
+    }
+  }
+
+  /* -------------------------------------------------------
+     COMMON NESTED FIELDS
+  ------------------------------------------------------- */
+
+  const nestedFields = [
+
+    "images",
+    "photos",
+    "media",
+    "gallery",
+    "pictures",
+
+    "property",
+    "hotel",
+    "accommodation",
+
+    "content",
+    "data",
+    "details"
+
+  ];
+
+  for (
+    const field of nestedFields
+  ) {
+
+    const value =
+      hotel[field];
+
+    const found =
+      findImageDeep(
+        value,
+        0
+      );
+
+    if (found) {
+      return found;
+    }
+  }
+
+  /* -------------------------------------------------------
+     DEEP SEARCH
+  ------------------------------------------------------- */
+
+  return findImageDeep(
+    hotel,
+    0
+  );
+}
+
+/* =========================================================
+   IMAGE VALUE
+========================================================= */
+
+function extractImageValue(value) {
+
+  if (
+    typeof value === "string" &&
+    value.trim()
+  ) {
+
+    const text =
+      value.trim();
+
+    if (
+      text.startsWith("http://") ||
+      text.startsWith("https://") ||
+      text.startsWith("//")
+    ) {
+
+      return text.startsWith("//")
+        ? "https:" + text
+        : text;
+
+    }
+
+    return null;
   }
 
   if (
-    typeof value === "string" ||
-    typeof value === "number"
+    Array.isArray(value)
   ) {
-    return String(value);
+
+    for (
+      const item of value
+    ) {
+
+      const found =
+        extractImageValue(
+          item
+        );
+
+      if (found) {
+        return found;
+      }
+    }
+
+    return null;
+  }
+
+  if (
+    value &&
+    typeof value === "object"
+  ) {
+
+    const keys = [
+
+      "url",
+      "src",
+      "href",
+      "image",
+      "image_url",
+      "imageUrl",
+      "photo",
+      "photo_url",
+      "photoUrl",
+      "thumbnail",
+      "thumbnail_url",
+      "thumbnailUrl",
+      "original",
+      "originalUrl",
+      "large",
+      "largeUrl"
+
+    ];
+
+    for (
+      const key of keys
+    ) {
+
+      const found =
+        extractImageValue(
+          value[key]
+        );
+
+      if (found) {
+        return found;
+      }
+    }
+  }
+
+  return null;
+}
+
+/* =========================================================
+   DEEP IMAGE SEARCH
+========================================================= */
+
+function findImageDeep(
+  value,
+  depth
+) {
+
+  if (
+    depth > 5 ||
+    value === null ||
+    value === undefined
+  ) {
+    return null;
+  }
+
+  const direct =
+    extractImageValue(
+      value
+    );
+
+  if (direct) {
+    return direct;
+  }
+
+  if (
+    Array.isArray(value)
+  ) {
+
+    for (
+      const item of value
+    ) {
+
+      const found =
+        findImageDeep(
+          item,
+          depth + 1
+        );
+
+      if (found) {
+        return found;
+      }
+    }
+
+    return null;
   }
 
   if (
     typeof value === "object"
   ) {
 
-    const preferredKeys = [
-      "amount",
-      "value",
-      "price",
-      "total",
-      "perNight",
-      "per_night",
-      "nightly",
-      "nightlyPrice",
-      "formatted",
-      "formattedPrice",
-      "display",
-      "text"
-    ];
-
     for (
-      const key of preferredKeys
-    ) {
-
-      if (
-        value[key] !== null &&
-        value[key] !== undefined
-      ) {
-
-        const result =
-          extractDisplayValue(
-            value[key]
-          );
-
-        if (result) {
-          return result;
-        }
-      }
-    }
-
-    const keys =
-      Object.keys(value);
-
-    for (
-      const key of keys
-    ) {
-
-      const result =
-        extractDisplayValue(
-          value[key]
-        );
-
-      if (result) {
-        return result;
-      }
-    }
-
-    return "";
-  }
-
-  return "";
-}
-
-/* =========================================================
-   SMART IMAGE EXTRACTOR
-========================================================= */
-
-function extractHotelImage(hotel) {
-
-  if (!hotel || typeof hotel !== "object") {
-    return null;
-  }
-
-  const possibleFields = [
-    "image",
-    "image_url",
-    "imageUrl",
-    "thumbnail",
-    "thumbnail_url",
-    "thumbnailUrl",
-    "photo",
-    "photo_url",
-    "photoUrl",
-    "main_image",
-    "mainImage",
-    "cover_image",
-    "coverImage",
-    "picture",
-    "picture_url",
-    "pictureUrl"
-  ];
-
-  for (
-    const field of possibleFields
-  ) {
-
-    const value =
-      hotel[field];
-
-    if (
-      typeof value === "string" &&
-      value.trim()
-    ) {
-      return value.trim();
-    }
-
-    if (
-      Array.isArray(value) &&
-      value.length
-    ) {
-
-      const first =
-        value.find(
-          item =>
-            typeof item === "string" &&
-            item.trim()
-        );
-
-      if (first) {
-        return first.trim();
-      }
-
-      const objectImage =
-        value.find(
-          item =>
-            item &&
-            typeof item === "object"
-        );
-
-      if (objectImage) {
-
-        const nested =
-          extractHotelImage(
-            objectImage
-          );
-
-        if (nested) {
-          return nested;
-        }
-      }
-    }
-
-    if (
-      value &&
-      typeof value === "object"
-    ) {
-
-      const nested =
-        extractHotelImage(
-          value
-        );
-
-      if (nested) {
-        return nested;
-      }
-    }
-  }
-
-  /* Search common nested objects */
-
-  const nestedObjects = [
-    hotel.images,
-    hotel.photos,
-    hotel.media,
-    hotel.gallery,
-    hotel.property
-  ];
-
-  for (
-    const nested of nestedObjects
-  ) {
-
-    if (!nested) continue;
-
-    if (Array.isArray(nested)) {
-
-      for (
-        const item of nested
-      ) {
-
-        if (
-          typeof item === "string" &&
-          item.trim()
-        ) {
-          return item.trim();
-        }
-
-        if (
-          item &&
-          typeof item === "object"
-        ) {
-
-          const found =
-            extractHotelImage(
-              item
-            );
-
-          if (found) {
-            return found;
-          }
-        }
-      }
-
-    } else if (
-      typeof nested === "object"
+      const key of Object.keys(value)
     ) {
 
       const found =
-        extractHotelImage(
-          nested
+        findImageDeep(
+          value[key],
+          depth + 1
         );
 
       if (found) {
@@ -1474,22 +1859,37 @@ function extractHotelImage(hotel) {
 
 function extractHotelPrice(hotel) {
 
-  if (!hotel || typeof hotel !== "object") {
+  if (
+    !hotel ||
+    typeof hotel !== "object"
+  ) {
     return "";
   }
 
   const fields = [
+
     "price",
     "total_price",
     "totalPrice",
+
     "price_per_night",
     "pricePerNight",
+
     "rate",
     "rate_per_night",
     "ratePerNight",
+
     "nightly_price",
     "nightlyPrice",
-    "amount"
+
+    "amount",
+
+    "price_value",
+    "priceValue",
+
+    "display_price",
+    "displayPrice"
+
   ];
 
   for (
@@ -1501,13 +1901,40 @@ function extractHotelPrice(hotel) {
       hotel[field] !== undefined
     ) {
 
-      const result =
-        extractDisplayValue(
-          hotel[field]
+      const value =
+        hotel[field];
+
+      /* Try numeric extraction first */
+
+      const number =
+        extractNumber(
+          value
         );
 
-      if (result) {
-        return result;
+      if (
+        number !== null
+      ) {
+
+        return String(
+          number.toLocaleString(
+            "en-US",
+            {
+              maximumFractionDigits: 2
+            }
+          )
+        );
+
+      }
+
+      /* Then formatted string */
+
+      const display =
+        extractDisplayValue(
+          value
+        );
+
+      if (display) {
+        return display;
       }
     }
   }
@@ -1516,55 +1943,156 @@ function extractHotelPrice(hotel) {
 }
 
 /* =========================================================
+   HOTEL CURRENCY
+========================================================= */
+
+function extractHotelCurrency(hotel) {
+
+  if (
+    !hotel ||
+    typeof hotel !== "object"
+  ) {
+    return "USD";
+  }
+
+  const fields = [
+
+    "currency",
+    "currency_code",
+    "currencyCode",
+
+    "price_currency",
+    "priceCurrency",
+
+    "currencyCode"
+
+  ];
+
+  for (
+    const field of fields
+  ) {
+
+    const value =
+      hotel[field];
+
+    if (
+      typeof value === "string" &&
+      value.trim()
+    ) {
+
+      return value.trim();
+    }
+  }
+
+  /* Search inside price object */
+
+  const price =
+    hotel.price;
+
+  if (
+    price &&
+    typeof price === "object"
+  ) {
+
+    const nested =
+      price.currency ||
+      price.currency_code ||
+      price.currencyCode;
+
+    if (
+      typeof nested === "string" &&
+      nested.trim()
+    ) {
+
+      return nested.trim();
+    }
+  }
+
+  return "USD";
+}
+
+/* =========================================================
    HOTEL CARD
 ========================================================= */
 
 function renderHotelCard(hotel) {
 
+  console.log(
+    "RAW HOTEL OBJECT:",
+    hotel
+  );
+
   const name =
     extractDisplayValue(
-      hotel?.name ||
-      hotel?.title ||
-      "Hotel"
-    ) || "Hotel";
+      hotel?.name
+    ) ||
+    extractDisplayValue(
+      hotel?.title
+    ) ||
+    extractDisplayValue(
+      hotel?.hotelName
+    ) ||
+    extractDisplayValue(
+      hotel?.propertyName
+    ) ||
+    "Hotel";
 
   const location =
     extractDisplayValue(
-      hotel?.location ||
-      hotel?.address ||
-      hotel?.city ||
-      ""
-    );
+      hotel?.location
+    ) ||
+    extractDisplayValue(
+      hotel?.address
+    ) ||
+    extractDisplayValue(
+      hotel?.city
+    ) ||
+    "";
 
   const propertyType =
     extractDisplayValue(
-      hotel?.propertyType ||
-      hotel?.property_type ||
-      "Hotel"
-    ) || "Hotel";
+      hotel?.propertyType
+    ) ||
+    extractDisplayValue(
+      hotel?.property_type
+    ) ||
+    "Hotel";
 
   const guestRating =
     extractDisplayValue(
-      hotel?.guestRating ??
-      hotel?.guest_rating ??
-      hotel?.review_score ??
-      ""
-    );
+      hotel?.guestRating
+    ) ||
+    extractDisplayValue(
+      hotel?.guest_rating
+    ) ||
+    extractDisplayValue(
+      hotel?.review_score
+    ) ||
+    extractDisplayValue(
+      hotel?.reviewScore
+    ) ||
+    "";
 
   const starRating =
     extractDisplayValue(
-      hotel?.starRating ??
-      hotel?.star_rating ??
-      hotel?.stars ??
-      ""
-    );
+      hotel?.starRating
+    ) ||
+    extractDisplayValue(
+      hotel?.star_rating
+    ) ||
+    extractDisplayValue(
+      hotel?.stars
+    ) ||
+    "";
 
   const reviewCount =
     extractDisplayValue(
-      hotel?.reviewCount ??
-      hotel?.review_count ??
-      ""
-    );
+      hotel?.reviewCount
+    ) ||
+    extractDisplayValue(
+      hotel?.review_count
+    ) ||
+    "";
 
   const price =
     extractHotelPrice(
@@ -1572,10 +2100,9 @@ function renderHotelCard(hotel) {
     );
 
   const currency =
-    extractDisplayValue(
-      hotel?.currency ||
-      "USD"
-    ) || "USD";
+    extractHotelCurrency(
+      hotel
+    );
 
   const image =
     extractHotelImage(
@@ -1584,11 +2111,18 @@ function renderHotelCard(hotel) {
 
   const url =
     extractDisplayValue(
-      hotel?.url ||
-      hotel?.link ||
-      hotel?.property_url ||
-      ""
-    );
+      hotel?.url
+    ) ||
+    extractDisplayValue(
+      hotel?.link
+    ) ||
+    extractDisplayValue(
+      hotel?.property_url
+    ) ||
+    extractDisplayValue(
+      hotel?.propertyUrl
+    ) ||
+    "";
 
   console.log(
     "HOTEL CARD DATA:",
@@ -1603,6 +2137,10 @@ function renderHotelCard(hotel) {
     }
   );
 
+  /* -------------------------------------------------------
+     RATINGS
+  ------------------------------------------------------- */
+
   let ratingHTML = "";
 
   if (guestRating) {
@@ -1610,7 +2148,9 @@ function renderHotelCard(hotel) {
     ratingHTML += `
       <div class="hotel-meta">
         ⭐ Guest rating:
-        ${escapeHTML(guestRating)}
+        ${escapeHTML(
+          guestRating
+        )}
       </div>
     `;
   }
@@ -1619,7 +2159,9 @@ function renderHotelCard(hotel) {
 
     ratingHTML += `
       <div class="hotel-meta">
-        ${escapeHTML(starRating)}
+        ${escapeHTML(
+          starRating
+        )}
         star property
       </div>
     `;
@@ -1629,11 +2171,17 @@ function renderHotelCard(hotel) {
 
     ratingHTML += `
       <div class="hotel-meta">
-        ${escapeHTML(reviewCount)}
+        ${escapeHTML(
+          reviewCount
+        )}
         reviews
       </div>
     `;
   }
+
+  /* -------------------------------------------------------
+     PRICE
+  ------------------------------------------------------- */
 
   let priceHTML = "";
 
@@ -1641,46 +2189,66 @@ function renderHotelCard(hotel) {
 
     priceHTML = `
       <div class="hotel-price">
-        ${escapeHTML(price)}
+
+        ${escapeHTML(
+          price
+        )}
+
         <span class="hotel-price-label">
-          ${escapeHTML(currency)}
+          ${escapeHTML(
+            currency
+          )}
         </span>
+
       </div>
     `;
   }
 
-  /*
-   * IMAGE
-   *
-   * We intentionally do NOT use 🏨 anymore.
-   */
+  /* -------------------------------------------------------
+     IMAGE
+  ------------------------------------------------------- */
 
   let imageHTML = `
-    <div class="hotel-image-placeholder">
-      Hotel image unavailable
+    <div class="hotel-image-wrapper">
+
+      <div class="hotel-image-placeholder">
+        Hotel image unavailable
+      </div>
+
     </div>
   `;
 
   if (image) {
+
+    const safeImage =
+      escapeHTML(
+        image
+      );
+
+    const safeName =
+      escapeHTML(
+        name
+      );
 
     imageHTML = `
       <div class="hotel-image-wrapper">
 
         <img
           class="hotel-image"
-          src="${escapeHTML(image)}"
-          alt="${escapeHTML(name)}"
+          src="${safeImage}"
+          alt="${safeName}"
           loading="lazy"
           referrerpolicy="no-referrer"
-          onerror="
-            this.style.display='none';
-            this.parentElement.innerHTML='<div class=&quot;hotel-image-placeholder&quot;>Hotel image unavailable</div>';
-          "
+          onerror="this.onerror=null; this.style.display='none';"
         >
 
       </div>
     `;
   }
+
+  /* -------------------------------------------------------
+     BUTTON
+  ------------------------------------------------------- */
 
   let buttonHTML = "";
 
@@ -1689,7 +2257,9 @@ function renderHotelCard(hotel) {
     buttonHTML = `
       <a
         class="hotel-button"
-        href="${escapeHTML(url)}"
+        href="${escapeHTML(
+          url
+        )}"
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -1698,7 +2268,12 @@ function renderHotelCard(hotel) {
     `;
   }
 
+  /* -------------------------------------------------------
+     CARD
+  ------------------------------------------------------- */
+
   return `
+
     <article class="hotel-card">
 
       ${imageHTML}
@@ -1706,18 +2281,25 @@ function renderHotelCard(hotel) {
       <div class="hotel-body">
 
         <div class="hotel-name">
-          ${escapeHTML(name)}
+          ${escapeHTML(
+            name
+          )}
         </div>
 
         <div class="hotel-meta">
-          ${escapeHTML(propertyType)}
+          ${escapeHTML(
+            propertyType
+          )}
         </div>
 
         ${
           location
             ? `
               <div class="hotel-meta">
-                📍 ${escapeHTML(location)}
+                📍
+                ${escapeHTML(
+                  location
+                )}
               </div>
             `
             : ""
@@ -1732,6 +2314,7 @@ function renderHotelCard(hotel) {
       </div>
 
     </article>
+
   `;
 }
 
@@ -1742,7 +2325,8 @@ function renderHotelCard(hotel) {
 function renderTransport(plan) {
 
   const transport =
-    plan.transport || {};
+    plan.transport ||
+    {};
 
   const local =
     Array.isArray(
@@ -1767,7 +2351,9 @@ function renderTransport(plan) {
   if (transport.airport) {
 
     html += `
-      <h3>Airport Transfer</h3>
+      <h3>
+        Airport Transfer
+      </h3>
 
       <p>
         ${escapeHTML(
@@ -1780,18 +2366,26 @@ function renderTransport(plan) {
   if (local.length) {
 
     html += `
-      <h3>Local Transportation</h3>
+      <h3>
+        Local Transportation
+      </h3>
 
       <ul>
+
         ${local
           .map(
             item => `
               <li>
-                ${escapeHTML(item)}
+                ${escapeHTML(
+                  extractDisplayValue(
+                    item
+                  )
+                )}
               </li>
             `
           )
           .join("")}
+
       </ul>
     `;
   }
@@ -1810,7 +2404,8 @@ function renderTransport(plan) {
 function renderExperiences(plan) {
 
   const experiences =
-    plan.experiences || {};
+    plan.experiences ||
+    {};
 
   const places =
     Array.isArray(
@@ -1849,18 +2444,26 @@ function renderExperiences(plan) {
   if (places.length) {
 
     html += `
-      <h3>Places & Experiences</h3>
+      <h3>
+        Places & Experiences
+      </h3>
 
       <ul>
+
         ${places
           .map(
             place => `
               <li>
-                ${escapeHTML(place)}
+                ${escapeHTML(
+                  extractDisplayValue(
+                    place
+                  )
+                )}
               </li>
             `
           )
           .join("")}
+
       </ul>
     `;
   }
@@ -1868,18 +2471,26 @@ function renderExperiences(plan) {
   if (food.length) {
 
     html += `
-      <h3>Food Experiences</h3>
+      <h3>
+        Food Experiences
+      </h3>
 
       <ul>
+
         ${food
           .map(
             item => `
               <li>
-                ${escapeHTML(item)}
+                ${escapeHTML(
+                  extractDisplayValue(
+                    item
+                  )
+                )}
               </li>
             `
           )
           .join("")}
+
       </ul>
     `;
   }
@@ -1894,11 +2505,13 @@ function renderExperiences(plan) {
 
     html += `
       <div class="restaurants-grid">
+
         ${restaurants
           .map(
             renderRestaurantCard
           )
           .join("")}
+
       </div>
     `;
 
@@ -1928,41 +2541,59 @@ function renderRestaurantCard(
 ) {
 
   const name =
-    restaurant.name ||
+    extractDisplayValue(
+      restaurant?.name
+    ) ||
     "Restaurant";
 
   const cuisine =
-    restaurant.cuisine ||
+    extractDisplayValue(
+      restaurant?.cuisine
+    ) ||
     "";
 
   const location =
-    restaurant.location ||
+    extractDisplayValue(
+      restaurant?.location
+    ) ||
     "";
 
   const priceLevel =
-    restaurant.priceLevel ||
+    extractDisplayValue(
+      restaurant?.priceLevel
+    ) ||
     "$$";
 
   const description =
-    restaurant.description ||
+    extractDisplayValue(
+      restaurant?.description
+    ) ||
     "";
 
   const url =
-    restaurant.url ||
+    extractDisplayValue(
+      restaurant?.url
+    ) ||
     "";
 
   return `
+
     <article class="restaurant-card">
 
       <div class="restaurant-name">
-        ${escapeHTML(name)}
+        ${escapeHTML(
+          name
+        )}
       </div>
 
       ${
         cuisine
           ? `
             <div class="restaurant-meta">
-              🍴 ${escapeHTML(cuisine)}
+              🍴
+              ${escapeHTML(
+                cuisine
+              )}
             </div>
           `
           : ""
@@ -1972,21 +2603,29 @@ function renderRestaurantCard(
         location
           ? `
             <div class="restaurant-meta">
-              📍 ${escapeHTML(location)}
+              📍
+              ${escapeHTML(
+                location
+              )}
             </div>
           `
           : ""
       }
 
       <div class="restaurant-meta">
-        💰 ${escapeHTML(priceLevel)}
+        💰
+        ${escapeHTML(
+          priceLevel
+        )}
       </div>
 
       ${
         description
           ? `
             <div class="restaurant-description">
-              ${escapeHTML(description)}
+              ${escapeHTML(
+                description
+              )}
             </div>
           `
           : ""
@@ -1997,7 +2636,9 @@ function renderRestaurantCard(
           ? `
             <a
               class="restaurant-button"
-              href="${escapeHTML(url)}"
+              href="${escapeHTML(
+                url
+              )}"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -2008,6 +2649,7 @@ function renderRestaurantCard(
       }
 
     </article>
+
   `;
 }
 
@@ -2018,32 +2660,33 @@ function renderRestaurantCard(
 function renderBudget(plan) {
 
   const budget =
-    plan.budget || {};
+    plan.budget ||
+    {};
 
   const accommodation =
-    Number(
-      budget.accommodation || 0
-    );
+    extractNumber(
+      budget.accommodation
+    ) || 0;
 
   const transportation =
-    Number(
-      budget.transportation || 0
-    );
+    extractNumber(
+      budget.transportation
+    ) || 0;
 
   const food =
-    Number(
-      budget.food || 0
-    );
+    extractNumber(
+      budget.food
+    ) || 0;
 
   const activities =
-    Number(
-      budget.activities || 0
-    );
+    extractNumber(
+      budget.activities
+    ) || 0;
 
   const other =
-    Number(
-      budget.other || 0
-    );
+    extractNumber(
+      budget.other
+    ) || 0;
 
   const calculatedTotal =
     accommodation +
@@ -2052,64 +2695,100 @@ function renderBudget(plan) {
     activities +
     other;
 
+  const suppliedTotal =
+    extractNumber(
+      budget.total
+    );
+
   const total =
-    Number.isFinite(
-      Number(budget.total)
-    )
-      ? Number(budget.total)
+    suppliedTotal !== null
+      ? suppliedTotal
       : calculatedTotal;
 
   let html = `
+
     <div class="budget-box">
 
       <div class="budget-row">
-        <span>Accommodation</span>
+        <span>
+          Accommodation
+        </span>
+
         <strong>
-          ${formatUSD(accommodation)}
+          ${formatUSD(
+            accommodation
+          )}
         </strong>
       </div>
 
       <div class="budget-row">
-        <span>Transportation</span>
+        <span>
+          Transportation
+        </span>
+
         <strong>
-          ${formatUSD(transportation)}
+          ${formatUSD(
+            transportation
+          )}
         </strong>
       </div>
 
       <div class="budget-row">
-        <span>Food</span>
+        <span>
+          Food
+        </span>
+
         <strong>
-          ${formatUSD(food)}
+          ${formatUSD(
+            food
+          )}
         </strong>
       </div>
 
       <div class="budget-row">
-        <span>Activities</span>
+        <span>
+          Activities
+        </span>
+
         <strong>
-          ${formatUSD(activities)}
+          ${formatUSD(
+            activities
+          )}
         </strong>
       </div>
 
       <div class="budget-row">
-        <span>Other</span>
+        <span>
+          Other
+        </span>
+
         <strong>
-          ${formatUSD(other)}
+          ${formatUSD(
+            other
+          )}
         </strong>
       </div>
 
       <div class="budget-row budget-total">
-        <span>Total</span>
+        <span>
+          Total
+        </span>
+
         <strong>
-          ${formatUSD(total)}
+          ${formatUSD(
+            total
+          )}
         </strong>
       </div>
 
     </div>
+
   `;
 
   if (budget.strategy) {
 
     html += `
+
       <div class="planner-status">
 
         <strong>
@@ -2123,6 +2802,7 @@ function renderBudget(plan) {
         )}
 
       </div>
+
     `;
   }
 
@@ -2139,7 +2819,9 @@ function renderBudget(plan) {
 function renderDays(plan) {
 
   const days =
-    Array.isArray(plan.days)
+    Array.isArray(
+      plan.days
+    )
       ? plan.days
       : [];
 
@@ -2151,9 +2833,11 @@ function renderDays(plan) {
   if (!days.length) {
 
     container.innerHTML = `
+
       <div class="day">
         No itinerary days were returned.
       </div>
+
     `;
 
     return;
@@ -2165,19 +2849,30 @@ function renderDays(plan) {
         (day, index) => {
 
           const number =
-            day.day ||
+            extractDisplayValue(
+              day?.day
+            ) ||
             index + 1;
 
           const title =
-            day.title ||
+            extractDisplayValue(
+              day?.title
+            ) ||
             `Day ${number}`;
 
           return `
+
             <article class="day">
 
               <h3>
-                Day ${escapeHTML(number)}
-                — ${escapeHTML(title)}
+                Day
+                ${escapeHTML(
+                  number
+                )}
+                —
+                ${escapeHTML(
+                  title
+                )}
               </h3>
 
               <div class="day-part">
@@ -2188,7 +2883,9 @@ function renderDays(plan) {
 
                 <div>
                   ${escapeHTML(
-                    day.morning || ""
+                    extractDisplayValue(
+                      day?.morning
+                    )
                   )}
                 </div>
 
@@ -2202,7 +2899,9 @@ function renderDays(plan) {
 
                 <div>
                   ${escapeHTML(
-                    day.afternoon || ""
+                    extractDisplayValue(
+                      day?.afternoon
+                    )
                   )}
                 </div>
 
@@ -2216,13 +2915,16 @@ function renderDays(plan) {
 
                 <div>
                   ${escapeHTML(
-                    day.evening || ""
+                    extractDisplayValue(
+                      day?.evening
+                    )
                   )}
                 </div>
 
               </div>
 
             </article>
+
           `;
         }
       )
@@ -2250,7 +2952,9 @@ function setupForm() {
   const cleanForm =
     form.cloneNode(true);
 
-  form.replaceWith(cleanForm);
+  form.replaceWith(
+    cleanForm
+  );
 
   cleanForm.addEventListener(
     "submit",
@@ -2272,6 +2976,7 @@ function setupForm() {
       );
 
       showReview();
+
     },
     false
   );
@@ -2303,6 +3008,7 @@ function setupReviewButtons() {
         event.stopPropagation();
 
         closeReviewScreen();
+
       },
       false
     );
@@ -2328,6 +3034,7 @@ function setupReviewButtons() {
         event.stopPropagation();
 
         await createPlan();
+
       },
       false
     );
@@ -2379,4 +3086,5 @@ if (
 } else {
 
   initializeApp();
-           }
+
+      }
