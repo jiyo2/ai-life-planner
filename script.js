@@ -1,10 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  console.log("AI LIFE PLANNER — TEST MODE V2");
-
-  /* =========================================================
-     ELEMENTS
-  ========================================================= */
+  // =========================================================
+  // UI ELEMENTS
+  // =========================================================
 
   const plannerForm = document.getElementById("plannerForm");
   const appScreen = document.getElementById("app");
@@ -16,18 +14,730 @@ document.addEventListener("DOMContentLoaded", () => {
   const payBtn = document.getElementById("pay");
 
   const selectedInterests = new Set();
-
   let formData = {};
 
-  /* =========================================================
-     BASIC HELPERS
-  ========================================================= */
+  // =========================================================
+  // INTEREST CHIPS
+  // =========================================================
+
+  const chips = document.querySelectorAll(".chip");
+
+  chips.forEach((chip) => {
+
+    chip.addEventListener("click", () => {
+
+      const interest = chip.textContent.trim();
+
+      if (selectedInterests.has(interest)) {
+
+        selectedInterests.delete(interest);
+        chip.classList.remove("active");
+
+      } else {
+
+        selectedInterests.add(interest);
+        chip.classList.add("active");
+
+      }
+
+    });
+
+  });
+
+  // =========================================================
+  // FORM SUBMISSION
+  // =========================================================
+
+  if (plannerForm) {
+
+    plannerForm.addEventListener("submit", (e) => {
+
+      e.preventDefault();
+
+      formData = {
+
+        destination:
+          document.getElementById("destination").value.trim(),
+
+        startDate:
+          document.getElementById("startDate").value || "Flexible",
+
+        days:
+          document.getElementById("days").value,
+
+        budget:
+          document.getElementById("budget").value,
+
+        travelers:
+          document.getElementById("travelers").value,
+
+        interests:
+          Array.from(selectedInterests).join(", ") ||
+          "General Sightseeing",
+
+        notes:
+          document.getElementById("notes").value.trim() ||
+          "None"
+
+      };
+
+      // =====================================================
+      // REVIEW SUMMARY
+      // =====================================================
+
+      summaryDiv.innerHTML = `
+
+        <p>
+          📍 <strong>Destination:</strong>
+          ${escapeHTML(formData.destination)}
+        </p>
+
+        <p>
+          📅 <strong>Duration:</strong>
+          ${escapeHTML(formData.days)} Days
+          (Starts: ${escapeHTML(formData.startDate)})
+        </p>
+
+        <p>
+          💰 <strong>Budget limit:</strong>
+          $${escapeHTML(formData.budget)}
+        </p>
+
+        <p>
+          👥 <strong>Party size:</strong>
+          ${escapeHTML(formData.travelers)}
+        </p>
+
+        <p>
+          🎯 <strong>Interests:</strong>
+          ${escapeHTML(formData.interests)}
+        </p>
+
+        <p>
+          📝 <strong>Special requests:</strong>
+          ${escapeHTML(formData.notes)}
+        </p>
+
+      `;
+
+      appScreen.classList.add("hidden");
+      reviewScreen.classList.remove("hidden");
+
+    });
+
+  }
+
+  // =========================================================
+  // EDIT BUTTON
+  // =========================================================
+
+  if (closeReviewBtn) {
+
+    closeReviewBtn.addEventListener("click", () => {
+
+      reviewScreen.classList.add("hidden");
+      appScreen.classList.remove("hidden");
+
+    });
+
+  }
+
+  // =========================================================
+  // TEST PAYMENT FLOW
+  // =========================================================
+
+  if (payBtn) {
+
+    payBtn.addEventListener("click", () => {
+
+      localStorage.setItem(
+        "pendingTripData",
+        JSON.stringify(formData)
+      );
+
+      /*
+       * TEST MODE
+       *
+       * We temporarily simulate successful payment.
+       *
+       * IMPORTANT:
+       * This is NOT real payment verification.
+       */
+
+      localStorage.setItem("hasPaid", "true");
+
+      // For testing, stay on the website.
+      // Do NOT redirect to Paddle yet.
+
+      generatePlan();
+
+    });
+
+  }
+
+  // =========================================================
+  // GENERATE PLAN
+  // =========================================================
+
+  async function generatePlan() {
+
+    const savedData =
+      localStorage.getItem("pendingTripData");
+
+    if (!savedData) {
+
+      showGenerationError(
+        "No trip information was found."
+      );
+
+      return;
+
+    }
+
+    try {
+
+      const parsedData = JSON.parse(savedData);
+
+      appScreen.classList.add("hidden");
+      reviewScreen.classList.add("hidden");
+      planScreen.classList.remove("hidden");
+
+      document.getElementById("planTitle").textContent =
+        `Creating your trip to ${parsedData.destination}...`;
+
+      document.getElementById("planIntro").textContent =
+        "Our AI is building your personalized travel plan.";
+
+      // =====================================================
+      // RESET SECTIONS
+      // =====================================================
+
+      document.getElementById("stayContent").innerHTML =
+        "Finding the best accommodation options...";
+
+      document.getElementById("transportContent").innerHTML =
+        "Preparing transportation recommendations...";
+
+      document.getElementById("experiencesContent").innerHTML =
+        "Finding attractions and experiences...";
+
+      document.getElementById("moneyContent").innerHTML =
+        "Calculating your budget strategy...";
+
+      document.getElementById("daysContent").innerHTML =
+        "Building your day-by-day itinerary...";
+
+      // =====================================================
+      // API REQUEST
+      // =====================================================
+
+      const response = await fetch("/api/plan", {
+
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        body: savedData
+
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+
+        console.error("API ERROR:", data);
+
+        throw new Error(
+          data?.details ||
+          data?.error ||
+          "Travel plan could not be generated."
+        );
+
+      }
+
+      // =====================================================
+      // HEADER
+      // =====================================================
+
+      document.getElementById("planTitle").textContent =
+        `Your Trip to ${parsedData.destination}`;
+
+      document.getElementById("planIntro").textContent =
+        `Customized strategy for ${parsedData.days} days with a $${parsedData.budget} budget.`;
+
+      // =====================================================
+      // STAY
+      // =====================================================
+
+      renderHotels(
+        data.stay,
+        parsedData.destination
+      );
+
+      // =====================================================
+      // OTHER SECTIONS
+      // =====================================================
+
+      document.getElementById("transportContent").innerHTML =
+        safeHTML(data.transport);
+
+      document.getElementById("experiencesContent").innerHTML =
+        safeHTML(data.experiences);
+
+      document.getElementById("moneyContent").innerHTML =
+        safeHTML(data.money);
+
+      document.getElementById("daysContent").innerHTML =
+        safeHTML(data.daysPlan);
+
+      // =====================================================
+      // CLEAN TEST PAYMENT FLAGS
+      // =====================================================
+
+      localStorage.removeItem("hasPaid");
+      localStorage.removeItem("pendingTripData");
+
+    } catch (error) {
+
+      console.error("PLAN GENERATION ERROR:", error);
+
+      showGenerationError(
+        error.message ||
+        "The travel plan could not be generated."
+      );
+
+    }
+
+  }
+
+  // =========================================================
+  // HOTEL RENDERER
+  // =========================================================
+
+  function renderHotels(hotels, destination) {
+
+    const container =
+      document.getElementById("stayContent");
+
+    if (!container) return;
+
+    if (!Array.isArray(hotels) || hotels.length === 0) {
+
+      container.innerHTML = `
+        <div class="hotel-empty">
+          <div class="hotel-empty-icon">🏨</div>
+          <h3>No accommodation options found</h3>
+          <p>
+            We could not find accommodation recommendations
+            for this destination.
+          </p>
+        </div>
+      `;
+
+      return;
+
+    }
+
+    /*
+     * Display up to 10 hotels.
+     *
+     * If the API returns more than 10,
+     * we only show the first 10.
+     */
+
+    const hotelList = hotels.slice(0, 10);
+
+    let html = `
+
+      <div class="hotel-intro">
+
+        <h3>
+          Recommended stays in ${escapeHTML(destination)}
+        </h3>
+
+        <p>
+          Compare these accommodation options and choose
+          the one that best fits your trip.
+        </p>
+
+      </div>
+
+      <div class="hotels-grid">
+
+    `;
+
+    hotelList.forEach((hotel, index) => {
+
+      if (!hotel) return;
+
+      const name =
+        hotel.name ||
+        `Recommended Hotel ${index + 1}`;
+
+      const stars =
+        Number(hotel.stars) ||
+        0;
+
+      const price =
+        normalizePrice(hotel.price);
+
+      const currency =
+        hotel.currency ||
+        "USD";
+
+      const priceType =
+        hotel.priceType ||
+        "estimated per night";
+
+      const description =
+        hotel.description ||
+        "A recommended accommodation option for your trip.";
+
+      const image =
+        hotel.image ||
+        hotel.imageUrl ||
+        hotel.photo ||
+        hotel.photoUrl ||
+        "";
+
+      const amenities =
+        Array.isArray(hotel.amenities)
+          ? hotel.amenities
+          : [];
+
+      // =====================================================
+      // BOOKING LINK
+      // =====================================================
+
+      const bookingUrl =
+        createBookingSearchUrl(
+          name,
+          destination
+        );
+
+      // =====================================================
+      // STARS
+      // =====================================================
+
+      let starsHTML = "";
+
+      if (stars > 0) {
+
+        starsHTML =
+          "⭐".repeat(
+            Math.min(Math.round(stars), 5)
+          );
+
+      } else {
+
+        starsHTML = "Recommended";
+
+      }
+
+      // =====================================================
+      // IMAGE
+      // =====================================================
+
+      let imageHTML;
+
+      if (image) {
+
+        imageHTML = `
+
+          <img
+            src="${escapeAttribute(image)}"
+            alt="${escapeAttribute(name)}"
+            class="hotel-image"
+            loading="lazy"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+          >
+
+          <div class="hotel-image-fallback" style="display:none;">
+            <span>🏨</span>
+            <small>Hotel photo unavailable</small>
+          </div>
+
+        `;
+
+      } else {
+
+        imageHTML = `
+
+          <div class="hotel-image-fallback">
+            <span>🏨</span>
+            <small>Hotel photo unavailable</small>
+          </div>
+
+        `;
+
+      }
+
+      // =====================================================
+      // AMENITIES
+      // =====================================================
+
+      let amenitiesHTML = "";
+
+      if (amenities.length > 0) {
+
+        amenitiesHTML = `
+
+          <div class="hotel-amenities">
+
+            <h4>Amenities</h4>
+
+            <div class="amenities-list">
+
+              ${amenities
+                .slice(0, 6)
+                .map(
+                  item =>
+                    `<span>${escapeHTML(item)}</span>`
+                )
+                .join("")}
+
+            </div>
+
+          </div>
+
+        `;
+
+      }
+
+      // =====================================================
+      // HOTEL CARD
+      // =====================================================
+
+      html += `
+
+        <article class="hotel-card">
+
+          <div class="hotel-image-wrapper">
+
+            ${imageHTML}
+
+            <div class="hotel-number">
+              ${index + 1}
+            </div>
+
+          </div>
+
+          <div class="hotel-card-body">
+
+            <h3 class="hotel-name">
+              ${escapeHTML(name)}
+            </h3>
+
+            <div class="hotel-stars">
+              ${starsHTML}
+              ${
+                stars > 0
+                  ? `<span>${stars}-star property</span>`
+                  : ""
+              }
+            </div>
+
+            <div class="hotel-price">
+
+              <strong>
+                ${formatPrice(price, currency)}
+              </strong>
+
+              <span>
+                / ${escapeHTML(priceType)}
+              </span>
+
+            </div>
+
+            <p class="hotel-description">
+              ${escapeHTML(description)}
+            </p>
+
+            ${amenitiesHTML}
+
+            <a
+              href="${escapeAttribute(bookingUrl)}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="booking-button"
+            >
+              Check availability on Booking.com
+              <span>↗</span>
+            </a>
+
+          </div>
+
+        </article>
+
+      `;
+
+    });
+
+    html += `
+
+      </div>
+
+      <div class="hotel-note">
+        <strong>Price note:</strong>
+        Hotel prices shown by the AI are estimates.
+        Final prices and availability should be checked
+        on Booking.com before booking.
+      </div>
+
+    `;
+
+    container.innerHTML = html;
+
+    injectHotelStyles();
+
+  }
+
+  // =========================================================
+  // PRICE NORMALIZER
+  // =========================================================
+
+  function normalizePrice(value) {
+
+    if (typeof value === "number") {
+
+      return value;
+
+    }
+
+    if (typeof value === "string") {
+
+      const number =
+        parseFloat(
+          value.replace(/[^0-9.]/g, "")
+        );
+
+      return Number.isFinite(number)
+        ? number
+        : null;
+
+    }
+
+    if (typeof value === "object" && value !== null) {
+
+      if (typeof value.amount === "number") {
+        return value.amount;
+      }
+
+      if (typeof value.value === "number") {
+        return value.value;
+      }
+
+      if (typeof value.amount === "string") {
+
+        const number =
+          parseFloat(
+            value.amount.replace(
+              /[^0-9.]/g,
+              ""
+            )
+          );
+
+        return Number.isFinite(number)
+          ? number
+          : null;
+
+      }
+
+      if (typeof value.value === "string") {
+
+        const number =
+          parseFloat(
+            value.value.replace(
+              /[^0-9.]/g,
+              ""
+            )
+          );
+
+        return Number.isFinite(number)
+          ? number
+          : null;
+
+      }
+
+    }
+
+    return null;
+
+  }
+
+  // =========================================================
+  // FORMAT PRICE
+  // =========================================================
+
+  function formatPrice(price, currency) {
+
+    if (
+      price === null ||
+      price === undefined ||
+      !Number.isFinite(Number(price))
+    ) {
+
+      return "Price unavailable";
+
+    }
+
+    const numericPrice =
+      Number(price);
+
+    return `$${numericPrice.toLocaleString(
+      "en-US",
+      {
+        maximumFractionDigits: 0
+      }
+    )} ${escapeHTML(currency)}`;
+
+  }
+
+  // =========================================================
+  // BOOKING SEARCH URL
+  // =========================================================
+
+  function createBookingSearchUrl(
+    hotelName,
+    destination
+  ) {
+
+    const query =
+      `${hotelName}, ${destination}`;
+
+    return (
+      "https://www.booking.com/searchresults.html?ss=" +
+      encodeURIComponent(query)
+    );
+
+  }
+
+  // =========================================================
+  // SAFE HTML
+  // =========================================================
+
+  function safeHTML(value) {
+
+    if (
+      typeof value !== "string" ||
+      !value.trim()
+    ) {
+
+      return "<p>Information unavailable.</p>";
+
+    }
+
+    return value;
+
+  }
+
+  // =========================================================
+  // HTML ESCAPE
+  // =========================================================
 
   function escapeHTML(value) {
-
-    if (value === null || value === undefined) {
-      return "";
-    }
 
     return String(value)
       .replace(/&/g, "&amp;")
@@ -35,1730 +745,332 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
-  }
-
-
-  function setText(id, value) {
-
-    const element = document.getElementById(id);
-
-    if (!element) return;
-
-    element.textContent =
-      value === null || value === undefined
-        ? ""
-        : String(value);
-  }
-
-
-  function setHTML(id, value) {
-
-    const element = document.getElementById(id);
-
-    if (!element) return;
-
-    element.innerHTML = value || "";
-  }
-
-
-  function showScreen(screen) {
-
-    if (appScreen) {
-      appScreen.classList.add("hidden");
-    }
-
-    if (reviewScreen) {
-      reviewScreen.classList.add("hidden");
-    }
-
-    if (planScreen) {
-      planScreen.classList.add("hidden");
-    }
-
-    if (screen) {
-      screen.classList.remove("hidden");
-    }
-  }
-
-
-  function getNumber(value) {
-
-    if (
-      value === null ||
-      value === undefined
-    ) {
-      return null;
-    }
-
-    if (typeof value === "number") {
-
-      return Number.isFinite(value)
-        ? value
-        : null;
-    }
-
-    if (typeof value === "string") {
-
-      const cleaned =
-        value
-          .replace(/,/g, "")
-          .replace(/[^\d.-]/g, "");
-
-      const number = Number(cleaned);
-
-      return Number.isFinite(number)
-        ? number
-        : null;
-    }
-
-    if (
-      typeof value === "object"
-    ) {
-
-      const keys = [
-        "amount",
-        "value",
-        "price",
-        "total",
-        "totalPrice",
-        "total_price"
-      ];
-
-      for (const key of keys) {
-
-        if (
-          value[key] !== null &&
-          value[key] !== undefined
-        ) {
-
-          const result =
-            getNumber(value[key]);
-
-          if (result !== null) {
-            return result;
-          }
-        }
-      }
-    }
-
-    return null;
-  }
-
-
-  function formatUSD(value) {
-
-    const number =
-      getNumber(value);
-
-    if (number === null) {
-      return "$0";
-    }
-
-    return "$" +
-      number.toLocaleString(
-        "en-US",
-        {
-          maximumFractionDigits: 2
-        }
-      );
-  }
-
-
-  function getDisplayValue(value) {
-
-    if (
-      value === null ||
-      value === undefined
-    ) {
-      return "";
-    }
-
-    if (
-      typeof value === "string" ||
-      typeof value === "number"
-    ) {
-      return String(value);
-    }
-
-    if (typeof value === "boolean") {
-      return value ? "Yes" : "No";
-    }
-
-    if (
-      typeof value === "object"
-    ) {
-
-      const keys = [
-        "formatted",
-        "display",
-        "text",
-        "name",
-        "title",
-        "label",
-        "value",
-        "amount",
-        "price",
-        "description"
-      ];
-
-      for (const key of keys) {
-
-        if (
-          value[key] !== null &&
-          value[key] !== undefined
-        ) {
-
-          const result =
-            getDisplayValue(
-              value[key]
-            );
-
-          if (result) {
-            return result;
-          }
-        }
-      }
-    }
-
-    return "";
-  }
-
-
-  /* =========================================================
-     INTEREST CHIPS
-     IMPORTANT: THIS IS COMPLETELY INDEPENDENT
-  ========================================================= */
-
-  function setupInterestChips() {
-
-    const chips =
-      document.querySelectorAll(".chip");
-
-    console.log(
-      "INTEREST CHIPS FOUND:",
-      chips.length
-    );
-
-    chips.forEach((chip, index) => {
-
-      /*
-       * Prevent button default behavior.
-       * This guarantees that clicking a chip
-       * does NOT submit the form.
-       */
-
-      chip.type = "button";
-
-      /*
-       * Remove any old click handlers by
-       * replacing the element.
-       */
-
-      const newChip =
-        chip.cloneNode(true);
-
-      chip.parentNode.replaceChild(
-        newChip,
-        chip
-      );
-
-      newChip.addEventListener(
-        "click",
-        function(event) {
-
-          event.preventDefault();
-          event.stopPropagation();
-
-          const interest =
-            this.textContent.trim();
-
-          console.log(
-            "CHIP CLICKED:",
-            interest
-          );
-
-          if (
-            selectedInterests.has(
-              interest
-            )
-          ) {
-
-            selectedInterests.delete(
-              interest
-            );
-
-            this.classList.remove(
-              "active"
-            );
-
-            this.classList.remove(
-              "selected"
-            );
-
-          } else {
-
-            selectedInterests.add(
-              interest
-            );
-
-            this.classList.add(
-              "active"
-            );
-
-            this.classList.add(
-              "selected"
-            );
-
-          }
-
-          console.log(
-            "SELECTED INTERESTS:",
-            Array.from(
-              selectedInterests
-            )
-          );
-
-        },
-        false
-      );
-
-    });
 
   }
 
+  function escapeAttribute(value) {
 
-  /* =========================================================
-     FORM DATA
-  ========================================================= */
-
-  function collectFormData() {
-
-    const destination =
-      document
-        .getElementById("destination")
-        ?.value
-        .trim() || "";
-
-    const startDate =
-      document
-        .getElementById("startDate")
-        ?.value || "";
-
-    const days =
-      Number(
-        document
-          .getElementById("days")
-          ?.value || 0
-      );
-
-    const budget =
-      Number(
-        document
-          .getElementById("budget")
-          ?.value || 0
-      );
-
-    const travelers =
-      document
-        .getElementById("travelers")
-        ?.value ||
-      "1 traveler";
-
-    const notes =
-      document
-        .getElementById("notes")
-        ?.value
-        .trim() || "None";
-
-    return {
-
-      destination,
-
-      startDate,
-
-      days,
-
-      budget,
-
-      travelers,
-
-      interests:
-        Array.from(
-          selectedInterests
-        ).join(", ") ||
-        "General Sightseeing",
-
-      notes
-
-    };
+    return escapeHTML(value);
 
   }
 
-
-  /* =========================================================
-     REVIEW SCREEN
-  ========================================================= */
-
-  function showReview() {
-
-    formData =
-      collectFormData();
-
-    console.log(
-      "FORM DATA:",
-      formData
-    );
-
-    if (!formData.destination) {
-
-      alert(
-        "Please enter a destination."
-      );
-
-      return;
-    }
-
-    if (
-      !Number.isFinite(
-        formData.days
-      ) ||
-      formData.days < 1
-    ) {
-
-      alert(
-        "Please enter a valid number of days."
-      );
-
-      return;
-    }
-
-    if (
-      !Number.isFinite(
-        formData.budget
-      ) ||
-      formData.budget <= 0
-    ) {
-
-      alert(
-        "Please enter a valid budget."
-      );
-
-      return;
-    }
-
-
-    if (summaryDiv) {
-
-      summaryDiv.innerHTML = `
-
-        <p>
-          📍
-          <strong>Destination:</strong>
-          ${escapeHTML(
-            formData.destination
-          )}
-        </p>
-
-        <p>
-          📅
-          <strong>Duration:</strong>
-          ${escapeHTML(
-            formData.days
-          )}
-          days
-        </p>
-
-        <p>
-          🗓️
-          <strong>Start date:</strong>
-          ${
-            formData.startDate
-              ? escapeHTML(
-                  formData.startDate
-                )
-              : "Flexible"
-          }
-        </p>
-
-        <p>
-          💰
-          <strong>Budget:</strong>
-          ${formatUSD(
-            formData.budget
-          )}
-        </p>
-
-        <p>
-          👥
-          <strong>Travelers:</strong>
-          ${escapeHTML(
-            formData.travelers
-          )}
-        </p>
-
-        <p>
-          🎯
-          <strong>Interests:</strong>
-          ${escapeHTML(
-            formData.interests
-          )}
-        </p>
-
-        <p>
-          📝
-          <strong>Notes:</strong>
-          ${escapeHTML(
-            formData.notes
-          )}
-        </p>
-
-      `;
-
-    }
-
-    showScreen(
-      reviewScreen
-    );
-
-  }
-
-
-  /* =========================================================
-     FORM
-  ========================================================= */
-
-  function setupForm() {
-
-    if (!plannerForm) {
-
-      console.error(
-        "plannerForm NOT FOUND"
-      );
-
-      return;
-    }
-
-    plannerForm.addEventListener(
-      "submit",
-      event => {
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        console.log(
-          "FORM SUBMITTED"
-        );
-
-        showReview();
-
-      },
-      false
-    );
-
-  }
-
-
-  /* =========================================================
-     EDIT BUTTON
-  ========================================================= */
-
-  function setupEditButton() {
-
-    if (!closeReviewBtn) return;
-
-    closeReviewBtn.addEventListener(
-      "click",
-      event => {
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        console.log(
-          "EDIT TRIP"
-        );
-
-        showScreen(
-          appScreen
-        );
-
-      },
-      false
-    );
-
-  }
-
-
-  /* =========================================================
-     TEST PAYMENT BUTTON
-     
-     IMPORTANT:
-     THERE IS NO PADDLE HERE.
-     
-     This button directly creates the plan
-     so we can test the application.
-  ========================================================= */
-
-  function setupCreatePlanButton() {
-
-    if (!payBtn) {
-
-      console.error(
-        "Create Plan button NOT FOUND"
-      );
-
-      return;
-    }
-
-    payBtn.type = "button";
-
-    payBtn.addEventListener(
-      "click",
-      async event => {
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        console.log(
-          "TEST CREATE PLAN CLICKED"
-        );
-
-        await createPlan();
-
-      },
-      false
-    );
-
-  }
-
-
-  /* =========================================================
-     CREATE PLAN
-  ========================================================= */
-
-  async function createPlan() {
-
-    console.log(
-      "================================="
-    );
-
-    console.log(
-      "STARTING PLAN GENERATION"
-    );
-
-    console.log(
-      "DATA:",
-      formData
-    );
-
-    console.log(
-      "================================="
-    );
-
-
-    showScreen(
-      planScreen
-    );
-
-
-    setText(
-      "planTitle",
-      "Creating your personalized plan..."
-    );
-
-    setText(
-      "planIntro",
-      "Our AI is building your itinerary. Please wait a moment."
-    );
-
-
-    setHTML(
-      "stayContent",
-      `
-        <div class="planner-status">
-          🏨 Generating accommodation strategy...
-        </div>
-      `
-    );
-
-
-    setHTML(
-      "transportContent",
-      `
-        <div class="planner-status">
-          🚆 Generating transportation strategy...
-        </div>
-      `
-    );
-
-
-    setHTML(
-      "experiencesContent",
-      `
-        <div class="planner-status">
-          📍 Generating experiences...
-        </div>
-      `
-    );
-
-
-    setHTML(
-      "moneyContent",
-      `
-        <div class="planner-status">
-          💰 Calculating budget...
-        </div>
-      `
-    );
-
-
-    setHTML(
-      "daysContent",
-      `
-        <div class="planner-status">
-          📅 Creating your itinerary...
-        </div>
-      `
-    );
-
-
-    try {
-
-      const payload = {
-
-        destination:
-          formData.destination,
-
-        startDate:
-          formData.startDate,
-
-        days:
-          formData.days,
-
-        budget:
-          formData.budget,
-
-        travelers:
-          formData.travelers,
-
-        interests:
-          formData.interests,
-
-        notes:
-          formData.notes
-
-      };
-
-
-      console.log(
-        "POST /api/plan",
-        payload
-      );
-
-
-      const response =
-        await fetch(
-          "/api/plan",
-          {
-
-            method: "POST",
-
-            headers: {
-
-              "Content-Type":
-                "application/json",
-
-              "Accept":
-                "application/json"
-
-            },
-
-            body:
-              JSON.stringify(
-                payload
-              )
-
-          }
-        );
-
-
-      console.log(
-        "API STATUS:",
-        response.status
-      );
-
-
-      let data;
-
-      try {
-
-        data =
-          await response.json();
-
-      } catch (jsonError) {
-
-        console.error(
-          "INVALID JSON:",
-          jsonError
-        );
-
-        throw new Error(
-          "The server returned an invalid response."
-        );
-
-      }
-
-
-      console.log(
-        "API DATA:",
-        data
-      );
-
-
-      if (!response.ok) {
-
-        let serverError =
-          data?.details ||
-          data?.error ||
-          data?.message ||
-          "The travel plan could not be generated.";
-
-        if (
-          typeof serverError ===
-          "object"
-        ) {
-
-          serverError =
-            JSON.stringify(
-              serverError
-            );
-
-        }
-
-        throw new Error(
-          serverError
-        );
-
-      }
-
-
-      if (
-        !data ||
-        typeof data !== "object"
-      ) {
-
-        throw new Error(
-          "The server returned an empty plan."
-        );
-
-      }
-
-
-      /* =====================================================
-         SUCCESS
-      ===================================================== */
-
-      setText(
-        "planTitle",
-        `Your Trip to ${formData.destination}`
-      );
-
-
-      setText(
-        "planIntro",
-        `Customized strategy for ${formData.days} days with a ${formatUSD(formData.budget)} budget.`
-      );
-
-
-      renderStay(
-        data.stay
-      );
-
-
-      renderTransport(
-        data.transport
-      );
-
-
-      renderExperiences(
-        data.experiences
-      );
-
-
-      renderMoney(
-        data.money
-      );
-
-
-      renderDays(
-        data.daysPlan
-      );
-
-
-      activateDefaultTab();
-
-
-      console.log(
-        "PLAN GENERATION SUCCESS"
-      );
-
-
-    } catch (error) {
-
-      console.error(
-        "PLAN GENERATION ERROR:",
-        error
-      );
-
-
-      showGenerationError(
-        error
-      );
-
-    }
-
-  }
-
-
-  /* =========================================================
-     STAY
-  ========================================================= */
-
-  function renderStay(stay) {
-
-    const container =
-      document.getElementById(
-        "stayContent"
-      );
-
-    if (!container) return;
-
-
-    if (
-      !Array.isArray(stay) ||
-      stay.length === 0
-    ) {
-
-      container.innerHTML = `
-
-        <div class="planner-status">
-          No accommodation recommendations
-          were returned by the AI.
-        </div>
-
-      `;
-
-      return;
-    }
-
-
-    let html = `
-
-      <div class="hotels-grid">
-
-    `;
-
-
-    stay.forEach(
-      hotel => {
-
-        html +=
-          renderHotel(
-            hotel
-          );
-
-      }
-    );
-
-
-    html += `
+  // =========================================================
+  // GENERATION ERROR
+  // =========================================================
+
+  function showGenerationError(message) {
+
+    appScreen.classList.add("hidden");
+    reviewScreen.classList.add("hidden");
+    planScreen.classList.remove("hidden");
+
+    document.getElementById("planTitle").textContent =
+      "Generation Error";
+
+    document.getElementById("planIntro").textContent =
+      message;
+
+    document.getElementById("stayContent").innerHTML = `
+      <div class="hotel-empty">
+        <div class="hotel-empty-icon">⚠️</div>
+        <h3>Something went wrong.</h3>
+        <p>${escapeHTML(message)}</p>
       </div>
     `;
 
-
-    container.innerHTML =
-      html;
-
   }
 
+  // =========================================================
+  // HOTEL STYLES
+  // =========================================================
 
-  /* =========================================================
-     HOTEL
-  ========================================================= */
-
-  function renderHotel(hotel) {
+  function injectHotelStyles() {
 
     if (
-      !hotel ||
-      typeof hotel !== "object"
-    ) {
-
-      return "";
-
-    }
-
-
-    const name =
-      getDisplayValue(
-        hotel.name
-      ) ||
-      "Accommodation";
-
-
-    const stars =
-      getNumber(
-        hotel.stars
-      );
-
-
-    const price =
-      getNumber(
-        hotel.price
-      );
-
-
-    const currency =
-      getDisplayValue(
-        hotel.currency
-      ) ||
-      "USD";
-
-
-    const priceType =
-      getDisplayValue(
-        hotel.priceType
-      ) ||
-      "estimated per night";
-
-
-    const description =
-      getDisplayValue(
-        hotel.description
-      );
-
-
-    const amenities =
-      Array.isArray(
-        hotel.amenities
+      document.getElementById(
+        "aiLifePlannerHotelStyles"
       )
-        ? hotel.amenities
-        : [];
-
-
-    let starsHTML = "";
-
-
-    if (
-      stars !== null
     ) {
-
-      starsHTML = `
-
-        <div class="hotel-meta">
-
-          ${"⭐".repeat(
-            Math.min(
-              5,
-              Math.max(
-                1,
-                Math.round(
-                  stars
-                )
-              )
-            )
-          )}
-
-          ${escapeHTML(
-            stars
-          )}-star property
-
-        </div>
-
-      `;
-
+      return;
     }
 
+    const style =
+      document.createElement("style");
 
-    let amenitiesHTML = "";
+    style.id =
+      "aiLifePlannerHotelStyles";
 
+    style.textContent = `
 
-    if (
-      amenities.length
-    ) {
+      .hotel-intro {
+        margin-bottom: 24px;
+      }
 
-      amenitiesHTML = `
+      .hotel-intro h3 {
+        margin: 0 0 8px;
+        font-size: 22px;
+      }
 
-        <div class="hotel-meta">
+      .hotel-intro p {
+        margin: 0;
+        opacity: 0.72;
+      }
 
-          <strong>
-            Amenities
-          </strong>
+      .hotels-grid {
+        display: grid;
+        grid-template-columns:
+          repeat(auto-fit, minmax(280px, 1fr));
+        gap: 22px;
+      }
 
-          <ul>
+      .hotel-card {
+        overflow: hidden;
+        border-radius: 18px;
+        background: #fff;
+        border: 1px solid rgba(0,0,0,0.08);
+        box-shadow:
+          0 8px 28px rgba(0,0,0,0.08);
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
 
-            ${amenities
-              .map(
-                amenity => `
-                  <li>
-                    ${escapeHTML(
-                      getDisplayValue(
-                        amenity
-                      )
-                    )}
-                  </li>
-                `
-              )
-              .join("")
-            }
+      .hotel-card:hover {
+        transform: translateY(-4px);
+        box-shadow:
+          0 14px 35px rgba(0,0,0,0.12);
+      }
 
-          </ul>
+      .hotel-image-wrapper {
+        position: relative;
+        width: 100%;
+        height: 210px;
+        overflow: hidden;
+        background:
+          linear-gradient(
+            135deg,
+            #e9eef5,
+            #f8fafc
+          );
+      }
 
-        </div>
+      .hotel-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
 
-      `;
+      .hotel-image-fallback {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        color: #64748b;
+      }
 
-    }
+      .hotel-image-fallback span {
+        font-size: 44px;
+      }
 
+      .hotel-number {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.72);
+        color: white;
+        font-weight: 700;
+        font-size: 14px;
+      }
 
-    let priceHTML = "";
+      .hotel-card-body {
+        padding: 20px;
+      }
 
+      .hotel-name {
+        margin: 0 0 8px;
+        font-size: 19px;
+        line-height: 1.3;
+      }
 
-    if (
-      price !== null
-    ) {
+      .hotel-stars {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 12px;
+        font-size: 14px;
+      }
 
-      priceHTML = `
+      .hotel-stars span {
+        opacity: 0.65;
+      }
 
-        <div class="hotel-price">
+      .hotel-price {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 5px;
+        margin-bottom: 12px;
+      }
 
-          ${escapeHTML(
-            "$" +
-            price.toLocaleString(
-              "en-US",
-              {
-                maximumFractionDigits: 2
-              }
-            )
-          )}
+      .hotel-price strong {
+        font-size: 20px;
+      }
 
-          <span class="hotel-price-label">
+      .hotel-price span {
+        font-size: 12px;
+        opacity: 0.65;
+      }
 
-            ${escapeHTML(
-              currency
-            )}
+      .hotel-description {
+        font-size: 14px;
+        line-height: 1.6;
+        opacity: 0.78;
+        margin-bottom: 16px;
+      }
 
-            /
-            ${escapeHTML(
-              priceType
-            )}
+      .hotel-amenities h4 {
+        margin: 0 0 9px;
+        font-size: 14px;
+      }
 
-          </span>
+      .amenities-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-bottom: 18px;
+      }
 
-        </div>
+      .amenities-list span {
+        padding: 6px 9px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        font-size: 12px;
+      }
 
-      `;
+      .booking-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px 14px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 13px;
+        background: #111827;
+        color: white;
+        transition:
+          opacity 0.2s ease,
+          transform 0.2s ease;
+      }
 
-    }
+      .booking-button:hover {
+        opacity: 0.88;
+        transform: translateY(-1px);
+      }
 
+      .hotel-note {
+        margin-top: 22px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        background: #f8fafc;
+        font-size: 13px;
+        line-height: 1.5;
+        opacity: 0.8;
+      }
 
-    const bookingQuery =
-      encodeURIComponent(
-        `${name} ${formData.destination}`
-      );
+      .hotel-empty {
+        text-align: center;
+        padding: 40px 20px;
+        border-radius: 16px;
+        background: #f8fafc;
+      }
 
+      .hotel-empty-icon {
+        font-size: 42px;
+        margin-bottom: 10px;
+      }
 
-    const bookingURL =
-      `https://www.booking.com/searchresults.html?ss=${bookingQuery}`;
+      .hotel-empty h3 {
+        margin: 0 0 8px;
+      }
 
+      .hotel-empty p {
+        margin: 0;
+        opacity: 0.7;
+      }
 
-    return `
+      @media (max-width: 600px) {
 
-      <article class="hotel-card">
+        .hotels-grid {
+          grid-template-columns: 1fr;
+        }
 
-        <div
-          class="hotel-image-wrapper"
-        >
+        .hotel-image-wrapper {
+          height: 200px;
+        }
 
-          <div
-            class="hotel-image-placeholder"
-          >
-
-            🏨
-
-            <br>
-
-            Hotel image unavailable
-
-          </div>
-
-        </div>
-
-
-        <div class="hotel-body">
-
-          <div class="hotel-name">
-
-            ${escapeHTML(
-              name
-            )}
-
-          </div>
-
-
-          ${starsHTML}
-
-
-          ${priceHTML}
-
-
-          ${
-            description
-              ? `
-                <div class="hotel-meta">
-                  ${escapeHTML(
-                    description
-                  )}
-                </div>
-              `
-              : ""
-          }
-
-
-          ${amenitiesHTML}
-
-
-          <a
-            class="hotel-button"
-            href="${bookingURL}"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Check on Booking.com ↗
-          </a>
-
-        </div>
-
-      </article>
+      }
 
     `;
 
+    document.head.appendChild(style);
+
   }
 
+  // =========================================================
+  // TAB NAVIGATION
+  // =========================================================
 
-  /* =========================================================
-     TRANSPORT
-  ========================================================= */
+  const tabs =
+    document.querySelectorAll(".plan-tab");
 
-  function renderTransport(
-    transport
-  ) {
+  const sections =
+    document.querySelectorAll(".plan-section");
 
-    const container =
-      document.getElementById(
-        "transportContent"
+  tabs.forEach((tab) => {
+
+    tab.addEventListener("click", () => {
+
+      const targetSectionId =
+        tab.getAttribute("data-target");
+
+      tabs.forEach((t) =>
+        t.classList.remove("active")
       );
 
-    if (!container) return;
-
-
-    if (
-      !transport
-    ) {
-
-      container.innerHTML =
-        "Transportation information unavailable.";
-
-      return;
-
-    }
-
-
-    if (
-      typeof transport ===
-      "string"
-    ) {
-
-      container.innerHTML =
-        transport;
-
-      return;
-
-    }
-
-
-    container.innerHTML = `
-
-      <div class="planner-status">
-
-        ${escapeHTML(
-          getDisplayValue(
-            transport
-          )
-        )}
-
-      </div>
-
-    `;
-
-  }
-
-
-  /* =========================================================
-     EXPERIENCES
-  ========================================================= */
-
-  function renderExperiences(
-    experiences
-  ) {
-
-    const container =
-      document.getElementById(
-        "experiencesContent"
+      sections.forEach((section) =>
+        section.classList.add("hidden")
       );
 
-    if (!container) return;
-
-
-    if (
-      !experiences
-    ) {
-
-      container.innerHTML =
-        "Experiences information unavailable.";
-
-      return;
-
-    }
-
-
-    if (
-      typeof experiences ===
-      "string"
-    ) {
-
-      container.innerHTML =
-        experiences;
-
-      return;
-
-    }
-
-
-    container.innerHTML = `
-
-      <div class="planner-status">
-
-        ${escapeHTML(
-          getDisplayValue(
-            experiences
-          )
-        )}
-
-      </div>
-
-    `;
-
-  }
-
-
-  /* =========================================================
-     MONEY
-  ========================================================= */
-
-  function renderMoney(
-    money
-  ) {
-
-    const container =
-      document.getElementById(
-        "moneyContent"
-      );
-
-    if (!container) return;
-
-
-    if (!money) {
-
-      container.innerHTML =
-        "Budget information unavailable.";
-
-      return;
-
-    }
-
-
-    if (
-      typeof money ===
-      "string"
-    ) {
-
-      container.innerHTML =
-        money;
-
-      return;
-
-    }
-
-
-    container.innerHTML = `
-
-      <div class="planner-status">
-
-        ${escapeHTML(
-          getDisplayValue(
-            money
-          )
-        )}
-
-      </div>
-
-    `;
-
-  }
-
-
-  /* =========================================================
-     DAYS
-  ========================================================= */
-
-  function renderDays(
-    daysPlan
-  ) {
-
-    const container =
-      document.getElementById(
-        "daysContent"
-      );
-
-    if (!container) return;
-
-
-    if (!daysPlan) {
-
-      container.innerHTML =
-        "Day-by-day itinerary unavailable.";
-
-      return;
-
-    }
-
-
-    if (
-      typeof daysPlan ===
-      "string"
-    ) {
-
-      container.innerHTML =
-        daysPlan;
-
-      return;
-
-    }
-
-
-    container.innerHTML = `
-
-      <div class="planner-status">
-
-        ${escapeHTML(
-          getDisplayValue(
-            daysPlan
-          )
-        )}
-
-      </div>
-
-    `;
-
-  }
-
-
-  /* =========================================================
-     ERROR
-  ========================================================= */
-
-  function showGenerationError(
-    error
-  ) {
-
-    let message =
-      error?.message ||
-      "The travel plan could not be generated.";
-
-
-    if (
-      typeof message ===
-      "object"
-    ) {
-
-      message =
-        JSON.stringify(
-          message
+      tab.classList.add("active");
+
+      const target =
+        document.getElementById(
+          targetSectionId
         );
 
-    }
+      if (target) {
 
+        target.classList.remove("hidden");
 
-    setText(
-      "planTitle",
-      "Generation Error"
-    );
-
-
-    setText(
-      "planIntro",
-      "The travel plan could not be generated."
-    );
-
-
-    setHTML(
-      "stayContent",
-      `
-
-        <div class="planner-error">
-
-          <strong>
-            Something went wrong.
-          </strong>
-
-          <br><br>
-
-          ${escapeHTML(
-            message
-          )}
-
-        </div>
-
-      `
-    );
-
-
-    setHTML(
-      "transportContent",
-      ""
-    );
-
-
-    setHTML(
-      "experiencesContent",
-      ""
-    );
-
-
-    setHTML(
-      "moneyContent",
-      ""
-    );
-
-
-    setHTML(
-      "daysContent",
-      ""
-    );
-
-  }
-
-
-  /* =========================================================
-     TABS
-  ========================================================= */
-
-  function setupTabs() {
-
-    const tabs =
-      document.querySelectorAll(
-        ".plan-tab"
-      );
-
-    const sections =
-      document.querySelectorAll(
-        ".plan-section"
-      );
-
-
-    console.log(
-      "PLAN TABS FOUND:",
-      tabs.length
-    );
-
-
-    tabs.forEach(tab => {
-
-      tab.type = "button";
-
-
-      tab.addEventListener(
-        "click",
-        event => {
-
-          event.preventDefault();
-          event.stopPropagation();
-
-
-          const target =
-            tab.getAttribute(
-              "data-target"
-            );
-
-
-          console.log(
-            "TAB CLICKED:",
-            target
-          );
-
-
-          if (!target) return;
-
-
-          tabs.forEach(
-            t =>
-              t.classList.remove(
-                "active"
-              )
-          );
-
-
-          sections.forEach(
-            section =>
-              section.classList.add(
-                "hidden"
-              )
-          );
-
-
-          tab.classList.add(
-            "active"
-          );
-
-
-          const targetSection =
-            document.getElementById(
-              target
-            );
-
-
-          if (
-            targetSection
-          ) {
-
-            targetSection.classList.remove(
-              "hidden"
-            );
-
-          }
-
-        },
-        false
-      );
+      }
 
     });
 
-  }
-
-
-  /* =========================================================
-     DEFAULT TAB
-  ========================================================= */
-
-  function activateDefaultTab() {
-
-    const tabs =
-      document.querySelectorAll(
-        ".plan-tab"
-      );
-
-    const sections =
-      document.querySelectorAll(
-        ".plan-section"
-      );
-
-
-    tabs.forEach(
-      tab =>
-        tab.classList.remove(
-          "active"
-        )
-    );
-
-
-    sections.forEach(
-      section =>
-        section.classList.add(
-          "hidden"
-        )
-    );
-
-
-    const stayTab =
-      document.querySelector(
-        '.plan-tab[data-target="staySection"]'
-      );
-
-
-    const staySection =
-      document.getElementById(
-        "staySection"
-      );
-
-
-    if (stayTab) {
-
-      stayTab.classList.add(
-        "active"
-      );
-
-    }
-
-
-    if (staySection) {
-
-      staySection.classList.remove(
-        "hidden"
-      );
-
-    }
-
-  }
-
-
-  /* =========================================================
-     INITIALIZE
-  ========================================================= */
-
-  setupInterestChips();
-
-  setupForm();
-
-  setupEditButton();
-
-  setupCreatePlanButton();
-
-  setupTabs();
-
-  activateDefaultTab();
-
-  showScreen(
-    appScreen
-  );
-
-
-  console.log(
-    "================================="
-  );
-
-  console.log(
-    "AI LIFE PLANNER READY"
-  );
-
-  console.log(
-    "TEST MODE — NO PADDLE"
-  );
-
-  console.log(
-    "INTEREST CHIPS ENABLED"
-  );
-
-  console.log(
-    "================================="
-  );
+  });
 
 });
