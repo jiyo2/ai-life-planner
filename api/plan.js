@@ -1,4 +1,4 @@
-console.log("PLAN.JS SCRAPPA V1 RUNNING");
+console.log("PLAN.JS SCRAPPA V2 RUNNING");
 
 export default async function handler(req, res) {
   console.log("PLAN API START");
@@ -140,6 +140,7 @@ export default async function handler(req, res) {
 
     function extractAdults(value) {
       const text = String(value || "").toLowerCase();
+
       const match = text.match(/(\d+)/);
 
       if (match) {
@@ -592,8 +593,10 @@ Before returning JSON verify:
       return res.status(500).json({
         error:
           "Gemini request failed",
+
         geminiStatus:
           geminiResponse.status,
+
         details:
           geminiData
       });
@@ -684,6 +687,7 @@ Before returning JSON verify:
       return res.status(500).json({
         error:
           "Gemini returned invalid JSON",
+
         details:
           error.message
       });
@@ -842,9 +846,13 @@ Before returning JSON verify:
                 .slice(2, 10)}`,
 
             name,
+
             cuisine,
+
             location,
+
             priceLevel,
+
             description,
 
             platform:
@@ -857,7 +865,9 @@ Before returning JSON verify:
               ),
 
             rating: null,
+
             reviewCount: null,
+
             openingHours: null
           };
         })
@@ -977,16 +987,24 @@ Before returning JSON verify:
         budget / calculatedTotal;
 
       accommodation =
-        Math.floor(accommodation * ratio);
+        Math.floor(
+          accommodation * ratio
+        );
 
       transportation =
-        Math.floor(transportation * ratio);
+        Math.floor(
+          transportation * ratio
+        );
 
       food =
-        Math.floor(food * ratio);
+        Math.floor(
+          food * ratio
+        );
 
       activities =
-        Math.floor(activities * ratio);
+        Math.floor(
+          activities * ratio
+        );
 
       other =
         Math.max(
@@ -1037,7 +1055,8 @@ Before returning JSON verify:
           }
 
           return {
-            day: index + 1,
+            day:
+              index + 1,
 
             title:
               typeof day.title === "string" &&
@@ -1076,7 +1095,7 @@ Before returning JSON verify:
     }
 
     // =========================================================
-    // SCRAPPA HOTEL SEARCH
+    // HOTEL SEARCH
     // =========================================================
 
     let hotels = [];
@@ -1112,6 +1131,209 @@ Before returning JSON verify:
     };
 
     // =========================================================
+    // HOTEL PRICE NORMALIZER
+    // =========================================================
+
+    function normalizeHotelPrice(hotel) {
+      const rawPrice =
+        hotel.price ??
+        hotel.total_price ??
+        hotel.price_per_night ??
+        hotel.rate ??
+        hotel.rate_per_night ??
+        null;
+
+      if (
+        rawPrice === null ||
+        rawPrice === undefined
+      ) {
+        return null;
+      }
+
+      // Simple number
+      if (
+        typeof rawPrice === "number"
+      ) {
+        return String(rawPrice);
+      }
+
+      // Simple string
+      if (
+        typeof rawPrice === "string"
+      ) {
+        return rawPrice.trim();
+      }
+
+      // Object
+      if (
+        typeof rawPrice === "object"
+      ) {
+        const possibleValues = [
+          rawPrice.amount,
+          rawPrice.value,
+          rawPrice.price,
+          rawPrice.total,
+          rawPrice.display,
+          rawPrice.text,
+          rawPrice.formatted,
+          rawPrice.formatted_price,
+          rawPrice.display_price
+        ];
+
+        for (
+          const value of possibleValues
+        ) {
+          if (
+            value !== null &&
+            value !== undefined &&
+            String(value).trim()
+          ) {
+            return String(value).trim();
+          }
+        }
+
+        // Search nested object values
+        const values =
+          Object.values(rawPrice);
+
+        for (
+          const value of values
+        ) {
+          if (
+            typeof value === "number"
+          ) {
+            return String(value);
+          }
+
+          if (
+            typeof value === "string" &&
+            value.trim()
+          ) {
+            return value.trim();
+          }
+
+          if (
+            value &&
+            typeof value === "object"
+          ) {
+            const nested =
+              value.amount ??
+              value.value ??
+              value.price ??
+              value.total ??
+              value.display ??
+              value.text ??
+              value.formatted ??
+              null;
+
+            if (
+              nested !== null &&
+              nested !== undefined
+            ) {
+              return String(nested);
+            }
+          }
+        }
+
+        return null;
+      }
+
+      return null;
+    }
+
+    // =========================================================
+    // HOTEL IMAGE NORMALIZER
+    // =========================================================
+
+    function normalizeHotelImage(hotel) {
+      const directImage =
+        hotel.image ??
+        hotel.image_url ??
+        hotel.thumbnail ??
+        hotel.photo ??
+        hotel.photo_url ??
+        hotel.imageUrl ??
+        hotel.thumbnail_url ??
+        null;
+
+      if (
+        typeof directImage === "string" &&
+        directImage.trim()
+      ) {
+        return directImage.trim();
+      }
+
+      if (
+        directImage &&
+        typeof directImage === "object"
+      ) {
+        const nestedImage =
+          directImage.url ??
+          directImage.src ??
+          directImage.image_url ??
+          directImage.thumbnail ??
+          null;
+
+        if (
+          typeof nestedImage === "string" &&
+          nestedImage.trim()
+        ) {
+          return nestedImage.trim();
+        }
+      }
+
+      // Search common image arrays
+      const imageArrays = [
+        hotel.images,
+        hotel.photos,
+        hotel.gallery,
+        hotel.photo_urls
+      ];
+
+      for (
+        const array of imageArrays
+      ) {
+        if (
+          !Array.isArray(array)
+        ) {
+          continue;
+        }
+
+        for (
+          const item of array
+        ) {
+          if (
+            typeof item === "string" &&
+            item.trim()
+          ) {
+            return item.trim();
+          }
+
+          if (
+            item &&
+            typeof item === "object"
+          ) {
+            const imageUrl =
+              item.url ??
+              item.src ??
+              item.image_url ??
+              item.thumbnail ??
+              null;
+
+            if (
+              typeof imageUrl === "string" &&
+              imageUrl.trim()
+            ) {
+              return imageUrl.trim();
+            }
+          }
+        }
+      }
+
+      return null;
+    }
+
+    // =========================================================
     // HOTEL NORMALIZER
     // =========================================================
 
@@ -1128,12 +1350,6 @@ Before returning JSON verify:
           ) {
             return null;
           }
-
-          /*
-           * Scrappa Google Hotels can expose slightly
-           * different property names depending on the
-           * result. We normalize the common fields.
-           */
 
           const name =
             hotel.name ||
@@ -1159,36 +1375,98 @@ Before returning JSON verify:
             hotel.url ||
             hotel.link ||
             hotel.property_url ||
+            hotel.hotel_url ||
             null;
 
           const price =
-            hotel.price ||
-            hotel.total_price ||
-            hotel.price_per_night ||
-            hotel.rate ||
-            hotel.rate_per_night ||
-            null;
+            normalizeHotelPrice(
+              hotel
+            );
 
           const starRating =
             hotel.star_rating ??
             hotel.stars ??
-            hotel.rating ??
             null;
 
           const guestRating =
             hotel.guest_rating ??
             hotel.review_score ??
             hotel.rating_score ??
+            hotel.rating ??
             null;
 
           const reviewCount =
             hotel.review_count ??
             hotel.reviews_count ??
+            hotel.number_of_reviews ??
             null;
 
           const amenities =
-            Array.isArray(hotel.amenities)
+            Array.isArray(
+              hotel.amenities
+            )
               ? hotel.amenities
+              : [];
+
+          const image =
+            normalizeHotelImage(
+              hotel
+            );
+
+          const images =
+            Array.isArray(hotel.images)
+              ? hotel.images
+                  .map(item => {
+                    if (
+                      typeof item === "string"
+                    ) {
+                      return item;
+                    }
+
+                    if (
+                      item &&
+                      typeof item === "object"
+                    ) {
+                      return (
+                        item.url ??
+                        item.src ??
+                        item.image_url ??
+                        item.thumbnail ??
+                        null
+                      );
+                    }
+
+                    return null;
+                  })
+                  .filter(Boolean)
+              : [];
+
+          const photos =
+            Array.isArray(hotel.photos)
+              ? hotel.photos
+                  .map(item => {
+                    if (
+                      typeof item === "string"
+                    ) {
+                      return item;
+                    }
+
+                    if (
+                      item &&
+                      typeof item === "object"
+                    ) {
+                      return (
+                        item.url ??
+                        item.src ??
+                        item.image_url ??
+                        item.thumbnail ??
+                        null
+                      );
+                    }
+
+                    return null;
+                  })
+                  .filter(Boolean)
               : [];
 
           return {
@@ -1236,11 +1514,11 @@ Before returning JSON verify:
               hotel.currency ||
               "USD",
 
-            image:
-              hotel.image ||
-              hotel.image_url ||
-              hotel.thumbnail ||
-              null
+            image,
+
+            images,
+
+            photos
           };
         })
         .filter(Boolean)
@@ -1289,14 +1567,15 @@ Before returning JSON verify:
         "USD"
       );
 
-      // Turkey locale when destination is Istanbul/Turkey.
-      // This does not affect the secret key.
       if (
         /turkey|türkiye|istanbul/i.test(
           destination
         )
       ) {
-        params.set("gl", "tr");
+        params.set(
+          "gl",
+          "tr"
+        );
       }
 
       const scrappaURL =
@@ -1398,15 +1677,6 @@ Before returning JSON verify:
         );
 
         if (scrappaResponse.ok) {
-          /*
-           * Google Hotels responses normally contain:
-           * { properties: [...] }
-           *
-           * We also support a few possible wrappers so
-           * the frontend remains stable if the API shape
-           * includes success/meta fields.
-           */
-
           let rawHotels = [];
 
           if (
@@ -1416,6 +1686,7 @@ Before returning JSON verify:
           ) {
             rawHotels =
               scrappaData.properties;
+
           } else if (
             Array.isArray(
               scrappaData?.data?.properties
@@ -1423,6 +1694,7 @@ Before returning JSON verify:
           ) {
             rawHotels =
               scrappaData.data.properties;
+
           } else if (
             Array.isArray(
               scrappaData?.data
@@ -1430,6 +1702,7 @@ Before returning JSON verify:
           ) {
             rawHotels =
               scrappaData.data;
+
           } else if (
             Array.isArray(
               scrappaData?.results
@@ -1437,6 +1710,14 @@ Before returning JSON verify:
           ) {
             rawHotels =
               scrappaData.results;
+
+          } else if (
+            Array.isArray(
+              scrappaData?.hotels
+            )
+          ) {
+            rawHotels =
+              scrappaData.hotels;
           }
 
           hotels =
@@ -1459,9 +1740,9 @@ Before returning JSON verify:
 
             creditsCharged:
               Number(
-                scrappaData?.creditsCharged ||
-                scrappaData?.meta?.creditsCharged ||
-                scrappaData?.usage?.credits ||
+                scrappaData?.creditsCharged ??
+                scrappaData?.meta?.creditsCharged ??
+                scrappaData?.usage?.credits ??
                 1
               ),
 
@@ -1475,6 +1756,13 @@ Before returning JSON verify:
           console.log(
             "SCRAPPA HOTELS FOUND:",
             hotels.length
+          );
+
+          console.log(
+            "NORMALIZED HOTEL SAMPLE:",
+            JSON.stringify(
+              hotels[0] || null
+            ).slice(0, 2000)
           );
         } else {
           const errorMessage =
@@ -1628,4 +1916,4 @@ Before returning JSON verify:
         "Unknown error"
     });
   }
-        }
+                        }
