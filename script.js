@@ -58,36 +58,56 @@ document.addEventListener('DOMContentLoaded', () => {
         appScreen.classList.remove('hidden');
     });
 
-    // --- TESTING MODE: BYPASS PAYMENT AND CONTACT API DIRECTLY ---
-    payBtn.addEventListener('click', async () => {
-        reviewScreen.classList.add('hidden');
-        planScreen.classList.remove('hidden');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+    // --- LIVE PADDLE SANDBOX REDIRECTION FLOW ---
+    payBtn.addEventListener('click', () => {
+        // Save user choices temporarily in the browser local storage
+        localStorage.setItem('pendingTripData', JSON.stringify(formData));
+        localStorage.setItem('hasPaid', 'true'); 
 
-        try {
-            // Absolute localized route pointing to Vercel standard api/plan path rules
-            const response = await fetch('/api/plan', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
+        // ⚠️ REPLACE THIS LINK WITH YOUR LIVE OR SANDBOX PADDLE CHECKOUT LINK ⚠️
+        window.location.href = "https://paddle.com"; 
+    });
 
-            if (!response.ok) throw new Error('Live generation endpoint mapping failed.');
-            const data = await response.json();
+    // --- EXECUTE API AFTER SUCCESSFUL RETURN FROM GATEWAY ---
+    window.addEventListener('load', async () => {
+        const hasPaid = localStorage.getItem('hasPaid');
+        const savedData = localStorage.getItem('pendingTripData');
 
-            document.getElementById('planTitle').textContent = `Your Trip to ${formData.destination}`;
-            document.getElementById('planIntro').textContent = `Customized strategy for ${formData.days} days with a $${formData.budget} budget.`;
-            
-            document.getElementById('stayContent').innerHTML = data.stay;
-            document.getElementById('transportContent').innerHTML = data.transport;
-            document.getElementById('experiencesContent').innerHTML = data.experiences;
-            document.getElementById('moneyContent').innerHTML = data.money;
-            document.getElementById('daysContent').innerHTML = data.daysPlan;
+        if (hasPaid === 'true' && savedData) {
+            // Instantly clear indicators to secure request sequence loop
+            localStorage.removeItem('hasPaid');
+            localStorage.removeItem('pendingTripData');
 
-        } catch (error) {
-            document.getElementById('planTitle').textContent = "Generation Error";
-            document.getElementById('planIntro').textContent = "Something went wrong communicating with Gemini. Please try again.";
-            console.error(error);
+            appScreen.classList.add('hidden');
+            reviewScreen.classList.add('hidden');
+            planScreen.classList.remove('hidden');
+
+            try {
+                // Post form variables to Vercel core endpoint function path rules
+                const response = await fetch('/api/plan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: savedData
+                });
+
+                if (!response.ok) throw new Error('Live generation endpoint mapping failed.');
+                const data = await response.json();
+
+                const parsedData = JSON.parse(savedData);
+                document.getElementById('planTitle').textContent = `Your Trip to ${parsedData.destination}`;
+                document.getElementById('planIntro').textContent = `Customized strategy for ${parsedData.days} days with a $${parsedData.budget} budget.`;
+                
+                document.getElementById('stayContent').innerHTML = data.stay;
+                document.getElementById('transportContent').innerHTML = data.transport;
+                document.getElementById('experiencesContent').innerHTML = data.experiences;
+                document.getElementById('moneyContent').innerHTML = data.money;
+                document.getElementById('daysContent').innerHTML = data.daysPlan;
+
+            } catch (error) {
+                document.getElementById('planTitle').textContent = "Generation Error";
+                document.getElementById('planIntro').textContent = "Something went wrong communicating with Gemini. Please try again.";
+                console.error(error);
+            }
         }
     });
 
