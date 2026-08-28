@@ -39,7 +39,7 @@ body {
 }
 
 /* =========================================
-   GENERAL
+   GENERAL & VISIBILITY FIXES
 ========================================= */
 
 .hidden {
@@ -213,7 +213,7 @@ textarea {
 }
 
 /* =========================================
-   CHIPS
+   CHIPS (FIXED CLICK & ACTIVE STATE)
 ========================================= */
 
 .chips {
@@ -273,13 +273,14 @@ textarea {
     0 0 0 4px rgba(113, 133, 255, 0.15);
 }
 
+/* Beautiful blue highlight when selected */
 .chip.active {
-  background: #172033;
-  color: #ffffff;
-  border-color: #172033;
+  background: #007bff !important;
+  color: #ffffff !important;
+  border-color: #0056b3 !important;
 
   box-shadow:
-    0 5px 14px rgba(23, 32, 51, 0.14);
+    0 5px 14px rgba(0, 123, 255, 0.3) !important;
 }
 
 /* =========================================
@@ -396,163 +397,167 @@ textarea {
 }
 
 /* =========================================
-   PLAN
+   PLAN CONTAINER & HEADER
 ========================================= */
 
 #plan {
   width: 100%;
   min-height: 100vh;
-
   padding: 25px 18px 80px;
 }
 
 .plan-container {
   width: 100%;
   max-width: 1100px;
-
   margin: 0 auto;
 }
-
-/* =========================================
-   PLAN HEADER
-========================================= */
 
 .plan-header {
   text-align: center;
-
   padding: 45px 20px 30px;
+  position: relative;
 }
 
-.plan-header h1,
+.plan-header .price {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: #eef4ff;
+  color: #007bff;
+  padding: 6px 14px;
+  border-radius: 99px;
+  font-weight: 800;
+  font-size: 14px;
+}
+
 #planTitle {
   font-size: clamp(32px, 5vw, 52px);
-
   line-height: 1.1;
-
   letter-spacing: -1.8px;
-
   margin-bottom: 15px;
-
   font-weight: 850;
 }
 
-.plan-header p,
 #planIntro {
   max-width: 720px;
-
   margin: 0 auto;
-
   color: #697386;
-
   font-size: 17px;
 }
 
 /* =========================================
-   PLAN NAVIGATION
+   PLAN TABS NAVIGATION (FIXED MATCHING NAMES)
 ========================================= */
 
-.plan-navigation {
+.plan-tabs {
   display: grid;
-
-  grid-template-columns:
-    repeat(5, minmax(0, 1fr));
-
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
-
   margin: 15px auto 25px;
-
   max-width: 1050px;
 }
 
-.plan-navigation button {
+.plan-tab {
   border: 1px solid #e2e6ed;
-
   background: rgba(255, 255, 255, 0.9);
-
   color: #4b5568;
-
   border-radius: 18px;
-
   padding: 16px 10px;
-
   font-weight: 750;
-
   font-size: 14px;
-
   min-height: 70px;
-
-  transition:
-    transform 0.2s ease,
-    border-color 0.2s ease,
-    background 0.2s ease,
-    box-shadow 0.2s ease,
-    color 0.2s ease;
-
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s ease;
   touch-action: manipulation;
 }
 
-.plan-navigation button:hover {
+.plan-tab:hover {
   transform: translateY(-2px);
-
   border-color: #aeb9ff;
-
-  box-shadow:
-    0 10px 25px rgba(30, 45, 80, 0.07);
+  box-shadow: 0 10px 25px rgba(30, 45, 80, 0.07);
 }
 
-.plan-navigation button.active {
-  background: #172033;
+/* Active modern dark tab layout */
+.plan-tab.active {
+  background: #172033 !important;
+  color: #ffffff !important;
+  border-color: #172033 !important;
+  box-shadow: 0 12px 28px rgba(23, 32, 51, 0.18) !important;
+}
 
-  color: #ffffff;
-
-  border-color: #172033;
-
-  box-shadow:
-    0 12px 28px rgba(23, 32, 51, 0.18);
+/* Responsive adjustment for small phones */
+@media (max-width: 600px) {
+  .plan-tabs {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .plan-tab strong {
+    font-size: 11px;
+  }
 }
 
 /* =========================================
-   PLAN CONTENT CARD
+   PLAN CONTENT BODY CARDS
 ========================================= */
 
 .plan-content {
   width: 100%;
-
   background: rgba(255, 255, 255, 0.96);
-
   border: 1px solid #e6eaf0;
-
   border-radius: 28px;
-
   padding: 32px;
-
-  box-shadow:
-    0 20px 60px rgba(26, 39, 64, 0.08);
-
-  overflow: hidden;
-}
-
-/* =========================================
-   SECTION VISIBILITY
-========================================= */
-
-.plan-section-hidden {
-  display: none !important;
-}
-
-.plan-section-visible {
-  display: block;
-
-  animation: planFadeIn 0.3s ease;
+  box-shadow: 0 20px 60px rgba(26, 39, 64, 0.08);
 }
 
 .plan-section {
-  display: none;
+  animation: planFadeIn 0.3s ease;
 }
 
-.plan-section.active {
-  display: block;
-  animation: planFadeIn 0.3s ease;
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f0f2f5;
+  padding-bottom: 15px;
+}
+
+.section-icon {
+  font-size: 28px;
+  background: #f4f6f9;
+  padding: 10px;
+  border-radius: 14px;
+}
+
+.section-title h2 {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.section-title p {
+  font-size: 13px;
+  color: #697386;
+}
+
+.section-body {
+  padding: 5px 0;
+  line-height: 1.7;
+  font-size: 16px;
+  color: #2e3a51;
+}
+
+/* Injected lists styling */
+.section-body ul, .section-body ol {
+  padding-left: 22px;
+  margin: 10px 0;
+}
+
+.section-body li {
+  margin-bottom: 10px;
 }
 
 @keyframes planFadeIn {
@@ -560,1200 +565,8 @@ textarea {
     opacity: 0;
     transform: translateY(8px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-
-/* =========================================
-   PLAN MAIN TEXT
-========================================= */
-
-.plan-main-text {
-  font-size: 17px;
-
-  color: #394357;
-
-  line-height: 1.8;
-
-  margin-bottom: 25px;
-}
-
-/* =========================================
-   PLAN SUBSECTIONS
-========================================= */
-
-.plan-subsection {
-  width: 100%;
-
-  margin-top: 25px;
-
-  padding-top: 22px;
-
-  border-top: 1px solid #edf0f4;
-}
-
-.plan-subsection h4 {
-  font-size: 17px;
-
-  color: #172033;
-
-  margin-bottom: 12px;
-
-  font-weight: 800;
-}
-
-.plan-subsection p {
-  color: #596579;
-
-  line-height: 1.75;
-}
-
-.plan-subsection ul {
-  list-style: none;
-
-  display: grid;
-
-  gap: 10px;
-}
-
-.plan-subsection li {
-  position: relative;
-
-  padding: 12px 15px 12px 38px;
-
-  background: #f8f9fb;
-
-  border: 1px solid #edf0f4;
-
-  border-radius: 13px;
-
-  color: #4b5669;
-
-  overflow-wrap: anywhere;
-}
-
-.plan-subsection li::before {
-  content: "✓";
-
-  position: absolute;
-
-  left: 15px;
-  top: 11px;
-
-  font-weight: 800;
-
-  color: #172033;
-}
-
-/* =========================================
-   BUDGET
-========================================= */
-
-.budget-grid {
-  display: grid;
-
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
-
-  gap: 12px;
-
-  margin-bottom: 20px;
-}
-
-.budget-item {
-  display: flex;
-
-  align-items: center;
-  justify-content: space-between;
-
-  gap: 15px;
-
-  padding: 16px 18px;
-
-  background: #f8f9fb;
-
-  border: 1px solid #edf0f4;
-
-  border-radius: 15px;
-
-  min-width: 0;
-}
-
-.budget-item span {
-  color: #4b5669;
-
-  font-size: 14px;
-
-  font-weight: 650;
-}
-
-.budget-item strong {
-  color: #172033;
-
-  font-size: 17px;
-
-  white-space: nowrap;
-}
-
-.budget-total {
-  display: flex;
-
-  align-items: center;
-  justify-content: space-between;
-
-  gap: 20px;
-
-  padding: 20px;
-
-  border-radius: 18px;
-
-  background: #172033;
-
-  color: #ffffff;
-
-  margin-top: 18px;
-}
-
-.budget-total span {
-  font-weight: 700;
-}
-
-.budget-total strong {
-  font-size: 24px;
-  white-space: nowrap;
-}
-
-/* =========================================
-   DAY-BY-DAY
-========================================= */
-
-#daysOut {
-  display: grid;
-
-  gap: 18px;
-
-  width: 100%;
-}
-
-.day-card {
-  width: 100%;
-
-  background: #ffffff;
-
-  border: 1px solid #e5e9ef;
-
-  border-radius: 20px;
-
-  padding: 23px;
-
-  box-shadow:
-    0 10px 30px rgba(26, 39, 64, 0.05);
-}
-
-.day-number {
-  display: inline-flex;
-
-  align-items: center;
-  justify-content: center;
-
-  padding: 7px 12px;
-
-  background: #172033;
-
-  color: #ffffff;
-
-  border-radius: 999px;
-
-  font-size: 12px;
-
-  font-weight: 800;
-
-  margin-bottom: 12px;
-}
-
-.day-card h3 {
-  font-size: 22px;
-
-  line-height: 1.3;
-
-  margin-bottom: 20px;
-
-  color: #172033;
-}
-
-.day-period {
-  padding: 15px 0;
-
-  border-top: 1px solid #edf0f4;
-}
-
-.day-period span {
-  display: block;
-
-  margin-bottom: 5px;
-
-  font-size: 14px;
-
-  font-weight: 800;
-
-  color: #303a4d;
-}
-
-.day-period p {
-  color: #596579;
-
-  line-height: 1.7;
-}
-
-/* =========================================
-   LIVE HOTEL RESULTS
-========================================= */
-
-#liveHotelsSection {
-  width: 100%;
-
-  margin-top: 30px;
-
-  padding-top: 28px;
-
-  border-top: 1px solid #e8ecf2;
-}
-
-.hotel-results {
-  width: 100%;
-  min-width: 0;
-}
-
-.hotel-results h4 {
-  display: flex;
-
-  align-items: center;
-
-  gap: 8px;
-
-  font-size: 21px;
-
-  color: #172033;
-
-  margin-bottom: 8px;
-}
-
-.hotel-results-intro {
-  color: #697386;
-
-  margin-bottom: 22px;
-}
-
-/* =========================================
-   HOTEL STATUS
-========================================= */
-
-.hotel-status {
-  padding: 15px 17px;
-
-  background: #f7f8fb;
-
-  border: 1px solid #e8ebf1;
-
-  border-radius: 14px;
-
-  color: #4b5669;
-
-  font-weight: 650;
-
-  margin-bottom: 12px;
-}
-
-.hotel-results > p:not(.hotel-results-intro) {
-  color: #697386;
-}
-
-/* =========================================
-   HOTEL LIST
-========================================= */
-
-.hotel-list {
-  display: grid;
-
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
-
-  gap: 18px;
-
-  width: 100%;
-
-  min-width: 0;
-}
-
-/* =========================================
-   HOTEL CARD
-========================================= */
-
-.hotel-card {
-  position: relative;
-
-  display: flex;
-
-  flex-direction: column;
-
-  width: 100%;
-
-  min-width: 0;
-
-  padding: 22px;
-
-  background: #ffffff;
-
-  border: 1px solid #e1e6ee;
-
-  border-radius: 20px;
-
-  box-shadow:
-    0 10px 30px rgba(26, 39, 64, 0.06);
-
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
-
-  overflow: hidden;
-}
-
-.hotel-card:hover {
-  transform: translateY(-3px);
-
-  border-color: #cfd6e2;
-
-  box-shadow:
-    0 16px 38px rgba(26, 39, 64, 0.1);
-}
-
-/* =========================================
-   HOTEL NUMBER
-========================================= */
-
-.hotel-number {
-  display: inline-flex;
-
-  align-items: center;
-  justify-content: center;
-
-  width: 30px;
-  height: 30px;
-
-  margin-bottom: 12px;
-
-  border-radius: 50%;
-
-  background: #f0f2f6;
-
-  color: #172033;
-
-  font-size: 13px;
-  font-weight: 800;
-
-  flex-shrink: 0;
-}
-
-/* =========================================
-   HOTEL NAME
-========================================= */
-
-.hotel-name {
-  font-size: 19px;
-
-  line-height: 1.35;
-
-  color: #172033;
-
-  margin-bottom: 10px;
-
-  font-weight: 800;
-
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-/* =========================================
-   HOTEL LOCATION
-========================================= */
-
-.hotel-location {
-  color: #697386;
-
-  font-size: 14px;
-
-  line-height: 1.55;
-
-  margin-bottom: 9px;
-
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-/* =========================================
-   HOTEL STAR RATING
-========================================= */
-
-.hotel-rating {
-  color: #4b5669;
-
-  font-size: 14px;
-
-  margin-bottom: 7px;
-
-  overflow-wrap: anywhere;
-}
-
-/* =========================================
-   HOTEL GUEST RATING
-========================================= */
-
-.hotel-guest-rating {
-  display: flex;
-
-  align-items: center;
-
-  flex-wrap: wrap;
-
-  gap: 4px;
-
-  color: #4b5669;
-
-  font-size: 14px;
-
-  margin-bottom: 10px;
-}
-
-.hotel-guest-rating strong {
-  color: #172033;
-
-  font-size: 16px;
-}
-
-.hotel-guest-rating span {
-  color: #697386;
-}
-
-/* =========================================
-   HOTEL PRICE
-========================================= */
-
-.hotel-price {
-  display: flex;
-
-  align-items: baseline;
-
-  flex-wrap: wrap;
-
-  gap: 7px;
-
-  margin: 7px 0 12px;
-
-  color: #172033;
-
-  overflow-wrap: anywhere;
-}
-
-.hotel-price strong {
-  font-size: 20px;
-
-  font-weight: 850;
-
-  overflow-wrap: anywhere;
-}
-
-.hotel-nightly {
-  color: #697386;
-
-  font-size: 13px;
-
-  overflow-wrap: anywhere;
-}
-
-/* =========================================
-   HOTEL PLATFORM
-========================================= */
-
-.hotel-platform {
-  display: inline-flex;
-
-  align-self: flex-start;
-
-  margin-bottom: 14px;
-
-  padding: 5px 9px;
-
-  background: #f3f5f8;
-
-  border-radius: 8px;
-
-  color: #596579;
-
-  font-size: 12px;
-
-  font-weight: 750;
-
-  overflow-wrap: anywhere;
-}
-
-/* =========================================
-   HOTEL AMENITIES
-========================================= */
-
-.hotel-amenities {
-  display: flex;
-
-  flex-wrap: wrap;
-
-  gap: 7px;
-
-  width: 100%;
-
-  margin-bottom: 18px;
-}
-
-.hotel-amenity {
-  display: inline-flex;
-
-  align-items: center;
-
-  max-width: 100%;
-
-  padding: 6px 9px;
-
-  background: #f8f9fb;
-
-  border: 1px solid #edf0f4;
-
-  border-radius: 8px;
-
-  color: #596579;
-
-  font-size: 12px;
-
-  line-height: 1.35;
-
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-/* =========================================
-   HOTEL BUTTON
-========================================= */
-
-.hotel-button {
-  display: flex;
-
-  align-items: center;
-  justify-content: center;
-
-  width: 100%;
-
-  min-height: 46px;
-
-  margin-top: auto;
-
-  padding: 11px 15px;
-
-  background: #172033;
-
-  color: #ffffff;
-
-  border-radius: 12px;
-
-  font-size: 14px;
-
-  font-weight: 800;
-
-  text-align: center;
-
-  transition:
-    transform 0.2s ease,
-    opacity 0.2s ease,
-    box-shadow 0.2s ease;
-
-  touch-action: manipulation;
-}
-
-.hotel-button:hover {
-  transform: translateY(-1px);
-
-  box-shadow:
-    0 8px 20px rgba(23, 32, 51, 0.16);
-}
-
-.hotel-button:active {
-  transform: translateY(0);
-}
-
-.hotel-button.disabled {
-  background: #eef0f4;
-
-  color: #8a93a3;
-
-  cursor: default;
-
-  box-shadow: none;
-}
-
-/* =========================================
-   HOTEL NOTE
-========================================= */
-
-.hotel-note {
-  margin-top: 15px;
-
-  color: #7a8494;
-
-  font-size: 13px;
-
-  line-height: 1.6;
-
-  padding: 12px 14px;
-
-  background: #f8f9fb;
-
-  border-radius: 10px;
-}
-
-/* =========================================
-   RESPONSIVE — TABLET
-========================================= */
-
-@media (max-width: 850px) {
-
-  #app {
-    padding: 30px 16px 70px;
-  }
-
-  .hero {
-    padding: 45px 15px 30px;
-  }
-
-  .card {
-    padding: 28px;
-  }
-
-  .plan-navigation {
-    grid-template-columns:
-      repeat(3, minmax(0, 1fr));
-  }
-
-  .plan-content {
-    padding: 26px;
-  }
-
-  .hotel-list {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
-  }
-}
-
-/* =========================================
-   RESPONSIVE — MOBILE
-========================================= */
-
-@media (max-width: 700px) {
-
-  body {
-    font-size: 15px;
-  }
-
-  #app {
-    padding: 18px 10px 55px;
-  }
-
-  /* -----------------------------------------
-     HERO
-  ----------------------------------------- */
-
-  .hero {
-    padding: 32px 8px 25px;
-  }
-
-  .hero h1 {
-    font-size: 38px;
-
-    letter-spacing: -1.7px;
-
-    line-height: 1.05;
-  }
-
-  .hero p {
-    font-size: 15px;
-
-    line-height: 1.65;
-  }
-
-  /* -----------------------------------------
-     FORM CARD
-  ----------------------------------------- */
-
-  .card {
-    padding: 20px 16px;
-
-    border-radius: 22px;
-  }
-
-  .field {
-    margin-bottom: 20px;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-
-    gap: 0;
-  }
-
-  input,
-  textarea,
-  select {
-    font-size: 16px;
-  }
-
-  /* -----------------------------------------
-     INTEREST CHIPS
-  ----------------------------------------- */
-
-  .chips {
-    display: flex;
-
-    flex-wrap: wrap;
-
-    gap: 8px;
-
-    width: 100%;
-  }
-
-  .chip {
-    min-height: 42px;
-
-    padding: 9px 13px;
-
-    font-size: 13px;
-
-    touch-action: manipulation;
-
-    user-select: none;
-    -webkit-user-select: none;
-
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  /* -----------------------------------------
-     REVIEW
-  ----------------------------------------- */
-
-  #review {
-    padding: 20px 10px;
-
-    align-items: flex-start;
-  }
-
-  .review-card {
-    padding: 22px 17px;
-
-    border-radius: 22px;
-  }
-
-  .review-card h2 {
-    font-size: 27px;
-  }
-
-  .review-actions {
-    grid-template-columns: 1fr;
-
-    gap: 10px;
-  }
-
-  .review-actions > button:first-child {
-    min-height: 48px;
-  }
-
-  /* -----------------------------------------
-     PLAN
-  ----------------------------------------- */
-
-  #plan {
-    padding: 10px 8px 55px;
-  }
-
-  .plan-container {
-    width: 100%;
-  }
-
-  .plan-header {
-    padding: 30px 8px 22px;
-  }
-
-  .plan-header h1,
-  #planTitle {
-    font-size: 32px;
-
-    line-height: 1.1;
-
-    letter-spacing: -1px;
-  }
-
-  .plan-header p,
-  #planIntro {
-    font-size: 15px;
-
-    line-height: 1.65;
-  }
-
-  /* -----------------------------------------
-     PLAN NAVIGATION
-  ----------------------------------------- */
-
-  .plan-navigation {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
-
-    gap: 8px;
-
-    margin-bottom: 18px;
-  }
-
-  .plan-navigation button {
-    min-height: 58px;
-
-    padding: 11px 7px;
-
-    border-radius: 14px;
-
-    font-size: 12px;
-
-    line-height: 1.35;
-  }
-
-  /* -----------------------------------------
-     PLAN CONTENT
-  ----------------------------------------- */
-
-  .plan-content {
-    padding: 19px 15px;
-
-    border-radius: 22px;
-  }
-
-  .plan-main-text {
-    font-size: 15px;
-
-    line-height: 1.75;
-  }
-
-  .plan-subsection {
-    margin-top: 21px;
-
-    padding-top: 19px;
-  }
-
-  .plan-subsection h4 {
-    font-size: 16px;
-  }
-
-  .plan-subsection li {
-    padding: 11px 12px 11px 34px;
-
-    font-size: 14px;
-  }
-
-  .plan-subsection li::before {
-    left: 12px;
-  }
-
-  /* -----------------------------------------
-     BUDGET
-  ----------------------------------------- */
-
-  .budget-grid {
-    grid-template-columns: 1fr;
-
-    gap: 9px;
-  }
-
-  .budget-item {
-    padding: 14px;
-
-    gap: 10px;
-  }
-
-  .budget-item span {
-    font-size: 13px;
-  }
-
-  .budget-item strong {
-    font-size: 15px;
-  }
-
-  .budget-total {
-    padding: 17px;
-
-    gap: 12px;
-
-    border-radius: 15px;
-  }
-
-  .budget-total span {
-    font-size: 14px;
-  }
-
-  .budget-total strong {
-    font-size: 20px;
-  }
-
-  /* -----------------------------------------
-     DAYS
-  ----------------------------------------- */
-
-  #daysOut {
-    gap: 13px;
-  }
-
-  .day-card {
-    padding: 18px;
-
-    border-radius: 17px;
-  }
-
-  .day-card h3 {
-    font-size: 20px;
-
-    line-height: 1.35;
-
-    margin-bottom: 16px;
-  }
-
-  .day-period {
-    padding: 13px 0;
-  }
-
-  .day-period span {
-    font-size: 13px;
-  }
-
-  .day-period p {
-    font-size: 14px;
-
-    line-height: 1.65;
-  }
-
-  /* -----------------------------------------
-     LIVE HOTELS
-  ----------------------------------------- */
-
-  #liveHotelsSection {
-    margin-top: 24px;
-
-    padding-top: 22px;
-  }
-
-  .hotel-results h4 {
-    font-size: 19px;
-
-    line-height: 1.35;
-  }
-
-  .hotel-results-intro {
-    font-size: 14px;
-
-    margin-bottom: 17px;
-  }
-
-  /*
-     IMPORTANT:
-     ONE HOTEL CARD PER ROW ON MOBILE
-  */
-
-  .hotel-list {
-    display: grid;
-
-    grid-template-columns: 1fr !important;
-
-    gap: 14px;
-
-    width: 100%;
-  }
-
-  .hotel-card {
-    width: 100%;
-
-    min-width: 0;
-
-    padding: 18px;
-
-    border-radius: 18px;
-  }
-
-  .hotel-name {
-    font-size: 18px;
-
-    line-height: 1.35;
-
-    margin-bottom: 9px;
-
-    overflow-wrap: anywhere;
-
-    word-break: break-word;
-  }
-
-  .hotel-location {
-    font-size: 13px;
-
-    line-height: 1.55;
-
-    overflow-wrap: anywhere;
-
-    word-break: break-word;
-  }
-
-  .hotel-rating {
-    font-size: 13px;
-  }
-
-  .hotel-guest-rating {
-    font-size: 13px;
-  }
-
-  .hotel-price strong {
-    font-size: 19px;
-  }
-
-  .hotel-platform {
-    font-size: 11px;
-  }
-
-  .hotel-amenities {
-    gap: 6px;
-
-    margin-bottom: 15px;
-  }
-
-  .hotel-amenity {
-    font-size: 11px;
-
-    padding: 6px 8px;
-  }
-
-  .hotel-button {
-    width: 100%;
-
-    min-height: 46px;
-
-    font-size: 14px;
-  }
-}
-
-/* =========================================
-   RESPONSIVE — SMALL PHONES
-========================================= */
-
-@media (max-width: 400px) {
-
-  #app {
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-
-  .hero h1 {
-    font-size: 34px;
-  }
-
-  .card {
-    padding: 18px 14px;
-  }
-
-  .chip {
-    font-size: 12px;
-
-    padding: 8px 11px;
-
-    min-height: 40px;
-  }
-
-  .plan-navigation button {
-    font-size: 11px;
-
-    min-height: 55px;
-  }
-
-  .plan-content {
-    padding: 17px 13px;
-  }
-
-  .hotel-card {
-    padding: 16px;
-
-    border-radius: 16px;
-  }
-
-  .hotel-name {
-    font-size: 17px;
-  }
-
-  .hotel-results h4 {
-    font-size: 18px;
-  }
-
-  .budget-total strong {
-    font-size: 18px;
-  }
-}
-
-/* =========================================
-   ACCESSIBILITY
-========================================= */
-
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: 3px solid rgba(113, 133, 255, 0.35);
-
-  outline-offset: 2px;
-}
-
-/* =========================================
-   TOUCH DEVICES
-========================================= */
-
-@media (hover: none) {
-
-  .chip:hover,
-  .primary-button:hover,
-  .hotel-card:hover,
-  .hotel-button:hover,
-  .plan-navigation button:hover {
-    transform: none;
-  }
-
-  .chip:active {
-    transform: scale(0.97);
-  }
-}
-
-/* =========================================
-   PREVENT HORIZONTAL OVERFLOW
-========================================= */
-
-#app,
-#review,
-#plan,
-.plan-container,
-.plan-content,
-.plan-section,
-.hotel-results,
-.hotel-list,
-.hotel-card {
-  max-width: 100%;
-}
-
-/* =========================================
-   END
-========================================= */
