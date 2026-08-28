@@ -58,28 +58,26 @@ document.addEventListener('DOMContentLoaded', () => {
         appScreen.classList.remove('hidden');
     });
 
-    // --- TESTING MODE: BYPASS REAL PAYMENT AND CALL LIVE GEMINI API ---
+    // --- TESTING MODE: BYPASS PAYMENT AND CONTACT API DIRECTLY ---
     payBtn.addEventListener('click', async () => {
-        // Toggle active interface views immediately without loading Paddle
         reviewScreen.classList.add('hidden');
         planScreen.classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         try {
-            // Call your live Vercel Serverless Function endpoint directly for testing
+            // Absolute localized route pointing to Vercel standard api/plan path rules
             const response = await fetch('/api/plan', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
             });
 
-            if (!response.ok) throw new Error('Live generation stream failed.');
+            if (!response.ok) throw new Error('Live generation endpoint mapping failed.');
             const data = await response.json();
 
             document.getElementById('planTitle').textContent = `Your Trip to ${formData.destination}`;
             document.getElementById('planIntro').textContent = `Customized strategy for ${formData.days} days with a $${formData.budget} budget.`;
             
-            // Mount rich components containing hotel stars, amenities, and booking links
             document.getElementById('stayContent').innerHTML = data.stay;
             document.getElementById('transportContent').innerHTML = data.transport;
             document.getElementById('experiencesContent').innerHTML = data.experiences;
