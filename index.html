@@ -2,675 +2,204 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Life Planner</title>
-
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
   <!-- ================================
-       MAIN APP
+       MAIN APP (FORM SCREEN)
   ================================= -->
-
   <main id="app">
-
     <section class="hero">
-
-      <div class="brand">
-        ✦ AI Life Planner
-      </div>
-
-      <h1>
-        Plan your perfect trip with AI
-      </h1>
-
-      <p>
-        Tell us where you're going, your budget and what you love.
-        Our AI will create a personalized travel plan for you.
-      </p>
-
+      <div class="brand">✦ AI Life Planner</div>
+      <h1>Plan your perfect trip with AI</h1>
+      <p>Tell us where you're going, your budget and what you love. Our AI will create a personalized travel plan for you.</p>
     </section>
 
-
-    <!-- ================================
-         TRIP FORM
-    ================================= -->
-
+    <!-- TRIP FORM -->
     <section class="card">
-
       <form id="plannerForm">
-
         <div class="field">
-
-          <label for="destination">
-            Destination
-          </label>
-
-          <input
-            id="destination"
-            type="text"
-            placeholder="e.g. Istanbul"
-            required
-          >
-
+          <label for="destination">Destination</label>
+          <input id="destination" type="text" placeholder="e.g. Istanbul" required>
         </div>
 
-
         <div class="form-grid">
-
           <div class="field">
-
-            <label for="startDate">
-              Start date
-            </label>
-
-            <input
-              id="startDate"
-              type="date"
-            >
-
+            <label for="startDate">Start date</label>
+            <input id="startDate" type="date">
           </div>
-
-
           <div class="field">
-
-            <label for="days">
-              Number of days
-            </label>
-
-            <input
-              id="days"
-              type="number"
-              min="1"
-              max="60"
-              value="5"
-              required
-            >
-
+            <label for="days">Number of days</label>
+            <input id="days" type="number" min="1" max="60" value="5" required>
           </div>
-
         </div>
 
-
         <div class="form-grid">
-
           <div class="field">
-
-            <label for="budget">
-              Budget (USD)
-            </label>
-
-            <input
-              id="budget"
-              type="number"
-              min="1"
-              placeholder="800"
-              required
-            >
-
+            <label for="budget">Budget (USD)</label>
+            <input id="budget" type="number" min="1" placeholder="800" required>
           </div>
-
-
           <div class="field">
-
-            <label for="travelers">
-              Travelers
-            </label>
-
+            <label for="travelers">Travelers</label>
             <select id="travelers">
-
-              <option value="1 traveler">
-                1 traveler
-              </option>
-
-              <option value="2 travelers">
-                2 travelers
-              </option>
-
-              <option value="3 travelers">
-                3 travelers
-              </option>
-
-              <option value="4 travelers">
-                4 travelers
-              </option>
-
-              <option value="5 travelers">
-                5 travelers
-              </option>
-
-              <option value="6+ travelers">
-                6+ travelers
-              </option>
-
+              <option value="1 traveler">1 traveler</option>
+              <option value="2 travelers">2 travelers</option>
+              <option value="3 travelers">3 travelers</option>
+              <option value="4 travelers">4 travelers</option>
+              <option value="5 travelers">5 travelers</option>
+              <option value="6+ travelers">6+ travelers</option>
             </select>
-
           </div>
-
         </div>
 
-
-        <!-- ================================
-             INTERESTS
-        ================================= -->
-
+        <!-- INTERESTS -->
         <div class="field">
-
-          <label>
-            What are you interested in?
-          </label>
-
+          <label>What are you interested in?</label>
           <div class="chips">
-
-            <button
-              type="button"
-              class="chip"
-            >
-              🏖️ Beaches
-            </button>
-
-            <button
-              type="button"
-              class="chip"
-            >
-              🏛️ Culture
-            </button>
-
-            <button
-              type="button"
-              class="chip"
-            >
-              🍴 Food
-            </button>
-
-            <button
-              type="button"
-              class="chip"
-            >
-              🛍️ Shopping
-            </button>
-
-            <button
-              type="button"
-              class="chip"
-            >
-              🌲 Nature
-            </button>
-
-            <button
-              type="button"
-              class="chip"
-            >
-              🎨 Art
-            </button>
-
-            <button
-              type="button"
-              class="chip"
-            >
-              🌃 Nightlife
-            </button>
-
-            <button
-              type="button"
-              class="chip"
-            >
-              🧘 Relaxation
-            </button>
-
+            <button type="button" class="chip">🏖️ Beaches</button>
+            <button type="button" class="chip">🏛️ Culture</button>
+            <button type="button" class="chip">🍴 Food</button>
+            <button type="button" class="chip">🛍️ Shopping</button>
+            <button type="button" class="chip">🌲 Nature</button>
+            <button type="button" class="chip">🎨 Art</button>
+            <button type="button" class="chip">🌃 Nightlife</button>
+            <button type="button" class="chip">🧘 Relaxation</button>
           </div>
-
         </div>
 
-
-        <!-- ================================
-             NOTES
-        ================================= -->
-
+        <!-- NOTES -->
         <div class="field">
-
-          <label for="notes">
-            Additional notes
-          </label>
-
-          <textarea
-            id="notes"
-            rows="4"
-            placeholder="Anything else we should know?"
-          ></textarea>
-
+          <label for="notes">Additional notes</label>
+          <textarea id="notes" rows="4" placeholder="Anything else we should know?"></textarea>
         </div>
 
-
-        <button
-          type="submit"
-          class="primary-button"
-        >
-          Create My Travel Plan
-        </button>
-
+        <button type="submit" class="primary-button">Create My Travel Plan</button>
       </form>
-
     </section>
-
   </main>
 
-
   <!-- ================================
-       REVIEW
+       REVIEW SCREEN (BEFORE PAYMENT)
   ================================= -->
-
-  <section
-    id="review"
-    class="hidden"
-  >
-
+  <section id="review" class="hidden">
     <div class="review-card">
-
-      <div class="brand">
-        ✦ AI Life Planner
-      </div>
-
-      <h2>
-        Review your trip
-      </h2>
-
+      <div class="brand">✦ AI Life Planner</div>
+      <h2>Review your trip</h2>
       <div id="summary"></div>
-
-
       <div class="review-actions">
-
-        <button
-          id="closeReview"
-          type="button"
-        >
-          Edit
-        </button>
-
-        <button
-          id="pay"
-          type="button"
-          class="primary-button"
-        >
-          $4.99 — Create My Plan
-        </button>
-
+        <button id="closeReview" type="button">Edit</button>
+        <button id="pay" type="button" class="primary-button">$4.99 — Create My Plan</button>
       </div>
-
     </div>
-
   </section>
 
-
   <!-- ================================
-       AI PLAN
+       AI PLAN SCREEN (RESULTS)
   ================================= -->
-
-  <section
-    id="plan"
-    class="hidden"
-  >
-
+  <section id="plan" class="hidden">
     <div class="plan-container">
-
+      
       <!-- HEADER -->
-
       <div class="plan-header">
-
-        <div class="brand">
-          ✦ AI Life Planner
-        </div>
-
-        <div class="price">
-          $4.99
-        </div>
-
+        <div class="brand">✦ AI Life Planner</div>
+        <div class="price">$4.99</div>
       </div>
-
 
       <div class="plan-introduction">
-
-        <h1 id="planTitle">
-          Creating your personalized plan...
-        </h1>
-
-        <p id="planIntro">
-          Our AI is building your itinerary.
-          Please wait a moment.
-        </p>
-
+        <h1 id="planTitle">Creating your personalized plan...</h1>
+        <p id="planIntro">Our AI is building your itinerary. Please wait a moment.</p>
       </div>
 
-
-      <!-- ================================
-           PLAN NAVIGATION
-      ================================= -->
-
+      <!-- PLAN NAVIGATION TABS -->
       <div class="plan-tabs">
-
-        <button
-          type="button"
-          class="plan-tab active"
-          data-plan-section="stay"
-        >
-          <span>🏨</span>
-          <strong>Stay</strong>
+        <button type="button" class="plan-tab active" data-target="staySection">
+          <span>🏨</span> <strong>Stay</strong>
         </button>
-
-
-        <button
-          type="button"
-          class="plan-tab"
-          data-plan-section="transport"
-        >
-          <span>🚆</span>
-          <strong>Getting Around</strong>
+        <button type="button" class="plan-tab" data-target="transportSection">
+          <span>🚆</span> <strong>Getting Around</strong>
         </button>
-
-
-        <button
-          type="button"
-          class="plan-tab"
-          data-plan-section="experiences"
-        >
-          <span>📍</span>
-          <strong>Experiences</strong>
+        <button type="button" class="plan-tab" data-target="experiencesSection">
+          <span>📍</span> <strong>Experiences</strong>
         </button>
-
-
-        <button
-          type="button"
-          class="plan-tab"
-          data-plan-section="money"
-        >
-          <span>💰</span>
-          <strong>Budget Strategy</strong>
+        <button type="button" class="plan-tab" data-target="moneySection">
+          <span>💰</span> <strong>Budget Strategy</strong>
         </button>
-
-
-        <button
-          type="button"
-          class="plan-tab"
-          data-plan-section="days"
-        >
-          <span>📅</span>
-          <strong>Day-by-Day Itinerary</strong>
+        <button type="button" class="plan-tab" data-target="daysSection">
+          <span>📅</span> <strong>Day-by-Day</strong>
         </button>
-
       </div>
 
-
-      <!-- ================================
-           PLAN CONTENT
-      ================================= -->
-
+      <!-- PLAN CONTENT SECTIONS -->
       <div class="plan-content">
 
-
-        <!-- STAY -->
-
-        <section
-          id="staySection"
-          class="plan-section"
-        >
-
+        <!-- 1. STAY -->
+        <section id="staySection" class="plan-section">
           <div class="section-title">
-
-            <span class="section-icon">
-              🏨
-            </span>
-
+            <span class="section-icon">🏨</span>
             <div>
-
-              <h2>
-                Stay
-              </h2>
-
-              <p>
-                Your personalized accommodation strategy
-              </p>
-
+              <h2>Stay</h2>
+              <p>Your personalized accommodation strategy</p>
             </div>
-
           </div>
-
-
-          <div
-            id="stay"
-            class="section-body"
-          >
-            Generating accommodation strategy...
-          </div>
-
+          <div id="stayContent" class="section-body">Generating accommodation strategy...</div>
         </section>
 
-
-        <!-- TRANSPORT -->
-
-        <section
-          id="transportSection"
-          class="plan-section"
-        >
-
+        <!-- 2. TRANSPORT -->
+        <section id="transportSection" class="plan-section hidden">
           <div class="section-title">
-
-            <span class="section-icon">
-              🚆
-            </span>
-
+            <span class="section-icon">🚆</span>
             <div>
-
-              <h2>
-                Getting Around
-              </h2>
-
-              <p>
-                Your personalized transportation strategy
-              </p>
-
+              <h2>Getting Around</h2>
+              <p>Best local transit options and estimated costs</p>
             </div>
-
           </div>
-
-
-          <div
-            id="transport"
-            class="section-body"
-          >
-            Generating transportation strategy...
-          </div>
-
+          <div id="transportContent" class="section-body">Generating transport guide...</div>
         </section>
 
-
-        <!-- EXPERIENCES -->
-
-        <section
-          id="experiencesSection"
-          class="plan-section"
-        >
-
+        <!-- 3. EXPERIENCES -->
+        <section id="experiencesSection" class="plan-section hidden">
           <div class="section-title">
-
-            <span class="section-icon">
-              📍
-            </span>
-
+            <span class="section-icon">📍</span>
             <div>
-
-              <h2>
-                Experiences
-              </h2>
-
-              <p>
-                Activities, attractions and food
-              </p>
-
+              <h2>Experiences & Restaurants</h2>
+              <p>Top attractions, local culture, and food hotspots</p>
             </div>
-
           </div>
-
-
-          <div
-            id="experiences"
-            class="section-body"
-          >
-            Generating experiences...
-          </div>
-
+          <div id="experiencesContent" class="section-body">Generating curated experiences...</div>
         </section>
 
-
-        <!-- BUDGET -->
-
-        <section
-          id="moneySection"
-          class="plan-section"
-        >
-
+        <!-- 4. BUDGET STRATEGY -->
+        <section id="moneySection" class="plan-section hidden">
           <div class="section-title">
-
-            <span class="section-icon">
-              💰
-            </span>
-
+            <span class="section-icon">💰</span>
             <div>
-
-              <h2>
-                Budget Strategy
-              </h2>
-
-              <p>
-                Your personalized trip budget
-              </p>
-
+              <h2>Budget Strategy</h2>
+              <p>How to allocate your money effectively</p>
             </div>
-
           </div>
-
-
-          <div
-            id="money"
-            class="section-body"
-          >
-            Calculating your budget...
-          </div>
-
+          <div id="moneyContent" class="section-body">Calculating budget split...</div>
         </section>
 
-
-        <!-- DAY BY DAY -->
-
-        <section
-          id="daysSection"
-          class="plan-section"
-        >
-
+        <!-- 5. DAY BY DAY ITINERARY -->
+        <section id="daysSection" class="plan-section hidden">
           <div class="section-title">
-
-            <span class="section-icon">
-              📅
-            </span>
-
+            <span class="section-icon">📅</span>
             <div>
-
-              <h2>
-                Day-by-Day Itinerary
-              </h2>
-
-              <p>
-                Your personalized daily travel plan
-              </p>
-
+              <h2>Day-by-Day Itinerary</h2>
+              <p>Your optimized daily travel schedule</p>
             </div>
-
           </div>
-
-
-          <div
-            id="daysOut"
-            class="days-container"
-          >
-
-            <div class="day">
-
-              <b>
-                AI Travel Planner
-              </b>
-
-              <p>
-                Creating your personalized
-                day-by-day itinerary...
-              </p>
-
-            </div>
-
-          </div>
-
+          <div id="daysContent" class="section-body">Structuring your days...</div>
         </section>
-
 
       </div>
-
-
-      <!-- ================================
-           FOOTER
-      ================================= -->
-
-      <div class="plan-footer">
-
-        <p>
-          Production V2 architecture
-        </p>
-
-        <p>
-          The interface is ready for the next connections:
-          real AI API, real payment checkout, and live
-          travel/affiliate data. No secret API keys are
-          stored in this front-end.
-        </p>
-
-
-        <div class="footer-links">
-
-          <a href="terms.html">
-            Terms of Service
-          </a>
-
-          <a href="privacy.html">
-            Privacy Policy
-          </a>
-
-          <a href="refund.html">
-            Refund Policy
-          </a>
-
-        </div>
-
-      </div>
-
     </div>
-
   </section>
 
-
-  <!-- Paddle -->
-
-  <script
-    src="https://cdn.paddle.com/paddle/v2/paddle.js"
-  ></script>
-
-
-  <!-- App -->
-
-  <script src="app.js"></script>
-
+  <!-- JS SCRIPT LINK -->
+  <script src="script.js"></script>
 </body>
-</html>
+        </html>
