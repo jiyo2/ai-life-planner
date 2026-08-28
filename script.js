@@ -1,9 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  console.log("AI LIFE PLANNER — TEST MODE");
+  console.log("AI LIFE PLANNER — TEST MODE V2");
 
   /* =========================================================
-     UI ELEMENTS
+     ELEMENTS
   ========================================================= */
 
   const plannerForm = document.getElementById("plannerForm");
@@ -12,27 +12,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const planScreen = document.getElementById("plan");
 
   const summaryDiv = document.getElementById("summary");
-
-  const closeReviewBtn =
-    document.getElementById("closeReview");
-
-  const payBtn =
-    document.getElementById("pay");
+  const closeReviewBtn = document.getElementById("closeReview");
+  const payBtn = document.getElementById("pay");
 
   const selectedInterests = new Set();
 
   let formData = {};
 
   /* =========================================================
-     HELPERS
+     BASIC HELPERS
   ========================================================= */
 
   function escapeHTML(value) {
 
-    if (
-      value === null ||
-      value === undefined
-    ) {
+    if (value === null || value === undefined) {
       return "";
     }
 
@@ -44,23 +37,134 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/'/g, "&#039;");
   }
 
+
+  function setText(id, value) {
+
+    const element = document.getElementById(id);
+
+    if (!element) return;
+
+    element.textContent =
+      value === null || value === undefined
+        ? ""
+        : String(value);
+  }
+
+
+  function setHTML(id, value) {
+
+    const element = document.getElementById(id);
+
+    if (!element) return;
+
+    element.innerHTML = value || "";
+  }
+
+
   function showScreen(screen) {
 
-    [appScreen, reviewScreen, planScreen]
-      .forEach(el => {
+    if (appScreen) {
+      appScreen.classList.add("hidden");
+    }
 
-        if (!el) return;
+    if (reviewScreen) {
+      reviewScreen.classList.add("hidden");
+    }
 
-        el.classList.add("hidden");
-
-      });
+    if (planScreen) {
+      planScreen.classList.add("hidden");
+    }
 
     if (screen) {
       screen.classList.remove("hidden");
     }
   }
 
-  function getValue(value) {
+
+  function getNumber(value) {
+
+    if (
+      value === null ||
+      value === undefined
+    ) {
+      return null;
+    }
+
+    if (typeof value === "number") {
+
+      return Number.isFinite(value)
+        ? value
+        : null;
+    }
+
+    if (typeof value === "string") {
+
+      const cleaned =
+        value
+          .replace(/,/g, "")
+          .replace(/[^\d.-]/g, "");
+
+      const number = Number(cleaned);
+
+      return Number.isFinite(number)
+        ? number
+        : null;
+    }
+
+    if (
+      typeof value === "object"
+    ) {
+
+      const keys = [
+        "amount",
+        "value",
+        "price",
+        "total",
+        "totalPrice",
+        "total_price"
+      ];
+
+      for (const key of keys) {
+
+        if (
+          value[key] !== null &&
+          value[key] !== undefined
+        ) {
+
+          const result =
+            getNumber(value[key]);
+
+          if (result !== null) {
+            return result;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+
+  function formatUSD(value) {
+
+    const number =
+      getNumber(value);
+
+    if (number === null) {
+      return "$0";
+    }
+
+    return "$" +
+      number.toLocaleString(
+        "en-US",
+        {
+          maximumFractionDigits: 2
+        }
+      );
+  }
+
+
+  function getDisplayValue(value) {
 
     if (
       value === null ||
@@ -80,13 +184,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return value ? "Yes" : "No";
     }
 
-    if (typeof value === "object") {
+    if (
+      typeof value === "object"
+    ) {
 
       const keys = [
         "formatted",
-        "formattedPrice",
         "display",
-        "displayValue",
         "text",
         "name",
         "title",
@@ -105,392 +209,427 @@ document.addEventListener("DOMContentLoaded", () => {
         ) {
 
           const result =
-            getValue(value[key]);
+            getDisplayValue(
+              value[key]
+            );
 
           if (result) {
             return result;
           }
-
         }
-
       }
-
-      return "";
     }
 
     return "";
   }
 
-  function getNumber(value) {
-
-    if (
-      value === null ||
-      value === undefined
-    ) {
-      return null;
-    }
-
-    if (typeof value === "number") {
-
-      return Number.isFinite(value)
-        ? value
-        : null;
-
-    }
-
-    if (typeof value === "string") {
-
-      const cleaned =
-        value
-          .replace(/,/g, "")
-          .replace(/[^\d.-]/g, "");
-
-      const number =
-        Number(cleaned);
-
-      return Number.isFinite(number)
-        ? number
-        : null;
-
-    }
-
-    if (typeof value === "object") {
-
-      const keys = [
-        "amount",
-        "value",
-        "price",
-        "total",
-        "totalPrice",
-        "total_price",
-        "perNight",
-        "per_night",
-        "nightly",
-        "nightlyPrice",
-        "nightly_price"
-      ];
-
-      for (const key of keys) {
-
-        if (
-          value[key] !== null &&
-          value[key] !== undefined
-        ) {
-
-          const result =
-            getNumber(value[key]);
-
-          if (result !== null) {
-            return result;
-          }
-
-        }
-
-      }
-
-    }
-
-    return null;
-  }
-
-  function formatUSD(value) {
-
-    const number =
-      getNumber(value);
-
-    if (number === null) {
-      return "";
-    }
-
-    return "$" +
-      number.toLocaleString(
-        "en-US",
-        {
-          maximumFractionDigits: 2
-        }
-      );
-  }
 
   /* =========================================================
      INTEREST CHIPS
+     IMPORTANT: THIS IS COMPLETELY INDEPENDENT
   ========================================================= */
 
-  const chips =
-    document.querySelectorAll(".chip");
+  function setupInterestChips() {
 
-  console.log(
-    "INTEREST CHIPS:",
-    chips.length
-  );
+    const chips =
+      document.querySelectorAll(".chip");
 
-  chips.forEach(chip => {
+    console.log(
+      "INTEREST CHIPS FOUND:",
+      chips.length
+    );
 
-    chip.addEventListener("click", () => {
+    chips.forEach((chip, index) => {
 
-      const interest =
-        chip.textContent.trim();
+      /*
+       * Prevent button default behavior.
+       * This guarantees that clicking a chip
+       * does NOT submit the form.
+       */
 
-      if (
-        selectedInterests.has(
-          interest
-        )
-      ) {
+      chip.type = "button";
 
-        selectedInterests.delete(
-          interest
-        );
+      /*
+       * Remove any old click handlers by
+       * replacing the element.
+       */
 
-        chip.classList.remove(
-          "active"
-        );
+      const newChip =
+        chip.cloneNode(true);
 
-      } else {
+      chip.parentNode.replaceChild(
+        newChip,
+        chip
+      );
 
-        selectedInterests.add(
-          interest
-        );
+      newChip.addEventListener(
+        "click",
+        function(event) {
 
-        chip.classList.add(
-          "active"
-        );
+          event.preventDefault();
+          event.stopPropagation();
 
-      }
+          const interest =
+            this.textContent.trim();
 
-      console.log(
-        "Selected interests:",
-        Array.from(selectedInterests)
+          console.log(
+            "CHIP CLICKED:",
+            interest
+          );
+
+          if (
+            selectedInterests.has(
+              interest
+            )
+          ) {
+
+            selectedInterests.delete(
+              interest
+            );
+
+            this.classList.remove(
+              "active"
+            );
+
+            this.classList.remove(
+              "selected"
+            );
+
+          } else {
+
+            selectedInterests.add(
+              interest
+            );
+
+            this.classList.add(
+              "active"
+            );
+
+            this.classList.add(
+              "selected"
+            );
+
+          }
+
+          console.log(
+            "SELECTED INTERESTS:",
+            Array.from(
+              selectedInterests
+            )
+          );
+
+        },
+        false
       );
 
     });
 
-  });
+  }
+
 
   /* =========================================================
-     FORM SUBMISSION
+     FORM DATA
   ========================================================= */
 
-  if (plannerForm) {
+  function collectFormData() {
+
+    const destination =
+      document
+        .getElementById("destination")
+        ?.value
+        .trim() || "";
+
+    const startDate =
+      document
+        .getElementById("startDate")
+        ?.value || "";
+
+    const days =
+      Number(
+        document
+          .getElementById("days")
+          ?.value || 0
+      );
+
+    const budget =
+      Number(
+        document
+          .getElementById("budget")
+          ?.value || 0
+      );
+
+    const travelers =
+      document
+        .getElementById("travelers")
+        ?.value ||
+      "1 traveler";
+
+    const notes =
+      document
+        .getElementById("notes")
+        ?.value
+        .trim() || "None";
+
+    return {
+
+      destination,
+
+      startDate,
+
+      days,
+
+      budget,
+
+      travelers,
+
+      interests:
+        Array.from(
+          selectedInterests
+        ).join(", ") ||
+        "General Sightseeing",
+
+      notes
+
+    };
+
+  }
+
+
+  /* =========================================================
+     REVIEW SCREEN
+  ========================================================= */
+
+  function showReview() {
+
+    formData =
+      collectFormData();
+
+    console.log(
+      "FORM DATA:",
+      formData
+    );
+
+    if (!formData.destination) {
+
+      alert(
+        "Please enter a destination."
+      );
+
+      return;
+    }
+
+    if (
+      !Number.isFinite(
+        formData.days
+      ) ||
+      formData.days < 1
+    ) {
+
+      alert(
+        "Please enter a valid number of days."
+      );
+
+      return;
+    }
+
+    if (
+      !Number.isFinite(
+        formData.budget
+      ) ||
+      formData.budget <= 0
+    ) {
+
+      alert(
+        "Please enter a valid budget."
+      );
+
+      return;
+    }
+
+
+    if (summaryDiv) {
+
+      summaryDiv.innerHTML = `
+
+        <p>
+          📍
+          <strong>Destination:</strong>
+          ${escapeHTML(
+            formData.destination
+          )}
+        </p>
+
+        <p>
+          📅
+          <strong>Duration:</strong>
+          ${escapeHTML(
+            formData.days
+          )}
+          days
+        </p>
+
+        <p>
+          🗓️
+          <strong>Start date:</strong>
+          ${
+            formData.startDate
+              ? escapeHTML(
+                  formData.startDate
+                )
+              : "Flexible"
+          }
+        </p>
+
+        <p>
+          💰
+          <strong>Budget:</strong>
+          ${formatUSD(
+            formData.budget
+          )}
+        </p>
+
+        <p>
+          👥
+          <strong>Travelers:</strong>
+          ${escapeHTML(
+            formData.travelers
+          )}
+        </p>
+
+        <p>
+          🎯
+          <strong>Interests:</strong>
+          ${escapeHTML(
+            formData.interests
+          )}
+        </p>
+
+        <p>
+          📝
+          <strong>Notes:</strong>
+          ${escapeHTML(
+            formData.notes
+          )}
+        </p>
+
+      `;
+
+    }
+
+    showScreen(
+      reviewScreen
+    );
+
+  }
+
+
+  /* =========================================================
+     FORM
+  ========================================================= */
+
+  function setupForm() {
+
+    if (!plannerForm) {
+
+      console.error(
+        "plannerForm NOT FOUND"
+      );
+
+      return;
+    }
 
     plannerForm.addEventListener(
       "submit",
       event => {
 
         event.preventDefault();
-
-        formData = {
-
-          destination:
-            document
-              .getElementById("destination")
-              ?.value
-              .trim() || "",
-
-          startDate:
-            document
-              .getElementById("startDate")
-              ?.value || "",
-
-          days:
-            Number(
-              document
-                .getElementById("days")
-                ?.value || 0
-            ),
-
-          budget:
-            Number(
-              document
-                .getElementById("budget")
-                ?.value || 0
-            ),
-
-          travelers:
-            document
-              .getElementById("travelers")
-              ?.value || "1 traveler",
-
-          interests:
-            Array.from(
-              selectedInterests
-            ).join(", ") ||
-            "General Sightseeing",
-
-          notes:
-            document
-              .getElementById("notes")
-              ?.value
-              .trim() || "None"
-
-        };
+        event.stopPropagation();
 
         console.log(
-          "FORM DATA:",
-          formData
+          "FORM SUBMITTED"
         );
 
-        if (!formData.destination) {
+        showReview();
 
-          alert(
-            "Please enter a destination."
-          );
-
-          return;
-        }
-
-        if (
-          !Number.isFinite(
-            formData.days
-          ) ||
-          formData.days < 1
-        ) {
-
-          alert(
-            "Please enter a valid number of days."
-          );
-
-          return;
-        }
-
-        if (
-          !Number.isFinite(
-            formData.budget
-          ) ||
-          formData.budget <= 0
-        ) {
-
-          alert(
-            "Please enter a valid budget."
-          );
-
-          return;
-        }
-
-        /* =====================================================
-           REVIEW
-        ===================================================== */
-
-        summaryDiv.innerHTML = `
-
-          <p>
-            📍
-            <strong>Destination:</strong>
-            ${escapeHTML(
-              formData.destination
-            )}
-          </p>
-
-          <p>
-            📅
-            <strong>Duration:</strong>
-            ${escapeHTML(
-              formData.days
-            )}
-            days
-          </p>
-
-          <p>
-            🗓️
-            <strong>Start date:</strong>
-            ${
-              formData.startDate
-                ? escapeHTML(
-                    formData.startDate
-                  )
-                : "Flexible"
-            }
-          </p>
-
-          <p>
-            💰
-            <strong>Budget limit:</strong>
-            ${formatUSD(
-              formData.budget
-            )}
-          </p>
-
-          <p>
-            👥
-            <strong>Travelers:</strong>
-            ${escapeHTML(
-              formData.travelers
-            )}
-          </p>
-
-          <p>
-            🎯
-            <strong>Interests:</strong>
-            ${escapeHTML(
-              formData.interests
-            )}
-          </p>
-
-          <p>
-            📝
-            <strong>Special requests:</strong>
-            ${escapeHTML(
-              formData.notes
-            )}
-          </p>
-
-        `;
-
-        showScreen(
-          reviewScreen
-        );
-
-      }
+      },
+      false
     );
 
   }
+
 
   /* =========================================================
      EDIT BUTTON
   ========================================================= */
 
-  if (closeReviewBtn) {
+  function setupEditButton() {
+
+    if (!closeReviewBtn) return;
 
     closeReviewBtn.addEventListener(
       "click",
       event => {
 
         event.preventDefault();
+        event.stopPropagation();
+
+        console.log(
+          "EDIT TRIP"
+        );
 
         showScreen(
           appScreen
         );
 
-      }
+      },
+      false
     );
 
   }
 
+
   /* =========================================================
-     TEST MODE CREATE PLAN
+     TEST PAYMENT BUTTON
      
      IMPORTANT:
-     NO PADDLE
-     NO REDIRECT
-     NO FAKE PAYMENT
+     THERE IS NO PADDLE HERE.
+     
+     This button directly creates the plan
+     so we can test the application.
   ========================================================= */
 
-  if (payBtn) {
+  function setupCreatePlanButton() {
+
+    if (!payBtn) {
+
+      console.error(
+        "Create Plan button NOT FOUND"
+      );
+
+      return;
+    }
+
+    payBtn.type = "button";
 
     payBtn.addEventListener(
       "click",
       async event => {
 
         event.preventDefault();
+        event.stopPropagation();
 
         console.log(
-          "TEST MODE: CREATE PLAN CLICKED"
+          "TEST CREATE PLAN CLICKED"
         );
 
         await createPlan();
 
-      }
+      },
+      false
     );
 
   }
+
 
   /* =========================================================
      CREATE PLAN
@@ -503,11 +642,11 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     console.log(
-      "CREATING AI TRAVEL PLAN"
+      "STARTING PLAN GENERATION"
     );
 
     console.log(
-      "FORM DATA:",
+      "DATA:",
       formData
     );
 
@@ -515,13 +654,11 @@ document.addEventListener("DOMContentLoaded", () => {
       "================================="
     );
 
+
     showScreen(
       planScreen
     );
 
-    /* =======================================================
-       RESET PLAN UI
-    ======================================================= */
 
     setText(
       "planTitle",
@@ -533,6 +670,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "Our AI is building your itinerary. Please wait a moment."
     );
 
+
     setHTML(
       "stayContent",
       `
@@ -541,6 +679,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `
     );
+
 
     setHTML(
       "transportContent",
@@ -551,6 +690,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `
     );
 
+
     setHTML(
       "experiencesContent",
       `
@@ -560,87 +700,94 @@ document.addEventListener("DOMContentLoaded", () => {
       `
     );
 
+
     setHTML(
       "moneyContent",
       `
         <div class="planner-status">
-          💰 Calculating your budget...
+          💰 Calculating budget...
         </div>
       `
     );
+
 
     setHTML(
       "daysContent",
       `
         <div class="planner-status">
-          📅 Creating your day-by-day itinerary...
+          📅 Creating your itinerary...
         </div>
       `
     );
 
+
     try {
 
-      /* =====================================================
-         API REQUEST
-      ===================================================== */
+      const payload = {
+
+        destination:
+          formData.destination,
+
+        startDate:
+          formData.startDate,
+
+        days:
+          formData.days,
+
+        budget:
+          formData.budget,
+
+        travelers:
+          formData.travelers,
+
+        interests:
+          formData.interests,
+
+        notes:
+          formData.notes
+
+      };
+
 
       console.log(
-        "POST /api/plan"
+        "POST /api/plan",
+        payload
       );
+
 
       const response =
         await fetch(
           "/api/plan",
           {
+
             method: "POST",
 
             headers: {
+
               "Content-Type":
                 "application/json",
 
               "Accept":
                 "application/json"
+
             },
 
             body:
-              JSON.stringify({
-
-                destination:
-                  formData.destination,
-
-                startDate:
-                  formData.startDate,
-
-                days:
-                  formData.days,
-
-                budget:
-                  formData.budget,
-
-                travelers:
-                  formData.travelers,
-
-                interests:
-                  formData.interests,
-
-                notes:
-                  formData.notes
-
-              })
+              JSON.stringify(
+                payload
+              )
 
           }
         );
+
 
       console.log(
         "API STATUS:",
         response.status
       );
 
-      /* =====================================================
-         READ RESPONSE
-      ===================================================== */
 
-      let data = null;
+      let data;
 
       try {
 
@@ -650,7 +797,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (jsonError) {
 
         console.error(
-          "JSON PARSE ERROR:",
+          "INVALID JSON:",
           jsonError
         );
 
@@ -660,43 +807,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
       }
 
+
       console.log(
-        "API RESPONSE:",
+        "API DATA:",
         data
       );
 
-      /* =====================================================
-         SERVER ERROR
-      ===================================================== */
 
       if (!response.ok) {
 
-        let message =
+        let serverError =
           data?.details ||
           data?.error ||
           data?.message ||
           "The travel plan could not be generated.";
 
         if (
-          typeof message === "object"
+          typeof serverError ===
+          "object"
         ) {
 
-          message =
+          serverError =
             JSON.stringify(
-              message
+              serverError
             );
 
         }
 
         throw new Error(
-          message
+          serverError
         );
 
       }
 
-      /* =====================================================
-         VALIDATE RESPONSE
-      ===================================================== */
 
       if (
         !data ||
@@ -704,17 +847,14 @@ document.addEventListener("DOMContentLoaded", () => {
       ) {
 
         throw new Error(
-          "The server returned an empty response."
+          "The server returned an empty plan."
         );
 
       }
 
-      console.log(
-        "SUCCESS — TRAVEL DATA RECEIVED"
-      );
 
       /* =====================================================
-         TITLE
+         SUCCESS
       ===================================================== */
 
       setText(
@@ -722,47 +862,53 @@ document.addEventListener("DOMContentLoaded", () => {
         `Your Trip to ${formData.destination}`
       );
 
+
       setText(
         "planIntro",
         `Customized strategy for ${formData.days} days with a ${formatUSD(formData.budget)} budget.`
       );
 
-      /* =====================================================
-         RENDER ALL SECTIONS
-      ===================================================== */
 
       renderStay(
         data.stay
       );
 
+
       renderTransport(
         data.transport
       );
+
 
       renderExperiences(
         data.experiences
       );
 
+
       renderMoney(
         data.money
       );
+
 
       renderDays(
         data.daysPlan
       );
 
-      activateStayTab();
+
+      activateDefaultTab();
+
 
       console.log(
-        "PLAN RENDERED SUCCESSFULLY"
+        "PLAN GENERATION SUCCESS"
       );
+
 
     } catch (error) {
 
       console.error(
-        "CREATE PLAN ERROR:",
+        "PLAN GENERATION ERROR:",
         error
       );
+
 
       showGenerationError(
         error
@@ -772,47 +918,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   }
 
-  /* =========================================================
-     TEXT / HTML
-  ========================================================= */
-
-  function setText(
-    id,
-    value
-  ) {
-
-    const element =
-      document.getElementById(id);
-
-    if (!element) return;
-
-    element.textContent =
-      value || "";
-
-  }
-
-  function setHTML(
-    id,
-    value
-  ) {
-
-    const element =
-      document.getElementById(id);
-
-    if (!element) return;
-
-    element.innerHTML =
-      value || "";
-
-  }
 
   /* =========================================================
      STAY
   ========================================================= */
 
-  function renderStay(
-    stay
-  ) {
+  function renderStay(stay) {
 
     const container =
       document.getElementById(
@@ -820,6 +931,7 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
     if (!container) return;
+
 
     if (
       !Array.isArray(stay) ||
@@ -829,23 +941,22 @@ document.addEventListener("DOMContentLoaded", () => {
       container.innerHTML = `
 
         <div class="planner-status">
-
           No accommodation recommendations
           were returned by the AI.
-
         </div>
 
       `;
 
       return;
-
     }
+
 
     let html = `
 
       <div class="hotels-grid">
 
     `;
+
 
     stay.forEach(
       hotel => {
@@ -858,22 +969,23 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
 
+
     html += `
       </div>
     `;
+
 
     container.innerHTML =
       html;
 
   }
 
+
   /* =========================================================
-     HOTEL CARD
+     HOTEL
   ========================================================= */
 
-  function renderHotel(
-    hotel
-  ) {
+  function renderHotel(hotel) {
 
     if (
       !hotel ||
@@ -884,38 +996,45 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     const name =
-      getValue(
+      getDisplayValue(
         hotel.name
       ) ||
       "Accommodation";
 
+
     const stars =
-      getValue(
+      getNumber(
         hotel.stars
       );
+
 
     const price =
       getNumber(
         hotel.price
       );
 
+
     const currency =
-      getValue(
+      getDisplayValue(
         hotel.currency
       ) ||
       "USD";
 
+
     const priceType =
-      getValue(
+      getDisplayValue(
         hotel.priceType
       ) ||
       "estimated per night";
 
+
     const description =
-      getValue(
+      getDisplayValue(
         hotel.description
       );
+
 
     const amenities =
       Array.isArray(
@@ -924,52 +1043,43 @@ document.addEventListener("DOMContentLoaded", () => {
         ? hotel.amenities
         : [];
 
+
     let starsHTML = "";
 
-    if (stars) {
 
-      const starNumber =
-        Number(stars);
+    if (
+      stars !== null
+    ) {
 
-      if (
-        Number.isFinite(
-          starNumber
-        )
-      {
+      starsHTML = `
 
-        starsHTML = `
-          <div class="hotel-meta">
-            ${"⭐".repeat(
-              Math.min(
-                5,
-                Math.max(
-                  1,
-                  starNumber
+        <div class="hotel-meta">
+
+          ${"⭐".repeat(
+            Math.min(
+              5,
+              Math.max(
+                1,
+                Math.round(
+                  stars
                 )
               )
-            )}
-            ${escapeHTML(
-              starNumber
-            )}-star property
-          </div>
-        `;
+            )
+          )}
 
-      } else {
+          ${escapeHTML(
+            stars
+          )}-star property
 
-        starsHTML = `
-          <div class="hotel-meta">
-            ⭐
-            ${escapeHTML(
-              stars
-            )}
-          </div>
-        `;
+        </div>
 
-      }
+      `;
 
     }
 
+
     let amenitiesHTML = "";
+
 
     if (
       amenities.length
@@ -977,7 +1087,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       amenitiesHTML = `
 
-        <div class="hotel-amenities">
+        <div class="hotel-meta">
 
           <strong>
             Amenities
@@ -987,10 +1097,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
             ${amenities
               .map(
-                item => `
+                amenity => `
                   <li>
                     ${escapeHTML(
-                      getValue(item)
+                      getDisplayValue(
+                        amenity
+                      )
                     )}
                   </li>
                 `
@@ -1006,7 +1118,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     let priceHTML = "";
+
 
     if (
       price !== null
@@ -1045,40 +1159,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
-    /* =======================================================
-       BOOKING SEARCH
-       
-       This is only a search link.
-       It does NOT claim live availability.
-    ======================================================= */
 
     const bookingQuery =
       encodeURIComponent(
         `${name} ${formData.destination}`
       );
 
+
     const bookingURL =
       `https://www.booking.com/searchresults.html?ss=${bookingQuery}`;
+
 
     return `
 
       <article class="hotel-card">
 
-        <div class="hotel-image-wrapper">
+        <div
+          class="hotel-image-wrapper"
+        >
 
-          <div class="hotel-image-placeholder">
+          <div
+            class="hotel-image-placeholder"
+          >
 
             🏨
 
             <br>
 
-            Hotel image will be available
-            when a live hotel image source
-            is connected.
+            Hotel image unavailable
 
           </div>
 
         </div>
+
 
         <div class="hotel-body">
 
@@ -1090,9 +1203,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
           </div>
 
+
           ${starsHTML}
 
+
           ${priceHTML}
+
 
           ${
             description
@@ -1106,7 +1222,9 @@ document.addEventListener("DOMContentLoaded", () => {
               : ""
           }
 
+
           ${amenitiesHTML}
+
 
           <a
             class="hotel-button"
@@ -1125,6 +1243,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   }
 
+
   /* =========================================================
      TRANSPORT
   ========================================================= */
@@ -1140,6 +1259,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!container) return;
 
+
     if (
       !transport
     ) {
@@ -1151,8 +1271,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     if (
-      typeof transport === "string"
+      typeof transport ===
+      "string"
     ) {
 
       container.innerHTML =
@@ -1162,18 +1284,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
-    container.innerHTML =
-      `
-        <div class="planner-status">
-          ${escapeHTML(
-            getValue(
-              transport
-            )
-          )}
-        </div>
-      `;
+
+    container.innerHTML = `
+
+      <div class="planner-status">
+
+        ${escapeHTML(
+          getDisplayValue(
+            transport
+          )
+        )}
+
+      </div>
+
+    `;
 
   }
+
 
   /* =========================================================
      EXPERIENCES
@@ -1190,6 +1317,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!container) return;
 
+
     if (
       !experiences
     ) {
@@ -1201,8 +1329,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     if (
-      typeof experiences === "string"
+      typeof experiences ===
+      "string"
     ) {
 
       container.innerHTML =
@@ -1212,18 +1342,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
-    container.innerHTML =
-      `
-        <div class="planner-status">
-          ${escapeHTML(
-            getValue(
-              experiences
-            )
-          )}
-        </div>
-      `;
+
+    container.innerHTML = `
+
+      <div class="planner-status">
+
+        ${escapeHTML(
+          getDisplayValue(
+            experiences
+          )
+        )}
+
+      </div>
+
+    `;
 
   }
+
 
   /* =========================================================
      MONEY
@@ -1240,9 +1375,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!container) return;
 
-    if (
-      !money
-    ) {
+
+    if (!money) {
 
       container.innerHTML =
         "Budget information unavailable.";
@@ -1251,8 +1385,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     if (
-      typeof money === "string"
+      typeof money ===
+      "string"
     ) {
 
       container.innerHTML =
@@ -1262,18 +1398,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
-    container.innerHTML =
-      `
-        <div class="planner-status">
-          ${escapeHTML(
-            getValue(
-              money
-            )
-          )}
-        </div>
-      `;
+
+    container.innerHTML = `
+
+      <div class="planner-status">
+
+        ${escapeHTML(
+          getDisplayValue(
+            money
+          )
+        )}
+
+      </div>
+
+    `;
 
   }
+
 
   /* =========================================================
      DAYS
@@ -1290,9 +1431,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!container) return;
 
-    if (
-      !daysPlan
-    ) {
+
+    if (!daysPlan) {
 
       container.innerHTML =
         "Day-by-day itinerary unavailable.";
@@ -1301,8 +1441,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     if (
-      typeof daysPlan === "string"
+      typeof daysPlan ===
+      "string"
     ) {
 
       container.innerHTML =
@@ -1312,21 +1454,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
-    container.innerHTML =
-      `
-        <div class="planner-status">
-          ${escapeHTML(
-            getValue(
-              daysPlan
-            )
-          )}
-        </div>
-      `;
+
+    container.innerHTML = `
+
+      <div class="planner-status">
+
+        ${escapeHTML(
+          getDisplayValue(
+            daysPlan
+          )
+        )}
+
+      </div>
+
+    `;
 
   }
 
+
   /* =========================================================
-     GENERATION ERROR
+     ERROR
   ========================================================= */
 
   function showGenerationError(
@@ -1337,8 +1484,10 @@ document.addEventListener("DOMContentLoaded", () => {
       error?.message ||
       "The travel plan could not be generated.";
 
+
     if (
-      typeof message === "object"
+      typeof message ===
+      "object"
     ) {
 
       message =
@@ -1348,19 +1497,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     setText(
       "planTitle",
       "Generation Error"
     );
+
 
     setText(
       "planIntro",
       "The travel plan could not be generated."
     );
 
+
     setHTML(
       "stayContent",
       `
+
         <div class="planner-error">
 
           <strong>
@@ -1374,23 +1527,28 @@ document.addEventListener("DOMContentLoaded", () => {
           )}
 
         </div>
+
       `
     );
+
 
     setHTML(
       "transportContent",
       ""
     );
 
+
     setHTML(
       "experiencesContent",
       ""
     );
 
+
     setHTML(
       "moneyContent",
       ""
     );
+
 
     setHTML(
       "daysContent",
@@ -1399,38 +1557,57 @@ document.addEventListener("DOMContentLoaded", () => {
 
   }
 
+
   /* =========================================================
-     TAB NAVIGATION
+     TABS
   ========================================================= */
 
-  const tabs =
-    document.querySelectorAll(
-      ".plan-tab"
+  function setupTabs() {
+
+    const tabs =
+      document.querySelectorAll(
+        ".plan-tab"
+      );
+
+    const sections =
+      document.querySelectorAll(
+        ".plan-section"
+      );
+
+
+    console.log(
+      "PLAN TABS FOUND:",
+      tabs.length
     );
 
-  const sections =
-    document.querySelectorAll(
-      ".plan-section"
-    );
 
-  console.log(
-    "PLAN TABS:",
-    tabs.length
-  );
+    tabs.forEach(tab => {
 
-  tabs.forEach(
-    tab => {
+      tab.type = "button";
+
 
       tab.addEventListener(
         "click",
-        () => {
+        event => {
+
+          event.preventDefault();
+          event.stopPropagation();
+
 
           const target =
             tab.getAttribute(
               "data-target"
             );
 
+
+          console.log(
+            "TAB CLICKED:",
+            target
+          );
+
+
           if (!target) return;
+
 
           tabs.forEach(
             t =>
@@ -1439,6 +1616,7 @@ document.addEventListener("DOMContentLoaded", () => {
               )
           );
 
+
           sections.forEach(
             section =>
               section.classList.add(
@@ -1446,14 +1624,17 @@ document.addEventListener("DOMContentLoaded", () => {
               )
           );
 
+
           tab.classList.add(
             "active"
           );
+
 
           const targetSection =
             document.getElementById(
               target
             );
+
 
           if (
             targetSection
@@ -1465,17 +1646,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
           }
 
-        }
+        },
+        false
       );
 
-    }
-  );
+    });
+
+  }
+
 
   /* =========================================================
-     DEFAULT STAY TAB
+     DEFAULT TAB
   ========================================================= */
 
-  function activateStayTab() {
+  function activateDefaultTab() {
+
+    const tabs =
+      document.querySelectorAll(
+        ".plan-tab"
+      );
+
+    const sections =
+      document.querySelectorAll(
+        ".plan-section"
+      );
+
 
     tabs.forEach(
       tab =>
@@ -1484,6 +1679,7 @@ document.addEventListener("DOMContentLoaded", () => {
         )
     );
 
+
     sections.forEach(
       section =>
         section.classList.add(
@@ -1491,15 +1687,18 @@ document.addEventListener("DOMContentLoaded", () => {
         )
     );
 
+
     const stayTab =
       document.querySelector(
         '.plan-tab[data-target="staySection"]'
       );
 
+
     const staySection =
       document.getElementById(
         "staySection"
       );
+
 
     if (stayTab) {
 
@@ -1508,6 +1707,7 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
     }
+
 
     if (staySection) {
 
@@ -1519,16 +1719,46 @@ document.addEventListener("DOMContentLoaded", () => {
 
   }
 
+
   /* =========================================================
-     INITIAL STATE
+     INITIALIZE
   ========================================================= */
+
+  setupInterestChips();
+
+  setupForm();
+
+  setupEditButton();
+
+  setupCreatePlanButton();
+
+  setupTabs();
+
+  activateDefaultTab();
 
   showScreen(
     appScreen
   );
 
+
   console.log(
-    "AI LIFE PLANNER READY — TEST MODE"
+    "================================="
+  );
+
+  console.log(
+    "AI LIFE PLANNER READY"
+  );
+
+  console.log(
+    "TEST MODE — NO PADDLE"
+  );
+
+  console.log(
+    "INTEREST CHIPS ENABLED"
+  );
+
+  console.log(
+    "================================="
   );
 
 });
