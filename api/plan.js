@@ -1,10 +1,4 @@
-const axios = require("axios");
-
 module.exports = async (req, res) => {
-  // =========================================================
-  // CORS
-  // =========================================================
-
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -20,10 +14,6 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // =========================================================
-    // INPUT
-    // =========================================================
-
     const {
       destination,
       startDate,
@@ -34,23 +24,18 @@ module.exports = async (req, res) => {
       notes
     } = req.body || {};
 
-    // =========================================================
-    // API KEY
-    // =========================================================
+    console.log("PLAN API START");
+    console.log("Destination:", destination);
 
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
     if (!GEMINI_API_KEY) {
-      console.error("GEMINI_API_KEY is missing");
+      console.error("GEMINI_API_KEY missing");
 
       return res.status(500).json({
-        error: "Gemini API key is not configured."
+        error: "Gemini API key is missing."
       });
     }
-
-    // =========================================================
-    // VALIDATION
-    // =========================================================
 
     if (!destination || !days || !budget || !travelers) {
       return res.status(400).json({
@@ -58,156 +43,72 @@ module.exports = async (req, res) => {
       });
     }
 
-    // =========================================================
-    // GEMINI 3.6 FLASH
-    // =========================================================
-
     const GEMINI_URL =
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-    // =========================================================
-    // PROMPT
-    // =========================================================
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" +
+      encodeURIComponent(GEMINI_API_KEY);
 
     const prompt = `
-You are an expert travel planning AI.
+You are an expert travel planner.
 
-Create a premium, practical travel plan for:
+Create a realistic travel plan for:
 
 Destination: ${destination}
 Start date: ${startDate || "Flexible"}
-Trip length: ${days} days
-Maximum budget: $${budget}
+Days: ${days}
+Budget: $${budget}
 Travelers: ${travelers}
 Interests: ${interests || "General sightseeing"}
-Special notes: ${notes || "None"}
+Notes: ${notes || "None"}
 
-=========================================================
-HOTELS
-=========================================================
+IMPORTANT HOTEL REQUIREMENT:
 
-The most important requirement:
+Return EXACTLY 10 different real accommodation options in ${destination}.
 
-RETURN AT LEAST 10 DIFFERENT REAL ACCOMMODATION OPTIONS
-FOR ${destination}.
+Do NOT invent hotels.
 
-Prefer:
-- Real hotels
-- Real hostels
-- Real boutique hotels
-- Real serviced apartments
+For every hotel return:
 
-DO NOT invent accommodation names.
+- name
+- stars
+- price
+- currency
+- priceType
+- amenities
+- description
+- bookingUrl
+- imageUrl
 
-Every hotel must have:
+Prices are estimates only.
 
-name
-stars
-price
-currency
-priceType
-amenities
-description
-bookingUrl
-imageUrl
+Never claim live availability.
 
-IMPORTANT:
+For bookingUrl:
+If you do not know the exact hotel Booking.com page,
+create a Booking.com search URL for that hotel and destination.
 
-bookingUrl:
-- If you know a genuine official Booking.com hotel URL, provide it.
-- Otherwise use a SEARCH URL for Booking.com for that hotel and destination.
-- NEVER invent a fake hotel URL.
+For imageUrl:
+Only provide an image URL if you are reasonably confident it is a real public image.
+Otherwise return "".
 
-imageUrl:
-- Only provide an image URL if you are reasonably confident it is a real publicly accessible image URL for that property.
-- NEVER invent an image URL.
-- If no reliable image URL is available, return an empty string "".
+Never invent image URLs.
 
-PRICE:
-- Prices are estimates unless verified.
-- NEVER claim live availability.
-- Use realistic approximate USD nightly prices.
-- price must be a NUMBER, not an object.
-- currency must be "USD".
-- priceType should normally be "estimated per night".
+Also create:
 
-Do not add a "price note" section.
-The frontend will handle pricing disclaimers if necessary.
+transport
+experiences
+money
+daysPlan
 
-=========================================================
-TRANSPORT
-=========================================================
+transport, experiences, money and daysPlan must contain HTML.
 
-Explain:
+RETURN ONLY JSON.
 
-- Metro
-- Bus
-- Tram
-- Ferry where applicable
-- Taxi / ride-hailing
-- Approximate costs
-- Best option for this trip
-
-Return HTML markup.
-
-=========================================================
-EXPERIENCES
-=========================================================
-
-Recommend realistic:
-
-- Attractions
-- Activities
-- Restaurants
-- Local food
-- Shopping
-- Nightlife
-- Cultural experiences
-
-Return HTML markup.
-
-=========================================================
-BUDGET
-=========================================================
-
-Create a realistic allocation for the maximum budget.
-
-Include:
-
-Accommodation
-Food
-Transportation
-Activities
-Miscellaneous
-
-Return HTML markup.
-
-=========================================================
-DAY BY DAY
-=========================================================
-
-Create a realistic itinerary for ${days} days.
-
-Avoid overcrowding each day.
-
-Return HTML markup.
-
-=========================================================
-OUTPUT
-=========================================================
-
-RETURN ONLY VALID JSON.
-
-No Markdown.
-No code fences.
-No explanation before or after JSON.
-
-Use EXACTLY:
+Use exactly:
 
 {
   "stay": [
     {
-      "name": "Real hotel name",
+      "name": "Hotel name",
       "stars": 4,
       "price": 80,
       "currency": "USD",
@@ -218,7 +119,7 @@ Use EXACTLY:
         "Private Bathroom",
         "Breakfast Available"
       ],
-      "description": "Short useful description.",
+      "description": "Short description.",
       "bookingUrl": "https://www.booking.com/...",
       "imageUrl": ""
     }
@@ -228,37 +129,20 @@ Use EXACTLY:
   "money": "<div>...</div>",
   "daysPlan": "<div>...</div>"
 }
-
-FINAL HOTEL REQUIREMENTS:
-
-- Minimum 10 hotels.
-- Maximum 12 hotels.
-- All hotel names must be different.
-- Do not repeat the same property.
-- Do not invent hotels.
-- Do not fabricate live availability.
-- Do not fabricate image URLs.
-- Do not fabricate hotel booking URLs.
-- If an image is unavailable, use "".
-- If an exact Booking.com hotel URL is unavailable, use a Booking.com SEARCH URL for that hotel.
-- Keep hotel descriptions short.
 `;
 
-    // =========================================================
-    // GEMINI REQUEST
-    // =========================================================
+    // =====================================================
+    // GEMINI REQUEST USING NATIVE FETCH
+    // =====================================================
 
-    console.log("=================================");
-    console.log("PLAN API START");
-    console.log("Destination:", destination);
-    console.log("Days:", days);
-    console.log("Budget:", budget);
-    console.log("Travelers:", travelers);
-    console.log("=================================");
+    const geminiResponse = await fetch(GEMINI_URL, {
+      method: "POST",
 
-    const response = await axios.post(
-      GEMINI_URL,
-      {
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
         contents: [
           {
             parts: [
@@ -268,79 +152,103 @@ FINAL HOTEL REQUIREMENTS:
             ]
           }
         ],
+
         generationConfig: {
           responseMimeType: "application/json"
         }
-      },
-      {
-        timeout: 120000,
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }
+      })
+    });
+
+    const geminiText = await geminiResponse.text();
+
+    console.log(
+      "Gemini HTTP status:",
+      geminiResponse.status
     );
 
-    // =========================================================
-    // CHECK RESPONSE
-    // =========================================================
-
-    if (
-      !response.data ||
-      !response.data.candidates ||
-      !response.data.candidates[0]
-    ) {
+    if (!geminiResponse.ok) {
       console.error(
-        "Gemini returned no candidates:",
-        JSON.stringify(response.data)
+        "GEMINI ERROR:",
+        geminiText
       );
 
-      throw new Error("Gemini returned no candidates.");
+      return res.status(500).json({
+        error: "Gemini API request failed.",
+        status: geminiResponse.status,
+        details: geminiText
+      });
     }
 
-    const candidate = response.data.candidates[0];
+    let geminiData;
 
-    if (
-      !candidate.content ||
-      !candidate.content.parts ||
-      !candidate.content.parts[0] ||
-      !candidate.content.parts[0].text
-    ) {
+    try {
+      geminiData = JSON.parse(geminiText);
+    } catch (error) {
       console.error(
-        "Gemini returned empty content:",
-        JSON.stringify(candidate)
+        "Could not parse Gemini response:",
+        geminiText
       );
 
-      throw new Error("Gemini returned an empty response.");
+      return res.status(500).json({
+        error: "Invalid response from Gemini.",
+        details: geminiText
+      });
     }
 
-    // =========================================================
-    // PARSE JSON
-    // =========================================================
+    // =====================================================
+    // GET GEMINI TEXT
+    // =====================================================
 
-    let rawText = candidate.content.parts[0].text.trim();
+    const text =
+      geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    rawText = rawText
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/\s*```$/i, "")
+    if (!text) {
+      console.error(
+        "Gemini returned no text:",
+        JSON.stringify(geminiData)
+      );
+
+      return res.status(500).json({
+        error: "Gemini returned an empty response.",
+        details: JSON.stringify(geminiData)
+      });
+    }
+
+    console.log(
+      "Gemini text received successfully"
+    );
+
+    // =====================================================
+    // CLEAN JSON
+    // =====================================================
+
+    let cleanText = text.trim();
+
+    cleanText = cleanText
+      .replace(/^```json/i, "")
+      .replace(/^```/i, "")
+      .replace(/```$/i, "")
       .trim();
 
     let travelData;
 
     try {
-      travelData = JSON.parse(rawText);
-    } catch (parseError) {
-      console.error("JSON PARSE ERROR");
-      console.error(rawText);
-
-      throw new Error(
-        "Gemini returned invalid JSON: " + parseError.message
+      travelData = JSON.parse(cleanText);
+    } catch (error) {
+      console.error(
+        "GEMINI JSON PARSE ERROR:",
+        cleanText
       );
+
+      return res.status(500).json({
+        error: "Gemini returned invalid JSON.",
+        details: error.message
+      });
     }
 
-    // =========================================================
-    // NORMALIZE HOTEL DATA
-    // =========================================================
+    // =====================================================
+    // NORMALIZE HOTELS
+    // =====================================================
 
     if (!Array.isArray(travelData.stay)) {
       travelData.stay = [];
@@ -349,12 +257,9 @@ FINAL HOTEL REQUIREMENTS:
     travelData.stay = travelData.stay
       .filter(hotel => hotel && hotel.name)
       .map(hotel => ({
-        name: String(hotel.name).trim(),
+        name: String(hotel.name),
 
-        stars:
-          Number.isFinite(Number(hotel.stars))
-            ? Number(hotel.stars)
-            : 0,
+        stars: Number(hotel.stars) || 0,
 
         price:
           Number.isFinite(Number(hotel.price))
@@ -369,111 +274,84 @@ FINAL HOTEL REQUIREMENTS:
 
         amenities:
           Array.isArray(hotel.amenities)
-            ? hotel.amenities
-                .filter(Boolean)
-                .map(String)
-                .slice(0, 6)
+            ? hotel.amenities.slice(0, 6)
             : [],
 
         description:
-          hotel.description
-            ? String(hotel.description)
-            : "",
+          hotel.description || "",
 
         bookingUrl:
-          hotel.bookingUrl
-            ? String(hotel.bookingUrl)
-            : "",
+          hotel.bookingUrl || "",
 
         imageUrl:
-          hotel.imageUrl
-            ? String(hotel.imageUrl)
-            : ""
+          hotel.imageUrl || ""
       }));
 
-    // Remove duplicate hotel names
-    const seenHotels = new Set();
+    // =====================================================
+    // REMOVE DUPLICATES
+    // =====================================================
 
-    travelData.stay = travelData.stay.filter(hotel => {
-      const key = hotel.name.toLowerCase();
+    const uniqueHotels = [];
+    const names = new Set();
 
-      if (seenHotels.has(key)) {
-        return false;
+    for (const hotel of travelData.stay) {
+
+      const key =
+        hotel.name
+          .toLowerCase()
+          .trim();
+
+      if (!names.has(key)) {
+        names.add(key);
+        uniqueHotels.push(hotel);
       }
+    }
 
-      seenHotels.add(key);
-      return true;
-    });
-
-    // =========================================================
-    // FALLBACK CONTENT
-    // =========================================================
-
-    travelData.transport =
-      travelData.transport ||
-      "<p>Transportation information could not be generated.</p>";
-
-    travelData.experiences =
-      travelData.experiences ||
-      "<p>Experience recommendations could not be generated.</p>";
-
-    travelData.money =
-      travelData.money ||
-      "<p>Budget information could not be generated.</p>";
-
-    travelData.daysPlan =
-      travelData.daysPlan ||
-      "<p>Daily itinerary could not be generated.</p>";
-
-    // =========================================================
-    // LOG
-    // =========================================================
+    travelData.stay =
+      uniqueHotels.slice(0, 10);
 
     console.log(
       "Hotels returned:",
       travelData.stay.length
     );
 
-    console.log("PLAN API SUCCESS");
+    // =====================================================
+    // FALLBACK CONTENT
+    // =====================================================
 
-    // =========================================================
+    travelData.transport =
+      travelData.transport ||
+      "<p>Transportation information unavailable.</p>";
+
+    travelData.experiences =
+      travelData.experiences ||
+      "<p>Experience information unavailable.</p>";
+
+    travelData.money =
+      travelData.money ||
+      "<p>Budget information unavailable.</p>";
+
+    travelData.daysPlan =
+      travelData.daysPlan ||
+      "<p>Itinerary information unavailable.</p>";
+
+    // =====================================================
     // SUCCESS
-    // =========================================================
+    // =====================================================
+
+    console.log("PLAN API SUCCESS");
 
     return res.status(200).json(travelData);
 
   } catch (error) {
 
-    console.error("=================================");
-    console.error("VERCEL BACKEND ERROR");
-    console.error("Message:", error.message);
-
-    if (error.response) {
-      console.error(
-        "Gemini Status:",
-        error.response.status
-      );
-
-      console.error(
-        "Gemini Response:",
-        JSON.stringify(error.response.data)
-      );
-    }
-
-    console.error("=================================");
-
-    if (error.response) {
-      return res.status(500).json({
-        error: "Gemini API request failed.",
-        status: error.response.status,
-        details:
-          error.response.data?.error?.message ||
-          error.message
-      });
-    }
+    console.error(
+      "PLAN API CRITICAL ERROR:",
+      error
+    );
 
     return res.status(500).json({
-      error: "Internal Server Error during plan generation.",
+      error: "Server error while generating travel plan.",
       details: error.message
     });
   }
