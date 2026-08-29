@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let formData = {};
 
+
   // =========================================================
   // HOTEL + RESTAURANT STYLES
   // =========================================================
@@ -439,6 +440,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.head.appendChild(style);
   }
 
+
   // =========================================================
   // INTEREST CHIPS
   // =========================================================
@@ -447,7 +449,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     chip.addEventListener("click", () => {
 
-      const interest = chip.textContent.trim();
+      const interest =
+        chip.textContent.trim();
 
       if (selectedInterests.has(interest)) {
 
@@ -465,6 +468,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   });
 
+
   // =========================================================
   // FORM SUBMISSION
   // =========================================================
@@ -476,68 +480,103 @@ document.addEventListener("DOMContentLoaded", () => {
     formData = {
 
       destination:
-        document.getElementById("destination").value.trim(),
+        document
+          .getElementById("destination")
+          .value
+          .trim(),
 
       startDate:
-        document.getElementById("startDate").value || "Flexible",
+        document
+          .getElementById("startDate")
+          .value ||
+        "Flexible",
 
       days:
-        document.getElementById("days").value,
+        document
+          .getElementById("days")
+          .value,
 
       budget:
-        document.getElementById("budget").value,
+        document
+          .getElementById("budget")
+          .value,
 
       travelers:
-        document.getElementById("travelers").value,
+        document
+          .getElementById("travelers")
+          .value,
 
       interests:
-        Array.from(selectedInterests).join(", ") ||
+        Array
+          .from(selectedInterests)
+          .join(", ") ||
         "General Sightseeing",
 
       notes:
-        document.getElementById("notes").value.trim() ||
+        document
+          .getElementById("notes")
+          .value
+          .trim() ||
         "None"
+
     };
+
 
     summaryDiv.innerHTML = `
 
       <p>
-        📍 <strong>Destination:</strong>
-        ${escapeHTML(formData.destination)}
+        Destination:
+        <strong>
+          ${escapeHTML(formData.destination)}
+        </strong>
       </p>
 
       <p>
-        📅 <strong>Duration:</strong>
-        ${escapeHTML(formData.days)} Days
-        (Starts: ${escapeHTML(formData.startDate)})
+        Duration:
+        <strong>
+          ${escapeHTML(formData.days)} Days
+        </strong>
+        (Starts:
+        ${escapeHTML(formData.startDate)})
       </p>
 
       <p>
-        💰 <strong>Budget limit:</strong>
-        $${escapeHTML(formData.budget)}
+        Budget limit:
+        <strong>
+          $${escapeHTML(formData.budget)}
+        </strong>
       </p>
 
       <p>
-        👥 <strong>Party size:</strong>
-        ${escapeHTML(formData.travelers)}
+        Party size:
+        <strong>
+          ${escapeHTML(formData.travelers)}
+        </strong>
       </p>
 
       <p>
-        🎯 <strong>Interests:</strong>
-        ${escapeHTML(formData.interests)}
+        Interests:
+        <strong>
+          ${escapeHTML(formData.interests)}
+        </strong>
       </p>
 
       <p>
-        📝 <strong>Special requests:</strong>
-        ${escapeHTML(formData.notes)}
+        Special requests:
+        <strong>
+          ${escapeHTML(formData.notes)}
+        </strong>
       </p>
 
     `;
 
+
     appScreen.classList.add("hidden");
+
     reviewScreen.classList.remove("hidden");
 
   });
+
 
   // =========================================================
   // EDIT BUTTON
@@ -546,9 +585,11 @@ document.addEventListener("DOMContentLoaded", () => {
   closeReviewBtn.addEventListener("click", () => {
 
     reviewScreen.classList.add("hidden");
+
     appScreen.classList.remove("hidden");
 
   });
+
 
   // =========================================================
   // DEMO PAYMENT FLOW
@@ -561,15 +602,21 @@ document.addEventListener("DOMContentLoaded", () => {
       JSON.stringify(formData)
     );
 
-    localStorage.setItem("hasPaid", "true");
+    localStorage.setItem(
+      "hasPaid",
+      "true"
+    );
 
     appScreen.classList.add("hidden");
+
     reviewScreen.classList.add("hidden");
+
     planScreen.classList.remove("hidden");
 
     generatePlan(formData);
 
   });
+
 
   // =========================================================
   // RETURN / DEMO RECOVERY
@@ -583,7 +630,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const savedData =
       localStorage.getItem("pendingTripData");
 
-    if (hasPaid === "true" && savedData) {
+    if (
+      hasPaid === "true" &&
+      savedData
+    ) {
 
       try {
 
@@ -591,10 +641,15 @@ document.addEventListener("DOMContentLoaded", () => {
           JSON.parse(savedData);
 
         localStorage.removeItem("hasPaid");
-        localStorage.removeItem("pendingTripData");
+
+        localStorage.removeItem(
+          "pendingTripData"
+        );
 
         appScreen.classList.add("hidden");
+
         reviewScreen.classList.add("hidden");
+
         planScreen.classList.remove("hidden");
 
         generatePlan(parsedData);
@@ -612,6 +667,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   });
 
+
   // =========================================================
   // GENERATE PLAN
   // =========================================================
@@ -624,36 +680,117 @@ document.addEventListener("DOMContentLoaded", () => {
     const planIntro =
       document.getElementById("planIntro");
 
+
     planTitle.textContent =
       "Creating your personalized plan...";
 
     planIntro.textContent =
       "Our AI is building your itinerary. Please wait a moment.";
 
+
+    // Reset sections to loading state
+
+    const stayContent =
+      document.getElementById("stayContent");
+
+    const restaurantsContent =
+      document.getElementById("restaurantsContent");
+
+    const transportContent =
+      document.getElementById("transportContent");
+
+    const experiencesContent =
+      document.getElementById("experiencesContent");
+
+    const moneyContent =
+      document.getElementById("moneyContent");
+
+    const daysContent =
+      document.getElementById("daysContent");
+
+
+    if (stayContent) {
+      stayContent.innerHTML =
+        "Generating accommodation strategy...";
+    }
+
+    if (restaurantsContent) {
+      restaurantsContent.innerHTML =
+        "Finding restaurants in your destination...";
+    }
+
+    if (transportContent) {
+      transportContent.innerHTML =
+        "Generating transport guide...";
+    }
+
+    if (experiencesContent) {
+      experiencesContent.innerHTML =
+        "Generating curated experiences...";
+    }
+
+    if (moneyContent) {
+      moneyContent.innerHTML =
+        "Calculating budget split...";
+    }
+
+    if (daysContent) {
+      daysContent.innerHTML =
+        "Structuring your days...";
+    }
+
+
     try {
 
+      console.log(
+        "Sending trip data to /api/plan:",
+        tripData
+      );
+
+
       const response =
-        await fetch("/api/plan", {
+        await fetch(
+          "/api/plan",
+          {
+            method: "POST",
 
-          method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
 
-          headers: {
-            "Content-Type": "application/json"
-          },
+            body:
+              JSON.stringify(
+                tripData
+              )
+          }
+        );
 
-          body: JSON.stringify(tripData)
-
-        });
 
       const rawResponse =
         await response.text();
 
+
+      console.log(
+        "PLAN API HTTP STATUS:",
+        response.status
+      );
+
+      console.log(
+        "PLAN API RAW RESPONSE:",
+        rawResponse
+      );
+
+
       let data;
+
 
       try {
 
         data =
-          JSON.parse(rawResponse);
+          JSON.parse(
+            rawResponse
+          );
 
       } catch (jsonError) {
 
@@ -668,6 +805,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       }
 
+
       if (!response.ok) {
 
         throw new Error(
@@ -677,6 +815,7 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
       }
+
 
       // =====================================================
       // HEADER
@@ -688,8 +827,9 @@ document.addEventListener("DOMContentLoaded", () => {
       planIntro.textContent =
         `Customized strategy for ${tripData.days} days with a $${tripData.budget} budget.`;
 
+
       // =====================================================
-      // STAY
+      // HOTELS
       // =====================================================
 
       renderHotels(
@@ -697,38 +837,77 @@ document.addEventListener("DOMContentLoaded", () => {
         tripData.destination
       );
 
+
       // =====================================================
       // RESTAURANTS
       // =====================================================
+
+      console.log(
+        "Restaurants received:",
+        data.restaurants
+      );
 
       renderRestaurants(
         data.restaurants,
         tripData.destination
       );
 
+
       // =====================================================
-      // OTHER SECTIONS
+      // TRANSPORT
       // =====================================================
 
-      document.getElementById(
-        "transportContent"
-      ).innerHTML =
-        safeHTML(data.transport);
+      if (transportContent) {
 
-      document.getElementById(
-        "experiencesContent"
-      ).innerHTML =
-        safeHTML(data.experiences);
+        transportContent.innerHTML =
+          safeHTML(
+            data.transport
+          );
 
-      document.getElementById(
-        "moneyContent"
-      ).innerHTML =
-        safeHTML(data.money);
+      }
 
-      document.getElementById(
-        "daysContent"
-      ).innerHTML =
-        safeHTML(data.daysPlan);
+
+      // =====================================================
+      // EXPERIENCES
+      // =====================================================
+
+      if (experiencesContent) {
+
+        experiencesContent.innerHTML =
+          safeHTML(
+            data.experiences
+          );
+
+      }
+
+
+      // =====================================================
+      // MONEY
+      // =====================================================
+
+      if (moneyContent) {
+
+        moneyContent.innerHTML =
+          safeHTML(
+            data.money
+          );
+
+      }
+
+
+      // =====================================================
+      // DAY PLAN
+      // =====================================================
+
+      if (daysContent) {
+
+        daysContent.innerHTML =
+          safeHTML(
+            data.daysPlan
+          );
+
+      }
+
 
     } catch (error) {
 
@@ -737,15 +916,15 @@ document.addEventListener("DOMContentLoaded", () => {
         error
       );
 
+
       planTitle.textContent =
         "Generation Error";
 
       planIntro.textContent =
         "The travel plan could not be generated.";
 
-      document.getElementById(
-        "stayContent"
-      ).innerHTML = `
+
+      const errorHTML = `
 
         <div style="
           padding:20px;
@@ -763,16 +942,34 @@ document.addEventListener("DOMContentLoaded", () => {
             margin-top:8px;
             font-size:14px;
           ">
-            ${escapeHTML(error.message)}
+            ${escapeHTML(
+              error.message
+            )}
           </div>
 
         </div>
 
       `;
 
+
+      if (stayContent) {
+
+        stayContent.innerHTML =
+          errorHTML;
+
+      }
+
+      if (restaurantsContent) {
+
+        restaurantsContent.innerHTML =
+          errorHTML;
+
+      }
+
     }
 
   }
+
 
   // =========================================================
   // RENDER HOTELS
@@ -784,7 +981,21 @@ document.addEventListener("DOMContentLoaded", () => {
   ) {
 
     const container =
-      document.getElementById("stayContent");
+      document.getElementById(
+        "stayContent"
+      );
+
+
+    if (!container) {
+
+      console.error(
+        "stayContent element not found."
+      );
+
+      return;
+
+    }
+
 
     if (
       !Array.isArray(stayData) ||
@@ -799,65 +1010,76 @@ document.addEventListener("DOMContentLoaded", () => {
           border-radius:14px;
           color:#666;
         ">
+
           No accommodation recommendations
           were returned.
+
         </div>
 
       `;
 
       return;
+
     }
+
 
     const hotels =
       stayData.slice(0, 10);
 
-    const intro = `
 
-      <div class="hotel-intro">
+    const intro =
+      document.createElement("div");
 
-        <h3>
-          Recommended stays in
-          ${escapeHTML(destination)}
-        </h3>
 
-        <p>
-          Compare accommodation options selected
-          for your trip.
-        </p>
+    intro.className =
+      "hotel-intro";
 
-      </div>
+
+    intro.innerHTML = `
+
+      <h3>
+        Recommended stays in
+        ${escapeHTML(destination)}
+      </h3>
+
+      <p>
+        Compare accommodation options selected
+        for your trip.
+      </p>
 
     `;
+
 
     const hotelList =
       document.createElement("div");
 
+
     hotelList.className =
       "hotel-list";
 
-    hotels.forEach((hotel, index) => {
 
-      const card =
-        createHotelCard(
-          hotel,
-          index + 1,
-          destination
+    hotels.forEach(
+      (hotel, index) => {
+
+        const card =
+          createHotelCard(
+            hotel,
+            index + 1,
+            destination
+          );
+
+        hotelList.appendChild(
+          card
         );
 
-      hotelList.appendChild(card);
+      }
+    );
 
-    });
 
     container.innerHTML = "";
 
-    const introWrapper =
-      document.createElement("div");
-
-    introWrapper.innerHTML =
-      intro;
-
     container.appendChild(
-      introWrapper
+      intro
     );
 
     container.appendChild(
@@ -865,6 +1087,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
   }
+
 
   // =========================================================
   // CREATE HOTEL CARD
@@ -877,17 +1100,23 @@ document.addEventListener("DOMContentLoaded", () => {
   ) {
 
     const card =
-      document.createElement("article");
+      document.createElement(
+        "article"
+      );
+
 
     card.className =
       "hotel-card";
+
 
     const name =
       hotel?.name ||
       "Recommended Accommodation";
 
+
     const stars =
       Number(hotel?.stars) || 0;
+
 
     const price =
       hotel?.price !== undefined &&
@@ -896,18 +1125,29 @@ document.addEventListener("DOMContentLoaded", () => {
         ? hotel.price
         : null;
 
+
+    const currency =
+      hotel?.currency ||
+      "USD";
+
+
     const priceType =
       hotel?.priceType ||
       "estimated per night";
+
 
     const description =
       hotel?.description ||
       "A recommended accommodation option selected for this trip.";
 
+
     const amenities =
-      Array.isArray(hotel?.amenities)
+      Array.isArray(
+        hotel?.amenities
+      )
         ? hotel.amenities
         : [];
+
 
     const image =
       hotel?.image ||
@@ -916,7 +1156,9 @@ document.addEventListener("DOMContentLoaded", () => {
       hotel?.photoUrl ||
       "";
 
+
     let imageHTML = "";
+
 
     if (image) {
 
@@ -954,7 +1196,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     let starsHTML = "";
+
 
     if (stars > 0) {
 
@@ -964,7 +1208,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <span class="hotel-stars">
             ${"★".repeat(
-              Math.min(stars, 5)
+              Math.min(
+                stars,
+                5
+              )
             )}
           </span>
 
@@ -978,7 +1225,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     let priceHTML = "";
+
 
     if (price !== null) {
 
@@ -987,9 +1236,14 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="hotel-price">
 
           <span class="hotel-price-value">
-            $${escapeHTML(
+
+            ${escapeHTML(
               String(price)
             )}
+            ${escapeHTML(
+              String(currency)
+            )}
+
           </span>
 
           <span class="hotel-price-label">
@@ -1004,7 +1258,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     let amenitiesHTML = "";
+
 
     if (amenities.length > 0) {
 
@@ -1022,7 +1278,9 @@ document.addEventListener("DOMContentLoaded", () => {
               amenity => `
                 <span class="hotel-amenity">
                   ${escapeHTML(
-                    String(amenity)
+                    String(
+                      amenity
+                    )
                   )}
                 </span>
               `
@@ -1036,17 +1294,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     const bookingURL =
+      hotel?.bookingUrl ||
       createBookingSearchURL(
         name,
         destination
       );
 
+
     card.innerHTML = `
 
       <div class="hotel-image-wrap">
+
         ${imageHTML}
+
       </div>
+
 
       <div class="hotel-info">
 
@@ -1063,7 +1327,9 @@ document.addEventListener("DOMContentLoaded", () => {
         ${priceHTML}
 
         <div class="hotel-description">
-          ${escapeHTML(description)}
+          ${escapeHTML(
+            description
+          )}
         </div>
 
         ${amenitiesHTML}
@@ -1079,9 +1345,11 @@ document.addEventListener("DOMContentLoaded", () => {
             rel="noopener noreferrer"
           >
             Check availability on Booking.com
+
             <span class="booking-arrow">
               ↗
             </span>
+
           </a>
 
         </div>
@@ -1090,9 +1358,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     `;
 
+
     return card;
 
   }
+
 
   // =========================================================
   // RENDER RESTAURANTS
@@ -1103,33 +1373,66 @@ document.addEventListener("DOMContentLoaded", () => {
     destination
   ) {
 
+    // IMPORTANT:
+    // HTML uses restaurantsContent.
+    // Do NOT use experiencesContent here.
+
     const container =
       document.getElementById(
-        "experiencesContent"
+        "restaurantsContent"
       );
 
+
+    if (!container) {
+
+      console.error(
+        "restaurantsContent element not found in HTML."
+      );
+
+      return;
+
+    }
+
+
+    // Remove loading message
+
+    container.innerHTML = "";
+
+
+    // =======================================================
+    // NO RESTAURANTS
+    // =======================================================
+
     if (
-      !Array.isArray(restaurantData) ||
+      !Array.isArray(
+        restaurantData
+      ) ||
       restaurantData.length === 0
     ) {
 
       container.innerHTML = `
 
-        <div>
+        <div style="
+          padding:20px;
+          background:#f7f7f8;
+          border-radius:14px;
+          color:#666;
+          line-height:1.6;
+        ">
 
-          ${safeHTML(
-            container.innerHTML
-          )}
+          <strong>
+            No local restaurants found.
+          </strong>
 
           <div style="
-            margin-top:30px;
-            padding:20px;
-            background:#f7f7f8;
-            border-radius:14px;
-            color:#666;
+            margin-top:8px;
+            font-size:14px;
           ">
-            No restaurant recommendations
-            were returned.
+
+            We could not find real restaurants
+            listed in OpenStreetMap for
+            ${escapeHTML(destination)}.
+
           </div>
 
         </div>
@@ -1140,18 +1443,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
+    // =======================================================
+    // MAXIMUM 10
+    // =======================================================
+
     const restaurants =
       restaurantData.slice(0, 10);
 
-    const existingExperiences =
-      safeHTML(
-        container.innerHTML
-      );
 
-    const intro = `
+    // =======================================================
+    // INTRO
+    // =======================================================
 
-      <div class="restaurant-intro"
-           style="margin-top:32px;">
+    const introWrapper =
+      document.createElement("div");
+
+
+    introWrapper.innerHTML = `
+
+      <div class="restaurant-intro">
 
         <h3>
           Recommended restaurants in
@@ -1159,19 +1470,35 @@ document.addEventListener("DOMContentLoaded", () => {
         </h3>
 
         <p>
-          A selection of restaurants based on
-          your destination and interests.
+          Real local restaurants found through
+          OpenStreetMap.
         </p>
 
       </div>
 
     `;
 
+
+    container.appendChild(
+      introWrapper
+    );
+
+
+    // =======================================================
+    // LIST
+    // =======================================================
+
     const restaurantList =
       document.createElement("div");
 
+
     restaurantList.className =
       "restaurant-list";
+
+
+    // =======================================================
+    // CARDS
+    // =======================================================
 
     restaurants.forEach(
       (restaurant, index) => {
@@ -1183,6 +1510,7 @@ document.addEventListener("DOMContentLoaded", () => {
             destination
           );
 
+
         restaurantList.appendChild(
           card
         );
@@ -1190,24 +1518,17 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
 
-    container.innerHTML =
-      existingExperiences;
 
-    const introWrapper =
-      document.createElement("div");
-
-    introWrapper.innerHTML =
-      intro;
-
-    container.appendChild(
-      introWrapper
-    );
+    // =======================================================
+    // ADD TO PAGE
+    // =======================================================
 
     container.appendChild(
       restaurantList
     );
 
   }
+
 
   // =========================================================
   // CREATE RESTAURANT CARD
@@ -1220,22 +1541,29 @@ document.addEventListener("DOMContentLoaded", () => {
   ) {
 
     const card =
-      document.createElement("article");
+      document.createElement(
+        "article"
+      );
+
 
     card.className =
       "restaurant-card";
 
+
     const name =
       restaurant?.name ||
-      "Recommended Restaurant";
+      "Local Restaurant";
+
 
     const cuisine =
       restaurant?.cuisine ||
       "Local cuisine";
 
+
     const priceLevel =
       restaurant?.priceLevel ||
       "$$";
+
 
     const rating =
       restaurant?.rating !== undefined &&
@@ -1244,13 +1572,16 @@ document.addEventListener("DOMContentLoaded", () => {
         ? restaurant.rating
         : null;
 
+
     const address =
       restaurant?.address ||
-      "Address unavailable";
+      destination;
+
 
     const description =
       restaurant?.description ||
-      "A recommended restaurant selected for your trip.";
+      `A real restaurant listed in OpenStreetMap in ${destination}.`;
+
 
     const image =
       restaurant?.image ||
@@ -1259,14 +1590,17 @@ document.addEventListener("DOMContentLoaded", () => {
       restaurant?.photoUrl ||
       "";
 
+
     const mapsURL =
       restaurant?.mapsUrl ||
-      createGoogleMapsSearchURL(
-        name,
+      createOpenStreetMapURL(
+        restaurant,
         destination
       );
 
+
     let imageHTML = "";
+
 
     if (image) {
 
@@ -1304,7 +1638,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     let ratingHTML = "";
+
 
     if (rating !== null) {
 
@@ -1320,6 +1656,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     card.innerHTML = `
 
       <div class="restaurant-image-wrap">
@@ -1328,15 +1665,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       </div>
 
+
       <div class="restaurant-info">
 
         <div class="restaurant-number">
           Option ${number}
         </div>
 
+
         <h3 class="restaurant-name">
           ${escapeHTML(name)}
         </h3>
+
 
         <div class="restaurant-meta">
 
@@ -1346,23 +1686,32 @@ document.addEventListener("DOMContentLoaded", () => {
             )}
           </span>
 
+
           <span class="restaurant-price">
             ${escapeHTML(
               String(priceLevel)
             )}
           </span>
 
+
           ${ratingHTML}
 
         </div>
 
+
         <div class="restaurant-address">
-          ${escapeHTML(address)}
+          ${escapeHTML(
+            address
+          )}
         </div>
 
+
         <div class="restaurant-description">
-          ${escapeHTML(description)}
+          ${escapeHTML(
+            description
+          )}
         </div>
+
 
         <div class="restaurant-actions">
 
@@ -1374,8 +1723,13 @@ document.addEventListener("DOMContentLoaded", () => {
             target="_blank"
             rel="noopener noreferrer"
           >
-            View on Google Maps
-            <span>↗</span>
+
+            View on OpenStreetMap
+
+            <span>
+              ↗
+            </span>
+
           </a>
 
         </div>
@@ -1384,9 +1738,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     `;
 
+
     return card;
 
   }
+
 
   // =========================================================
   // BOOKING SEARCH URL
@@ -1402,27 +1758,71 @@ document.addEventListener("DOMContentLoaded", () => {
         `${hotelName} ${destination}`
       );
 
-    return `https://www.booking.com/searchresults.html?ss=${query}`;
+
+    return (
+      "https://www.booking.com/searchresults.html?ss=" +
+      query
+    );
 
   }
 
+
   // =========================================================
-  // GOOGLE MAPS SEARCH URL
+  // OPENSTREETMAP URL
   // =========================================================
 
-  function createGoogleMapsSearchURL(
-    restaurantName,
+  function createOpenStreetMapURL(
+    restaurant,
     destination
   ) {
 
-    const query =
-      encodeURIComponent(
-        `${restaurantName} ${destination}`
+    const latitude =
+      restaurant?.latitude;
+
+    const longitude =
+      restaurant?.longitude;
+
+
+    if (
+      latitude !== null &&
+      latitude !== undefined &&
+      longitude !== null &&
+      longitude !== undefined
+    ) {
+
+      return (
+        "https://www.openstreetmap.org/" +
+        `?mlat=${encodeURIComponent(
+          latitude
+        )}` +
+        `&mlon=${encodeURIComponent(
+          longitude
+        )}` +
+        "#map=18/" +
+        `${encodeURIComponent(
+          latitude
+        )}/` +
+        `${encodeURIComponent(
+          longitude
+        )}`
       );
 
-    return `https://www.google.com/maps/search/?api=1&query=${query}`;
+    }
+
+
+    const query =
+      encodeURIComponent(
+        `${restaurant?.name || ""} ${destination}`
+      );
+
+
+    return (
+      "https://www.openstreetmap.org/search?query=" +
+      query
+    );
 
   }
+
 
   // =========================================================
   // SAFE HTML
@@ -1439,9 +1839,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+
     return value;
 
   }
+
 
   // =========================================================
   // ESCAPE HTML
@@ -1450,22 +1852,27 @@ document.addEventListener("DOMContentLoaded", () => {
   function escapeHTML(value) {
 
     return String(value)
+
       .replace(
         /&/g,
         "&amp;"
       )
+
       .replace(
         /</g,
         "&lt;"
       )
+
       .replace(
         />/g,
         "&gt;"
       )
+
       .replace(
         /"/g,
         "&quot;"
       )
+
       .replace(
         /'/g,
         "&#039;"
@@ -1473,15 +1880,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   }
 
+
   // =========================================================
   // ESCAPE ATTRIBUTE
   // =========================================================
 
   function escapeAttribute(value) {
 
-    return escapeHTML(value);
+    return escapeHTML(
+      value
+    );
 
   }
+
 
   // =========================================================
   // TAB NAVIGATION
@@ -1492,56 +1903,71 @@ document.addEventListener("DOMContentLoaded", () => {
       ".plan-tab"
     );
 
+
   const sections =
     document.querySelectorAll(
       ".plan-section"
     );
 
-  tabs.forEach((tab) => {
 
-    tab.addEventListener(
-      "click",
-      () => {
+  tabs.forEach(
+    (tab) => {
 
-        const targetSectionId =
-          tab.getAttribute(
-            "data-target"
+      tab.addEventListener(
+        "click",
+        () => {
+
+          const targetSectionId =
+            tab.getAttribute(
+              "data-target"
+            );
+
+
+          tabs.forEach(
+            (t) => {
+
+              t.classList.remove(
+                "active"
+              );
+
+            }
           );
 
-        tabs.forEach((t) => {
-          t.classList.remove(
+
+          sections.forEach(
+            (section) => {
+
+              section.classList.add(
+                "hidden"
+              );
+
+            }
+          );
+
+
+          tab.classList.add(
             "active"
           );
-        });
 
-        sections.forEach(
-          (section) => {
-            section.classList.add(
+
+          const target =
+            document.getElementById(
+              targetSectionId
+            );
+
+
+          if (target) {
+
+            target.classList.remove(
               "hidden"
             );
+
           }
-        );
-
-        tab.classList.add(
-          "active"
-        );
-
-        const target =
-          document.getElementById(
-            targetSectionId
-          );
-
-        if (target) {
-
-          target.classList.remove(
-            "hidden"
-          );
 
         }
+      );
 
-      }
-    );
-
-  });
+    }
+  );
 
 });
