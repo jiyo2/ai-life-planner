@@ -58,29 +58,34 @@ module.exports = async (req, res) => {
     // API KEYS
     // =====================================================
 
-    const GEMINI_API_KEY =
-      process.env.GEMINI_API_KEY;
+    const GROQ_API_KEY =
+      process.env.GROQ_API_KEY;
 
     const FOURSQUARE_API_KEY =
       process.env.FOURSQUARE_API_KEY;
 
 
     // =====================================================
-    // GEMINI KEY CHECK
+    // GROQ KEY CHECK
     // =====================================================
 
-    if (!GEMINI_API_KEY) {
+    if (!GROQ_API_KEY) {
 
       console.error(
-        "GEMINI_API_KEY missing"
+        "GROQ_API_KEY missing"
       );
 
       return res.status(500).json({
         error:
-          "Gemini API key is missing."
+          "Groq API key is missing."
       });
 
     }
+
+
+    console.log(
+      "GROQ_API_KEY detected."
+    );
 
 
     // =====================================================
@@ -126,18 +131,15 @@ module.exports = async (req, res) => {
 
 
     // =====================================================
-    // GEMINI URL
+    // GROQ URL
     // =====================================================
 
-    const GEMINI_URL =
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" +
-      encodeURIComponent(
-        GEMINI_API_KEY
-      );
+    const GROQ_URL =
+      "https://api.groq.com/openai/v1/chat/completions";
 
 
     // =====================================================
-    // GEMINI PROMPT
+    // GROQ PROMPT
     // =====================================================
 
     const prompt = `
@@ -194,18 +196,19 @@ Therefore return:
 
 "restaurants": []
 
-Also create:
+IMPORTANT OUTPUT REQUIREMENTS:
 
-transport
-experiences
-money
-daysPlan
+Return ONLY valid JSON.
+
+Do not use Markdown.
+
+Do not use code fences.
+
+Do not add explanations before or after the JSON.
 
 transport, experiences, money and daysPlan must contain HTML.
 
-RETURN ONLY JSON.
-
-Use exactly:
+Use exactly this structure:
 
 {
   "stay": [
@@ -235,131 +238,191 @@ Use exactly:
 
 
     // =====================================================
-    // GEMINI REQUEST
+    // GROQ REQUEST
     // =====================================================
 
-    const geminiResponse =
+    const groqResponse =
       await fetch(
-        GEMINI_URL,
+        GROQ_URL,
         {
           method: "POST",
 
           headers: {
             "Content-Type":
-              "application/json"
+              "application/json",
+
+            "Authorization":
+              "Bearer " +
+              GROQ_API_KEY
           },
 
           body: JSON.stringify({
 
-            contents: [
+            model:
+              "openai/gpt-oss-120b",
+
+            messages: [
               {
-                parts: [
-                  {
-                    text: prompt
-                  }
-                ]
+                role: "user",
+                content: prompt
               }
             ],
 
-            generationConfig: {
-              responseMimeType:
-                "application/json"
-            }
+            temperature: 0.3,
 
+            max_completion_tokens:
+              6000,
+
+            response_format: {
+              type: "json_object"
+            },
+
+            reasoning_effort:
+              "low"
           })
         }
       );
 
 
-    const geminiText =
-      await geminiResponse.text();
+    const groqText =
+      await groqResponse.text();
 
 
     console.log(
-      "Gemini HTTP status:",
-      geminiResponse.status
+      "Groq HTTP status:",
+      groqResponse.status
     );
 
 
     // =====================================================
-    // GEMINI ERROR
+    // GROQ ERROR
     // =====================================================
 
-    if (!geminiResponse.ok) {
+    if (!groqResponse.ok) {
 
       console.error(
-        "GEMINI ERROR:",
-        geminiText
+        "GROQ ERROR:",
+        groqText
       );
 
-      return res.status(500).json({
+
+      let errorDetails =
+        groqText;
+
+      try {
+
+        const parsedError =
+          JSON.parse(
+            groqText
+          );
+
+        errorDetails =
+          parsedError?.error?.message ||
+          groqText;
+
+      } catch {
+        // Keep original text.
+      }
+
+
+      if (
+        groqResponse.status === 429
+      ) {
+
+        return res.status(429).json({
+
+          error:
+            "The AI service has reached its current free usage limit. Please try again later.",
+
+          provider:
+            "Groq",
+
+          status:
+            429,
+
+          details:
+            errorDetails
+
+        });
+
+      }
+
+
+      return res.status(502).json({
+
         error:
-          "Gemini API request failed.",
+          "Groq API request failed.",
+
+        provider:
+          "Groq",
+
         status:
-          geminiResponse.status,
+          groqResponse.status,
+
         details:
-          geminiText
+          errorDetails
+
       });
 
     }
 
 
     // =====================================================
-    // PARSE GEMINI RESPONSE
+    // PARSE GROQ RESPONSE
     // =====================================================
 
-    let geminiData;
+    let groqData;
 
     try {
 
-      geminiData =
+      groqData =
         JSON.parse(
-          geminiText
+          groqText
         );
 
     } catch (error) {
 
       console.error(
-        "Could not parse Gemini response:",
-        geminiText
+        "Could not parse Groq response:",
+        groqText
       );
 
       return res.status(500).json({
         error:
-          "Invalid response from Gemini.",
+          "Invalid response from Groq.",
         details:
-          geminiText
+          groqText
       });
 
     }
 
 
     // =====================================================
-    // GET GEMINI TEXT
+    // GET GROQ TEXT
     // =====================================================
 
     const text =
-      geminiData
-        ?.candidates?.[0]
-        ?.content?.parts?.[0]
-        ?.text;
+      groqData
+        ?.choices?.[0]
+        ?.message
+        ?.content;
 
 
     if (!text) {
 
       console.error(
-        "Gemini returned no text:",
+        "Groq returned no text:",
         JSON.stringify(
-          geminiData
+          groqData
         )
       );
 
       return res.status(500).json({
         error:
-          "Gemini returned an empty response.",
+          "Groq returned an empty response.",
         details:
           JSON.stringify(
-            geminiData
+            groqData
           )
       });
 
@@ -367,11 +430,14 @@ Use exactly:
 
 
     // =====================================================
-    // CLEAN GEMINI JSON
+    // CLEAN GROQ JSON
     // =====================================================
 
     let cleanText =
-      text.trim();
+      String(
+        text
+      ).trim();
+
 
     cleanText =
       cleanText
@@ -406,13 +472,13 @@ Use exactly:
     } catch (error) {
 
       console.error(
-        "GEMINI JSON PARSE ERROR:",
+        "GROQ JSON PARSE ERROR:",
         cleanText
       );
 
       return res.status(500).json({
         error:
-          "Gemini returned invalid JSON.",
+          "Groq returned invalid JSON.",
         details:
           error.message
       });
@@ -559,7 +625,7 @@ Use exactly:
 
 
     // =====================================================
-    // NO HOTEL IMAGE PROVIDER
+    // NO RANDOM HOTEL IMAGES
     // =====================================================
 
     travelData.stay =
@@ -1157,9 +1223,6 @@ Use exactly:
             );
 
 
-          // Distance score.
-          // 0m = 1.0
-          // 1500m = approximately 0
           const distanceScore =
             Number.isFinite(
               distance
@@ -1232,9 +1295,6 @@ Use exactly:
         // -------------------------------------------------
         // SAFETY CHECK
         // -------------------------------------------------
-        // Do not attach a clearly unrelated Foursquare
-        // business to an OSM restaurant.
-        // -------------------------------------------------
 
         const finalSimilarity =
           calculateNameSimilarity(
@@ -1249,7 +1309,8 @@ Use exactly:
             longitude,
             best?.latitude ??
               best?.geocodes?.main?.latitude,
-            longitude
+            best?.longitude ??
+              best?.geocodes?.main?.longitude
           );
 
 
@@ -1434,14 +1495,12 @@ Use exactly:
           new URLSearchParams();
 
 
-        // Ask Foursquare for multiple photos.
         params.set(
           "limit",
           "10"
         );
 
 
-        // Prefer restaurant-related imagery.
         params.set(
           "classifications",
           "food_or_drink,outdoor_building_exterior,outdoor_or_storefront,outdoor"
@@ -1565,37 +1624,10 @@ Use exactly:
           of data
         ) {
 
-          // ------------------------------------------------
-          // FOURSQUARE PHOTO FORMAT
-          // ------------------------------------------------
-
           if (
             photo?.prefix &&
             photo?.suffix
           ) {
-
-            /*
-             * Foursquare returns:
-             *
-             * prefix
-             * suffix
-             *
-             * The URL is assembled by inserting a size
-             * between them.
-             *
-             * Example:
-             * prefix + "original" + suffix
-             */
-
-            const originalUrl =
-              String(
-                photo.prefix
-              ) +
-              "original" +
-              String(
-                photo.suffix
-              );
-
 
             const mediumUrl =
               String(
@@ -1607,21 +1639,24 @@ Use exactly:
               );
 
 
-            // Prefer 600x600 because it is lighter for the
-            // website while still providing a real photo.
-            const imageUrl =
-              mediumUrl ||
-              originalUrl;
+            const originalUrl =
+              String(
+                photo.prefix
+              ) +
+              "original" +
+              String(
+                photo.suffix
+              );
 
 
             if (
-              imageUrl
+              mediumUrl
             ) {
 
               photoUrls.push({
 
                 url:
-                  imageUrl,
+                  mediumUrl,
 
                 originalUrl,
 
@@ -1719,10 +1754,6 @@ Use exactly:
         }
 
 
-        // -------------------------------------------------
-        // SEARCH FOURSQUARE
-        // -------------------------------------------------
-
         const place =
           await findFoursquarePlace(
             restaurant.name,
@@ -1744,10 +1775,6 @@ Use exactly:
 
         }
 
-
-        // -------------------------------------------------
-        // GET FSQ ID
-        // -------------------------------------------------
 
         const fsqId =
           place.fsq_place_id ||
@@ -1777,10 +1804,6 @@ Use exactly:
         );
 
 
-        // -------------------------------------------------
-        // GET PLACE DETAILS
-        // -------------------------------------------------
-
         const details =
           await getFoursquarePlaceDetails(
             fsqId
@@ -1791,10 +1814,6 @@ Use exactly:
           details ||
           place;
 
-
-        // -------------------------------------------------
-        // GET PHOTOS
-        // -------------------------------------------------
 
         const photos =
           await getFoursquarePlacePhotos(
@@ -1827,10 +1846,6 @@ Use exactly:
         }
 
 
-        // -------------------------------------------------
-        // RATING
-        // -------------------------------------------------
-
         let rating =
           restaurant.rating;
 
@@ -1860,19 +1875,11 @@ Use exactly:
         }
 
 
-        // -------------------------------------------------
-        // WEBSITE
-        // -------------------------------------------------
-
         const website =
           restaurant.website ||
           finalPlace.website ||
           "";
 
-
-        // -------------------------------------------------
-        // PHONE
-        // -------------------------------------------------
 
         const phone =
           restaurant.phone ||
@@ -1880,19 +1887,11 @@ Use exactly:
           "";
 
 
-        // -------------------------------------------------
-        // FOURSQUARE URL
-        // -------------------------------------------------
-
         const foursquareUrl =
           `https://foursquare.com/place/${encodeURIComponent(
             fsqId
           )}`;
 
-
-        // -------------------------------------------------
-        // FINAL RESTAURANT
-        // -------------------------------------------------
 
         console.log(
           "Restaurant enriched:",
@@ -2122,10 +2121,6 @@ out center tags;
           }
 
 
-          // -------------------------------------------------
-          // COORDINATES
-          // -------------------------------------------------
-
           let restaurantLat =
             item.lat;
 
@@ -2146,10 +2141,6 @@ out center tags;
 
           }
 
-
-          // -------------------------------------------------
-          // ADDRESS
-          // -------------------------------------------------
 
           const addressParts =
             [];
@@ -2218,18 +2209,10 @@ out center tags;
               : destination;
 
 
-          // -------------------------------------------------
-          // CUISINE
-          // -------------------------------------------------
-
           const cuisine =
             tags.cuisine ||
             "Local cuisine";
 
-
-          // -------------------------------------------------
-          // PRICE
-          // -------------------------------------------------
 
           const priceLevel =
             tags["price:level"] ||
@@ -2237,19 +2220,11 @@ out center tags;
             "$$";
 
 
-          // -------------------------------------------------
-          // WEBSITE
-          // -------------------------------------------------
-
           const website =
             tags.website ||
             tags["contact:website"] ||
             "";
 
-
-          // -------------------------------------------------
-          // PHONE
-          // -------------------------------------------------
 
           const phone =
             tags.phone ||
@@ -2257,18 +2232,10 @@ out center tags;
             "";
 
 
-          // -------------------------------------------------
-          // OPENING HOURS
-          // -------------------------------------------------
-
           const openingHours =
             tags.opening_hours ||
             "";
 
-
-          // -------------------------------------------------
-          // OSM RATING
-          // -------------------------------------------------
 
           let rating =
             null;
@@ -2297,10 +2264,6 @@ out center tags;
 
           }
 
-
-          // -------------------------------------------------
-          // REVIEW COUNT
-          // -------------------------------------------------
 
           let reviewCount =
             null;
@@ -2342,10 +2305,6 @@ out center tags;
           }
 
 
-          // -------------------------------------------------
-          // GOOGLE MAPS URL
-          // -------------------------------------------------
-
           let mapsUrl =
             "";
 
@@ -2384,10 +2343,6 @@ out center tags;
           }
 
 
-          // -------------------------------------------------
-          // OSM URL
-          // -------------------------------------------------
-
           let osmUrl =
             "";
 
@@ -2407,10 +2362,6 @@ out center tags;
           }
 
 
-          // -------------------------------------------------
-          // DESCRIPTION
-          // -------------------------------------------------
-
           let description =
             `${name} is a real local restaurant in ${destination}, listed in OpenStreetMap.`;
 
@@ -2424,10 +2375,6 @@ out center tags;
 
           }
 
-
-          // -------------------------------------------------
-          // RESTAURANT OBJECT
-          // -------------------------------------------------
 
           restaurants.push({
 
@@ -2509,10 +2456,6 @@ out center tags;
           });
 
 
-          // -------------------------------------------------
-          // COLLECT MORE OPTIONS
-          // -------------------------------------------------
-
           if (
             restaurants.length >= 50
           ) {
@@ -2573,8 +2516,6 @@ out center tags;
 
         // -------------------------------------------------
         // FOURSQUARE ENRICHMENT
-        //
-        // We check up to 30 real OSM restaurants.
         // -------------------------------------------------
 
         const candidates =
@@ -2587,14 +2528,6 @@ out center tags;
         const enrichedRestaurants =
           [];
 
-
-        /*
-         * Process in small batches.
-         *
-         * This avoids sending all 30 requests at once,
-         * while being considerably faster than doing
-         * everything sequentially.
-         */
 
         const batchSize =
           5;
@@ -2643,7 +2576,7 @@ out center tags;
 
 
         // -------------------------------------------------
-        // PREFER RESTAURANTS WITH REAL PHOTOS
+        // PREFER REAL PHOTOS
         // -------------------------------------------------
 
         enrichedRestaurants.sort(
@@ -2673,7 +2606,6 @@ out center tags;
             }
 
 
-            // Then prefer higher ratings.
             const aRating =
               Number(
                 a.rating
@@ -2693,10 +2625,6 @@ out center tags;
           }
         );
 
-
-        // -------------------------------------------------
-        // RETURN 15 RESTAURANTS
-        // -------------------------------------------------
 
         const finalRestaurants =
           enrichedRestaurants.slice(
