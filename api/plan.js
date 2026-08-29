@@ -44,7 +44,7 @@ module.exports = async (req, res) => {
 
 
     // =======================================================
-    // GROQ API KEY
+    // ENVIRONMENT
     // =======================================================
 
     const GROQ_API_KEY =
@@ -62,10 +62,6 @@ module.exports = async (req, res) => {
       });
 
     }
-
-    console.log(
-      "GROQ_API_KEY detected."
-    );
 
 
     // =======================================================
@@ -115,28 +111,30 @@ module.exports = async (req, res) => {
 
     const safeInterests =
       String(
-        interests || "General sightseeing"
+        interests ||
+        "General sightseeing"
       )
-      .trim()
-      .slice(0, 500);
+        .trim()
+        .slice(0, 500);
 
     const safeNotes =
       String(
         notes || ""
       )
-      .trim()
-      .slice(0, 500);
+        .trim()
+        .slice(0, 500);
 
     const safeStartDate =
       String(
-        startDate || "Flexible"
+        startDate ||
+        "Flexible"
       )
-      .trim()
-      .slice(0, 100);
+        .trim()
+        .slice(0, 100);
 
 
     // =======================================================
-    // GROQ CONFIGURATION
+    // GROQ CONFIG
     // =======================================================
 
     const GROQ_MODEL =
@@ -147,18 +145,22 @@ module.exports = async (req, res) => {
 
 
     // =======================================================
+    // OSM USER AGENT
+    // =======================================================
+
+    const OSM_USER_AGENT =
+      "AI-Life-Planner/1.0";
+
+
+    // =======================================================
     // TRAVEL PLAN PROMPT
-    //
-    // IMPORTANT:
-    // This prompt is designed to provide a useful,
-    // detailed travel plan without making the request
-    // unnecessarily large.
     // =======================================================
 
     const prompt = `
 Create a useful, realistic and detailed travel plan.
 
 TRIP INFORMATION
+
 Destination: ${safeDestination}
 Start date: ${safeStartDate}
 Number of days: ${safeDays}
@@ -167,82 +169,84 @@ Travelers: ${safeTravelers}
 Interests: ${safeInterests}
 Additional notes: ${safeNotes || "None"}
 
-IMPORTANT DATA RULES
+IMPORTANT RULES
 
 1. Hotels and restaurants are supplied separately by OpenStreetMap.
-2. Do NOT create hotels.
-3. Do NOT create restaurants.
+2. Do NOT invent hotels.
+3. Do NOT invent restaurants.
 4. Do NOT create hotel names.
 5. Do NOT create restaurant names.
 6. Do NOT create image URLs.
-7. Do NOT pretend that an invented place is real.
-8. For attractions and neighborhoods, only mention well-known places when you are reasonably confident they exist.
-9. For transportation prices, use approximate wording such as "around", "typically", or "varies".
-10. Never present uncertain prices as guaranteed current prices.
-11. For taxi applications, only mention established services you are reasonably confident operate in the destination. If availability varies, clearly say so.
-12. Include practical safety advice for taxis and transportation.
-13. Do not mention Foursquare.
-14. Do not mention Gemini.
-15. OpenStreetMap is the only external places data source.
-16. Groq is the only AI provider.
+7. Do NOT pretend an invented place is real.
+8. Do not mention Foursquare.
+9. Do not mention Gemini.
+10. Groq is the AI provider.
+11. OpenStreetMap is the places data source.
+12. Use approximate wording for prices.
+13. Never present uncertain prices as guaranteed current prices.
+14. Never invent taxi applications.
+15. Only mention established taxi applications when reasonably confident they operate in the destination.
 
-CONTENT REQUIREMENTS
+TRANSPORT
 
-The response must be substantially more useful than a short summary.
-
-TRANSPORT:
 Create a detailed transportation guide.
 
 Include:
 - Airport arrival options when relevant.
 - Metro/subway.
-- Tram.
+- Tram when relevant.
 - Bus.
 - Ferry when relevant.
 - Walking.
 - Taxi.
 - Approximate cost guidance.
-- Which option is best for tourists.
-- Which option is best for saving money.
-- Practical transportation tips.
+- Best option for tourists.
+- Cheapest practical option.
+- Transportation tips.
 - Taxi safety advice.
-- Recommend established taxi applications when reasonably known for the destination.
-- Tell travelers to verify the vehicle, driver and destination before entering.
-- Warn against unofficial drivers approaching travelers at airports, stations or tourist attractions.
-- Do not invent a taxi application.
+- Established taxi applications when reasonably known.
+- Verify vehicle and driver before entering.
+- Avoid unofficial drivers approaching travelers at airports, stations or attractions.
+- Explain how to reduce the risk of overcharging or scams.
 
-Return this as HTML using:
+Return HTML using:
 <h3>
+<h4>
 <p>
 <ul>
 <li>
 
-EXPERIENCES:
-Create a detailed experiences and sightseeing guide.
+EXPERIENCES
 
-Include several categories:
+Create a detailed sightseeing and experiences guide.
+
+Include:
 
 1. Major attractions
 2. Historic and cultural places
 3. Scenic places
 4. Walking and promenade areas
 5. Parks and outdoor places
-6. Local neighborhoods worth exploring
+6. Local neighborhoods
 7. Evening and nightlife ideas
 8. Local food experiences
 9. Shopping areas
 10. Relaxing activities
 
-For shopping specifically include:
-- Major traditional markets when relevant.
-- Popular shopping streets.
-- Modern shopping areas or malls when relevant.
-- Souvenir shopping.
-- Local products worth looking for.
-- Basic bargaining advice where appropriate.
-- How to avoid tourist traps.
+SHOPPING
 
-For walking and outdoor activities specifically include:
+Include when relevant:
+- Traditional markets.
+- Popular shopping streets.
+- Modern shopping areas or malls.
+- Souvenirs.
+- Local products.
+- Bargaining advice where appropriate.
+- Tourist-trap avoidance.
+
+WALKING AND OUTDOORS
+
+Include:
 - Waterfront walks when available.
 - Parks.
 - Viewpoints.
@@ -250,20 +254,21 @@ For walking and outdoor activities specifically include:
 - Relaxing areas.
 - Good times of day to visit.
 
-Do not make the section just a list of names.
-Explain briefly what makes each type of place worth visiting.
+Explain briefly why each category is worth visiting.
 
-Return useful HTML using:
+Return HTML using:
 <h3>
 <h4>
 <p>
 <ul>
 <li>
 
-MONEY:
+MONEY
+
 Create a detailed budget strategy.
 
 Break the budget into:
+
 - Accommodation
 - Food
 - Local transportation
@@ -272,25 +277,29 @@ Break the budget into:
 - Activities
 - Emergency/miscellaneous
 
-Explain what percentage or approximate amount could be allocated to each category.
+Explain approximate percentages or amounts.
 
-If the user's budget is unlikely to cover flights, explicitly say that flights may need to be treated separately.
+If the budget probably does not include flights, explicitly say flights may need to be handled separately.
 
-Do not claim exact prices unless they are given by the user.
+Do not claim exact prices unless provided by the user.
 
 Return HTML.
 
-DAYS PLAN:
+DAYS PLAN
+
 Create exactly ${safeDays} days.
 
 Every day must contain:
+
 - morning
 - afternoon
 - evening
 
-Each period should contain useful activities and logical geographic grouping.
+Each period should contain useful activities.
 
-Avoid sending the traveler back and forth across the city unnecessarily.
+Group nearby places logically.
+
+Avoid unnecessary travel across the city.
 
 Include:
 - sightseeing
@@ -299,28 +308,24 @@ Include:
 - walking
 - relaxation
 - cultural activities
-- optional nightlife when appropriate
+- optional nightlife
 
 If the trip is short, prioritize the most important experiences.
 
-Each day should be detailed enough to be genuinely useful, not just one short sentence.
-
-Return exactly ${safeDays} objects.
-
-OUTPUT FORMAT
+OUTPUT
 
 Return ONLY valid JSON.
 
-Do not use markdown.
-Do not use code fences.
-Do not write explanations outside the JSON.
+No markdown.
+No code fences.
+No explanations outside JSON.
 
 Required structure:
 
 {
-  "transport": "<detailed HTML>",
-  "experiences": "<detailed HTML>",
-  "money": "<detailed HTML>",
+  "transport": "<HTML>",
+  "experiences": "<HTML>",
+  "money": "<HTML>",
   "daysPlan": [
     {
       "day": 1,
@@ -332,366 +337,343 @@ Required structure:
   ]
 }
 
-The daysPlan array must contain exactly ${safeDays} objects.
-
-Keep the total response reasonably compact, but do NOT make the sections overly short.
+The daysPlan array MUST contain exactly ${safeDays} objects.
 `;
+
+
+    // =======================================================
+    // TIMEOUT HELPER
+    // =======================================================
+
+    function fetchWithTimeout(
+      url,
+      options = {},
+      timeoutMs = 9000
+    ) {
+
+      const controller =
+        new AbortController();
+
+      const timeout =
+        setTimeout(
+          () => {
+            controller.abort();
+          },
+          timeoutMs
+        );
+
+      return fetch(
+        url,
+        {
+          ...options,
+          signal:
+            controller.signal
+        }
+      ).finally(
+        () => {
+          clearTimeout(timeout);
+        }
+      );
+
+    }
 
 
     // =======================================================
     // GROQ REQUEST
     // =======================================================
 
-    console.log(
-      "Calling Groq..."
-    );
+    async function generateWithGroq() {
 
-    let groqResponse;
-
-    try {
-
-      groqResponse =
-        await fetch(
-          GROQ_URL,
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-
-              "Authorization":
-                "Bearer " +
-                GROQ_API_KEY
-            },
-
-            body:
-              JSON.stringify({
-
-                model:
-                  GROQ_MODEL,
-
-                messages: [
-                  {
-                    role:
-                      "system",
-
-                    content:
-                      "You are a professional travel planner. Return valid JSON only. Make the plan practical, detailed and concise enough for an API response."
-                  },
-                  {
-                    role:
-                      "user",
-
-                    content:
-                      prompt
-                  }
-                ],
-
-                temperature:
-                  0.4,
-
-                max_completion_tokens:
-                  6200,
-
-                response_format: {
-                  type:
-                    "json_object"
-                }
-
-              })
-          }
-        );
-
-    } catch (error) {
-
-      console.error(
-        "Groq network error:",
-        error.message
+      console.log(
+        "Calling Groq..."
       );
 
-      return res.status(502).json({
-        error:
-          "Could not connect to Groq.",
-        details:
-          error.message
-      });
-
-    }
-
-
-    // =======================================================
-    // READ GROQ RESPONSE
-    // =======================================================
-
-    const groqText =
-      await groqResponse.text();
-
-    console.log(
-      "Groq HTTP status:",
-      groqResponse.status
-    );
-
-
-    // =======================================================
-    // GROQ ERROR
-    // =======================================================
-
-    if (!groqResponse.ok) {
-
-      console.error(
-        "GROQ ERROR:",
-        groqText
-      );
-
-      let errorMessage =
-        "Groq API request failed.";
+      let response;
 
       try {
 
-        const parsedError =
-          JSON.parse(
-            groqText
+        response =
+          await fetchWithTimeout(
+            GROQ_URL,
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                "Authorization":
+                  "Bearer " +
+                  GROQ_API_KEY
+              },
+
+              body:
+                JSON.stringify({
+
+                  model:
+                    GROQ_MODEL,
+
+                  messages: [
+
+                    {
+                      role:
+                        "system",
+
+                      content:
+                        "You are a professional travel planner. Return valid JSON only. Follow the requested JSON structure exactly."
+                    },
+
+                    {
+                      role:
+                        "user",
+
+                      content:
+                        prompt
+                    }
+
+                  ],
+
+                  temperature:
+                    0.3,
+
+                  max_completion_tokens:
+                    10000,
+
+                  response_format: {
+                    type:
+                      "json_object"
+                  },
+
+                  include_reasoning:
+                    false
+
+                })
+
+            },
+            15000
           );
 
-        errorMessage =
-          parsedError?.error?.message ||
-          errorMessage;
+      } catch (error) {
+
+        console.error(
+          "Groq network/timeout error:",
+          error.message
+        );
+
+        throw new Error(
+          "Could not connect to Groq: " +
+          error.message
+        );
+
+      }
+
+
+      const text =
+        await response.text();
+
+
+      console.log(
+        "Groq HTTP status:",
+        response.status
+      );
+
+
+      if (!response.ok) {
+
+        console.error(
+          "GROQ ERROR:",
+          text
+        );
+
+        let message =
+          "Groq API request failed.";
+
+        try {
+
+          const parsed =
+            JSON.parse(
+              text
+            );
+
+          message =
+            parsed?.error?.message ||
+            message;
+
+        } catch {
+          // Keep default.
+        }
+
+
+        if (
+          response.status ===
+          429
+        ) {
+
+          throw new Error(
+            "Groq rate limit reached. Please wait and try again."
+          );
+
+        }
+
+
+        throw new Error(
+          message
+        );
+
+      }
+
+
+      let data;
+
+      try {
+
+        data =
+          JSON.parse(
+            text
+          );
+
+      } catch (error) {
+
+        console.error(
+          "Invalid Groq HTTP JSON:",
+          text
+        );
+
+        throw new Error(
+          "Groq returned an invalid HTTP response."
+        );
+
+      }
+
+
+      const content =
+        data
+          ?.choices?.[0]
+          ?.message?.content;
+
+
+      if (!content) {
+
+        console.error(
+          "Groq returned no content:",
+          JSON.stringify(data)
+        );
+
+        throw new Error(
+          "Groq returned an empty response."
+        );
+
+      }
+
+
+      return content;
+
+    }
+
+
+    // =======================================================
+    // JSON PARSER
+    // =======================================================
+
+    function parseAIJSON(
+      value
+    ) {
+
+      if (
+        typeof value ===
+        "object" &&
+        value !== null
+      ) {
+
+        return value;
+
+      }
+
+
+      let text =
+        String(
+          value || ""
+        ).trim();
+
+
+      // Remove code fences if model
+      // accidentally returns them.
+
+      text =
+        text.replace(
+          /^```json\s*/i,
+          ""
+        );
+
+      text =
+        text.replace(
+          /^```\s*/i,
+          ""
+        );
+
+      text =
+        text.replace(
+          /\s*```$/i,
+          ""
+        );
+
+      text =
+        text.trim();
+
+
+      // First attempt.
+
+      try {
+
+        return JSON.parse(
+          text
+        );
 
       } catch {
-        // Keep default error.
+        // Continue.
       }
+
+
+      // Find first JSON object.
+
+      const first =
+        text.indexOf("{");
+
+      const last =
+        text.lastIndexOf("}");
 
 
       if (
-        groqResponse.status === 429
+        first !== -1 &&
+        last !== -1 &&
+        last > first
       ) {
 
-        return res.status(429).json({
-          error:
-            "Groq rate limit reached. Please wait and try again.",
-          details:
-            errorMessage
-        });
+        const candidate =
+          text.slice(
+            first,
+            last + 1
+          );
+
+
+        try {
+
+          return JSON.parse(
+            candidate
+          );
+
+        } catch {
+          // Continue.
+        }
 
       }
 
 
-      return res.status(500).json({
-        error:
-          errorMessage,
-        details:
-          groqText
-      });
-
-    }
-
-
-    // =======================================================
-    // PARSE GROQ HTTP JSON
-    // =======================================================
-
-    let groqData;
-
-    try {
-
-      groqData =
-        JSON.parse(
-          groqText
-        );
-
-    } catch (error) {
-
-      console.error(
-        "Invalid Groq HTTP JSON:",
-        groqText
+      throw new Error(
+        "Groq returned invalid travel plan JSON."
       );
 
-      return res.status(500).json({
-        error:
-          "Invalid response from Groq.",
-        details:
-          error.message
-      });
-
     }
-
-
-    // =======================================================
-    // GET AI CONTENT
-    // =======================================================
-
-    const aiText =
-      groqData
-        ?.choices?.[0]
-        ?.message?.content;
-
-
-    if (!aiText) {
-
-      console.error(
-        "Groq returned no content:",
-        JSON.stringify(
-          groqData
-        )
-      );
-
-      return res.status(500).json({
-        error:
-          "Groq returned an empty response."
-      });
-
-    }
-
-
-    // =======================================================
-    // PARSE AI JSON
-    // =======================================================
-
-    let aiPlan;
-
-    try {
-
-      aiPlan =
-        typeof aiText === "string"
-          ? JSON.parse(
-              aiText
-            )
-          : aiText;
-
-    } catch (error) {
-
-      console.error(
-        "Groq JSON parse error:",
-        aiText
-      );
-
-      return res.status(500).json({
-        error:
-          "Groq returned invalid travel plan JSON.",
-        details:
-          error.message
-      });
-
-    }
-
-
-    // =======================================================
-    // NORMALIZE AI CONTENT
-    // =======================================================
-
-    const transport =
-      typeof aiPlan.transport === "string"
-        ? aiPlan.transport
-        : "<p>Transportation information unavailable.</p>";
-
-
-    const experiences =
-      typeof aiPlan.experiences === "string"
-        ? aiPlan.experiences
-        : "<p>Experience information unavailable.</p>";
-
-
-    const money =
-      typeof aiPlan.money === "string"
-        ? aiPlan.money
-        : "<p>Budget information unavailable.</p>";
-
-
-    // =======================================================
-    // NORMALIZE DAYS
-    // =======================================================
-
-    let daysPlan =
-      Array.isArray(
-        aiPlan.daysPlan
-      )
-        ? aiPlan.daysPlan
-        : [];
-
-
-    daysPlan =
-      daysPlan
-        .slice(0, safeDays)
-        .map(
-          (day, index) => ({
-
-            day:
-              Number(
-                day?.day
-              ) || index + 1,
-
-            title:
-              String(
-                day?.title ||
-                `Day ${index + 1}`
-              ),
-
-            morning:
-              String(
-                day?.morning ||
-                "Morning activities unavailable."
-              ),
-
-            afternoon:
-              String(
-                day?.afternoon ||
-                "Afternoon activities unavailable."
-              ),
-
-            evening:
-              String(
-                day?.evening ||
-                "Evening activities unavailable."
-              )
-
-          })
-        );
-
-
-    // =======================================================
-    // SAFETY: MAKE SURE DAYS EXIST
-    // =======================================================
-
-    while (
-      daysPlan.length <
-      safeDays
-    ) {
-
-      const index =
-        daysPlan.length;
-
-      daysPlan.push({
-
-        day:
-          index + 1,
-
-        title:
-          `Day ${index + 1}`,
-
-        morning:
-          "Explore the destination's main attractions and local area.",
-
-        afternoon:
-          "Enjoy local food, shopping and a walking experience.",
-
-        evening:
-          "Relax and explore a safe, popular evening area."
-      });
-
-    }
-
-
-    // =======================================================
-    // OPENSTREETMAP
-    //
-    // ONLY external places source.
-    // NO FOURSQUARE.
-    // NO GEMINI.
-    // =======================================================
-
-    const OSM_USER_AGENT =
-      "AI-Life-Planner/1.0";
 
 
     // =======================================================
@@ -715,7 +697,7 @@ Keep the total response reasonably compact, but do NOT make the sections overly 
 
 
         const response =
-          await fetch(
+          await fetchWithTimeout(
             url,
             {
               method: "GET",
@@ -729,7 +711,8 @@ Keep the total response reasonably compact, but do NOT make the sections overly 
                   "application/json"
 
               }
-            }
+            },
+            7000
           );
 
 
@@ -751,7 +734,7 @@ Keep the total response reasonably compact, but do NOT make the sections overly 
 
         if (
           !Array.isArray(data) ||
-          !data.length
+          data.length === 0
         ) {
 
           return null;
@@ -839,7 +822,9 @@ Keep the total response reasonably compact, but do NOT make the sections overly 
 
 
       const url =
-        String(value).trim();
+        String(
+          value
+        ).trim();
 
 
       if (
@@ -872,7 +857,9 @@ Keep the total response reasonably compact, but do NOT make the sections overly 
 
 
       const raw =
-        String(value).trim();
+        String(
+          value
+        ).trim();
 
 
       if (
@@ -911,21 +898,23 @@ Keep the total response reasonably compact, but do NOT make the sections overly 
 
 
     // =======================================================
-    // GET OSM IMAGE
+    // OSM IMAGE
     // =======================================================
 
     function getOSMImage(
       tags
     ) {
 
-      const image =
+      const directImage =
         normalizeImageUrl(
           tags?.image
         );
 
 
-      if (image) {
-        return image;
+      if (directImage) {
+
+        return directImage;
+
       }
 
 
@@ -1019,11 +1008,13 @@ Keep the total response reasonably compact, but do NOT make the sections overly 
 
 
       const fields = [
+
         "addr:housenumber",
         "addr:street",
         "addr:suburb",
         "addr:district",
         "addr:city"
+
       ];
 
 
@@ -1091,7 +1082,7 @@ Keep the total response reasonably compact, but do NOT make the sections overly 
 
 
     // =======================================================
-    // OPENSTREETMAP URL
+    // OSM URL
     // =======================================================
 
     function buildOSMUrl(
@@ -1123,9 +1114,7 @@ Keep the total response reasonably compact, but do NOT make the sections overly 
 
 
     // =======================================================
-    // ONE OSM SEARCH
-    //
-    // Hotels + restaurants together.
+    // GET OSM PLACES
     // =======================================================
 
     async function getOSMPlaces(
@@ -1173,18 +1162,14 @@ Keep the total response reasonably compact, but do NOT make the sections overly 
         );
 
 
-        // ===================================================
-        // ONE OVERPASS REQUEST
-        // ===================================================
-
         const overpassQuery = `
-[out:json][timeout:30];
+[out:json][timeout:20];
 
 (
-  nwr["tourism"="hotel"](around:15000,${lat},${lon});
-  nwr["tourism"="hostel"](around:15000,${lat},${lon});
-  nwr["tourism"="guest_house"](around:15000,${lat},${lon});
-  nwr["amenity"="restaurant"](around:15000,${lat},${lon});
+  nwr["tourism"="hotel"](around:12000,${lat},${lon});
+  nwr["tourism"="hostel"](around:12000,${lat},${lon});
+  nwr["tourism"="guest_house"](around:12000,${lat},${lon});
+  nwr["amenity"="restaurant"](around:12000,${lat},${lon});
 );
 
 out center tags;
@@ -1195,13 +1180,8 @@ out center tags;
           "https://overpass-api.de/api/interpreter";
 
 
-        console.log(
-          "Sending ONE Overpass request..."
-        );
-
-
         const response =
-          await fetch(
+          await fetchWithTimeout(
             overpassURL,
             {
               method: "POST",
@@ -1225,7 +1205,8 @@ out center tags;
                   overpassQuery
                 )
 
-            }
+            },
+            12000
           );
 
 
@@ -1281,7 +1262,7 @@ out center tags;
 
 
         // ===================================================
-        // PROCESS OSM ELEMENTS
+        // PROCESS ELEMENTS
         // ===================================================
 
         for (
@@ -1339,7 +1320,7 @@ out center tags;
 
 
           // =================================================
-          // HOTEL
+          // HOTELS
           // =================================================
 
           const tourism =
@@ -1379,7 +1360,9 @@ out center tags;
 
 
               if (
-                !Number.isFinite(stars)
+                !Number.isFinite(
+                  stars
+                )
               ) {
 
                 stars =
@@ -1391,17 +1374,17 @@ out center tags;
 
 
               if (
-                !Number.isFinite(stars)
+                !Number.isFinite(
+                  stars
+                )
               ) {
 
-                stars =
-                  0;
+                stars = 0;
 
               }
 
 
-              const amenities =
-                [];
+              const amenities = [];
 
 
               if (
@@ -1483,11 +1466,6 @@ out center tags;
                     : "Hotel";
 
 
-              const description =
-                tags.description ||
-                `${name} is a real ${hotelType.toLowerCase()} listed in OpenStreetMap.`;
-
-
               hotels.push({
 
                 name:
@@ -1514,7 +1492,8 @@ out center tags;
 
                 description:
                   String(
-                    description
+                    tags.description ||
+                    `${name} is a real ${hotelType.toLowerCase()} listed in OpenStreetMap.`
                   ),
 
                 bookingUrl:
@@ -1525,14 +1504,12 @@ out center tags;
 
                 imageUrl,
 
+                image:
+                  imageUrl,
+
                 imageSource:
                   imageUrl
                     ? "OpenStreetMap"
-                    : "",
-
-                imageAttribution:
-                  imageUrl
-                    ? "OpenStreetMap data"
                     : "",
 
                 mapsUrl,
@@ -1561,7 +1538,7 @@ out center tags;
 
 
           // =================================================
-          // RESTAURANT
+          // RESTAURANTS
           // =================================================
 
           if (
@@ -1598,27 +1575,31 @@ out center tags;
                 "$$";
 
 
+              const numericRating =
+                Number(
+                  tags.rating
+                );
+
+
               const rating =
                 Number.isFinite(
-                  Number(
-                    tags.rating
-                  )
+                  numericRating
                 )
-                  ? Number(
-                      tags.rating
-                    )
+                  ? numericRating
                   : null;
+
+
+              const reviewCountNumber =
+                Number(
+                  tags["review:count"]
+                );
 
 
               const reviewCount =
                 Number.isFinite(
-                  Number(
-                    tags["review:count"]
-                  )
+                  reviewCountNumber
                 )
-                  ? Number(
-                      tags["review:count"]
-                    )
+                  ? reviewCountNumber
                   : null;
 
 
@@ -1627,11 +1608,6 @@ out center tags;
                   tags,
                   placeName
                 );
-
-
-              const description =
-                tags.description ||
-                `${name} is a real local restaurant in ${placeName}, listed in OpenStreetMap.`;
 
 
               restaurants.push({
@@ -1662,19 +1638,18 @@ out center tags;
 
                 description:
                   String(
-                    description
+                    tags.description ||
+                    `${name} is a real local restaurant in ${placeName}, listed in OpenStreetMap.`
                   ),
 
                 imageUrl,
 
+                image:
+                  imageUrl,
+
                 imageSource:
                   imageUrl
                     ? "OpenStreetMap"
-                    : "",
-
-                imageAttribution:
-                  imageUrl
-                    ? "OpenStreetMap data"
                     : "",
 
                 mapsUrl,
@@ -1720,8 +1695,6 @@ out center tags;
 
         // ===================================================
         // SORT HOTELS
-        //
-        // Hotels with real OSM images first.
         // ===================================================
 
         hotels.sort(
@@ -1751,20 +1724,9 @@ out center tags;
             }
 
 
-            const aStars =
-              Number(
-                a.stars
-              ) || 0;
-
-            const bStars =
-              Number(
-                b.stars
-              ) || 0;
-
-
             return (
-              bStars -
-              aStars
+              (Number(b.stars) || 0) -
+              (Number(a.stars) || 0)
             );
 
           }
@@ -1773,8 +1735,6 @@ out center tags;
 
         // ===================================================
         // SORT RESTAURANTS
-        //
-        // Restaurants with real OSM images first.
         // ===================================================
 
         restaurants.sort(
@@ -1804,20 +1764,9 @@ out center tags;
             }
 
 
-            const aRating =
-              Number(
-                a.rating
-              ) || 0;
-
-            const bRating =
-              Number(
-                b.rating
-              ) || 0;
-
-
             return (
-              bRating -
-              aRating
+              (Number(b.rating) || 0) -
+              (Number(a.rating) || 0)
             );
 
           }
@@ -1832,8 +1781,7 @@ out center tags;
         console.log(
           "OSM hotel photos:",
           hotels.filter(
-            hotel =>
-              !!hotel.imageUrl
+            h => !!h.imageUrl
           ).length
         );
 
@@ -1845,8 +1793,7 @@ out center tags;
         console.log(
           "OSM restaurant photos:",
           restaurants.filter(
-            restaurant =>
-              !!restaurant.imageUrl
+            r => !!r.imageUrl
           ).length
         );
 
@@ -1885,33 +1832,296 @@ out center tags;
 
 
     // =======================================================
-    // GET OSM PLACES
+    // RUN GROQ + OSM IN PARALLEL
+    //
+    // This is important for Vercel performance.
     // =======================================================
 
     console.log(
-      "Starting ONE OpenStreetMap places request..."
+      "Starting Groq and OpenStreetMap in parallel..."
     );
 
 
-    const osmPlaces =
-      await getOSMPlaces(
-        safeDestination
+    let groqResult;
+    let osmResult;
+
+
+    try {
+
+      const results =
+        await Promise.allSettled([
+
+          generateWithGroq(),
+
+          getOSMPlaces(
+            safeDestination
+          )
+
+        ]);
+
+
+      const groqResponse =
+        results[0];
+
+      const osmResponse =
+        results[1];
+
+
+      if (
+        groqResponse.status ===
+        "rejected"
+      ) {
+
+        console.error(
+          "Groq failed:",
+          groqResponse.reason
+        );
+
+        return res.status(502).json({
+
+          error:
+            "The AI travel plan could not be generated.",
+
+          details:
+            groqResponse.reason?.message ||
+            "Groq request failed."
+
+        });
+
+      }
+
+
+      groqResult =
+        groqResponse.value;
+
+
+      if (
+        osmResponse.status ===
+        "fulfilled"
+      ) {
+
+        osmResult =
+          osmResponse.value;
+
+      } else {
+
+        console.error(
+          "OSM failed:",
+          osmResponse.reason
+        );
+
+        osmResult = {
+
+          hotels: [],
+
+          restaurants: []
+
+        };
+
+      }
+
+    } catch (error) {
+
+      console.error(
+        "Parallel requests error:",
+        error
       );
 
+      return res.status(500).json({
+
+        error:
+          "Could not generate the travel plan.",
+
+        details:
+          error.message
+
+      });
+
+    }
+
+
+    // =======================================================
+    // PARSE AI RESPONSE
+    // =======================================================
+
+    let aiPlan;
+
+
+    try {
+
+      aiPlan =
+        parseAIJSON(
+          groqResult
+        );
+
+    } catch (error) {
+
+      console.error(
+        "AI JSON ERROR:",
+        error.message
+      );
+
+      console.error(
+        "AI RAW RESPONSE:",
+        String(
+          groqResult
+        ).slice(
+          0,
+          5000
+        )
+      );
+
+      return res.status(500).json({
+
+        error:
+          "Groq returned invalid travel plan JSON.",
+
+        details:
+          error.message
+
+      });
+
+    }
+
+
+    // =======================================================
+    // NORMALIZE AI SECTIONS
+    // =======================================================
+
+    const transport =
+      typeof aiPlan.transport ===
+      "string"
+
+        ? aiPlan.transport
+
+        : "<p>Transportation information unavailable.</p>";
+
+
+    const experiences =
+      typeof aiPlan.experiences ===
+      "string"
+
+        ? aiPlan.experiences
+
+        : "<p>Experience information unavailable.</p>";
+
+
+    const money =
+      typeof aiPlan.money ===
+      "string"
+
+        ? aiPlan.money
+
+        : "<p>Budget information unavailable.</p>";
+
+
+    // =======================================================
+    // NORMALIZE DAYS
+    // =======================================================
+
+    let daysPlan =
+      Array.isArray(
+        aiPlan.daysPlan
+      )
+        ? aiPlan.daysPlan
+        : [];
+
+
+    daysPlan =
+      daysPlan
+        .slice(
+          0,
+          safeDays
+        )
+        .map(
+          (day, index) => ({
+
+            day:
+              Number(
+                day?.day
+              ) ||
+              index + 1,
+
+            title:
+              String(
+                day?.title ||
+                `Day ${index + 1}`
+              ),
+
+            morning:
+              String(
+                day?.morning ||
+                "Morning activities unavailable."
+              ),
+
+            afternoon:
+              String(
+                day?.afternoon ||
+                "Afternoon activities unavailable."
+              ),
+
+            evening:
+              String(
+                day?.evening ||
+                "Evening activities unavailable."
+              )
+
+          })
+        );
+
+
+    // =======================================================
+    // FILL MISSING DAYS
+    // =======================================================
+
+    while (
+      daysPlan.length <
+      safeDays
+    ) {
+
+      const index =
+        daysPlan.length;
+
+
+      daysPlan.push({
+
+        day:
+          index + 1,
+
+        title:
+          `Day ${index + 1}`,
+
+        morning:
+          "Explore the destination's main attractions and local area.",
+
+        afternoon:
+          "Enjoy local food, shopping and a walking experience.",
+
+        evening:
+          "Relax and explore a safe, popular evening area."
+
+      });
+
+    }
+
+
+    // =======================================================
+    // OSM DATA
+    // =======================================================
 
     const hotels =
       Array.isArray(
-        osmPlaces.hotels
+        osmResult?.hotels
       )
-        ? osmPlaces.hotels
+        ? osmResult.hotels
         : [];
 
 
     const restaurants =
       Array.isArray(
-        osmPlaces.restaurants
+        osmResult?.restaurants
       )
-        ? osmPlaces.restaurants
+        ? osmResult.restaurants
         : [];
 
 
@@ -1986,6 +2196,7 @@ out center tags;
 
       },
 
+      // script.js expects data.stay
       stay:
         hotels,
 
@@ -2063,9 +2274,11 @@ out center tags;
     // SUCCESS
     // =======================================================
 
-    return res.status(200).json(
-      responseData
-    );
+    return res
+      .status(200)
+      .json(
+        responseData
+      );
 
 
   } catch (error) {
