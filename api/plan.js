@@ -55,60 +55,30 @@ module.exports = async (req, res) => {
 
 
     // =====================================================
-    // API KEYS
+    // API KEY
+    // ONLY GROQ IS USED
     // =====================================================
 
     const GROQ_API_KEY =
       process.env.GROQ_API_KEY;
 
-    const FOURSQUARE_API_KEY =
-      process.env.FOURSQUARE_API_KEY;
-
-
-    // =====================================================
-    // GROQ KEY CHECK
-    // =====================================================
 
     if (!GROQ_API_KEY) {
 
       console.error(
-        "GROQ_API_KEY missing"
+        "GROQ_API_KEY missing."
       );
 
       return res.status(500).json({
         error:
-          "Groq API key is missing."
+          "Groq API key is missing. Add GROQ_API_KEY in Vercel Environment Variables."
       });
 
     }
 
-
     console.log(
       "GROQ_API_KEY detected."
     );
-
-
-    // =====================================================
-    // FOURSQUARE KEY CHECK
-    // =====================================================
-
-    if (!FOURSQUARE_API_KEY) {
-
-      console.warn(
-        "FOURSQUARE_API_KEY missing."
-      );
-
-      console.warn(
-        "Restaurants will still load from OpenStreetMap, but Foursquare photos will not be available."
-      );
-
-    } else {
-
-      console.log(
-        "FOURSQUARE_API_KEY detected."
-      );
-
-    }
 
 
     // =====================================================
@@ -131,8 +101,11 @@ module.exports = async (req, res) => {
 
 
     // =====================================================
-    // GROQ URL
+    // GROQ SETTINGS
     // =====================================================
+
+    const GROQ_MODEL =
+      "openai/gpt-oss-120b";
 
     const GROQ_URL =
       "https://api.groq.com/openai/v1/chat/completions";
@@ -157,11 +130,11 @@ Notes: ${notes || "None"}
 
 IMPORTANT HOTEL REQUIREMENT:
 
-Return up to 10 different real accommodation options in ${destination}.
+Return up to 10 different REAL accommodation options in ${destination}.
 
 Do NOT invent hotels.
 
-The hotels must be real existing accommodations.
+Hotels must be real existing accommodations.
 
 For every hotel return:
 
@@ -179,8 +152,8 @@ Prices are estimates only.
 Never claim live availability.
 
 For bookingUrl:
-If you do not know the exact hotel Booking.com page,
-create a Booking.com search URL for that hotel and destination.
+If you know the exact Booking.com page, use it.
+Otherwise create a Booking.com search URL using the hotel name and destination.
 
 Do NOT return hotel image URLs.
 
@@ -190,23 +163,22 @@ IMPORTANT RESTAURANT REQUIREMENT:
 
 Do NOT generate restaurant names.
 
-Restaurants will be obtained separately from OpenStreetMap and Foursquare.
+Restaurants are obtained separately from OpenStreetMap.
 
 Therefore return:
 
 "restaurants": []
 
-IMPORTANT OUTPUT REQUIREMENTS:
+IMPORTANT CONTENT REQUIREMENT:
+
+The following fields must contain HTML:
+
+transport
+experiences
+money
+daysPlan
 
 Return ONLY valid JSON.
-
-Do not use Markdown.
-
-Do not use code fences.
-
-Do not add explanations before or after the JSON.
-
-transport, experiences, money and daysPlan must contain HTML.
 
 Use exactly this structure:
 
@@ -241,6 +213,10 @@ Use exactly this structure:
     // GROQ REQUEST
     // =====================================================
 
+    console.log(
+      "Sending request to Groq..."
+    );
+
     const groqResponse =
       await fetch(
         GROQ_URL,
@@ -259,26 +235,27 @@ Use exactly this structure:
           body: JSON.stringify({
 
             model:
-              "openai/gpt-oss-120b",
+              GROQ_MODEL,
 
             messages: [
               {
+                role: "system",
+                content:
+                  "You are an expert travel planner. Return only valid JSON."
+              },
+              {
                 role: "user",
-                content: prompt
+                content:
+                  prompt
               }
             ],
 
-            temperature: 0.3,
-
-            max_completion_tokens:
-              6000,
+            temperature: 0.4,
 
             response_format: {
               type: "json_object"
-            },
+            }
 
-            reasoning_effort:
-              "low"
           })
         }
       );
@@ -305,62 +282,20 @@ Use exactly this structure:
         groqText
       );
 
-
-      let errorDetails =
-        groqText;
-
-      try {
-
-        const parsedError =
-          JSON.parse(
-            groqText
-          );
-
-        errorDetails =
-          parsedError?.error?.message ||
-          groqText;
-
-      } catch {
-        // Keep original text.
-      }
-
-
-      if (
+      return res.status(
         groqResponse.status === 429
-      ) {
-
-        return res.status(429).json({
-
-          error:
-            "The AI service has reached its current free usage limit. Please try again later.",
-
-          provider:
-            "Groq",
-
-          status:
-            429,
-
-          details:
-            errorDetails
-
-        });
-
-      }
-
-
-      return res.status(502).json({
+          ? 429
+          : 500
+      ).json({
 
         error:
           "Groq API request failed.",
-
-        provider:
-          "Groq",
 
         status:
           groqResponse.status,
 
         details:
-          errorDetails
+          groqText
 
       });
 
@@ -388,10 +323,13 @@ Use exactly this structure:
       );
 
       return res.status(500).json({
+
         error:
           "Invalid response from Groq.",
+
         details:
           groqText
+
       });
 
     }
@@ -404,33 +342,35 @@ Use exactly this structure:
     const text =
       groqData
         ?.choices?.[0]
-        ?.message
-        ?.content;
+        ?.message?.content;
 
 
     if (!text) {
 
       console.error(
-        "Groq returned no text:",
+        "Groq returned no content:",
         JSON.stringify(
           groqData
         )
       );
 
       return res.status(500).json({
+
         error:
           "Groq returned an empty response.",
+
         details:
           JSON.stringify(
             groqData
           )
+
       });
 
     }
 
 
     // =====================================================
-    // CLEAN GROQ JSON
+    // CLEAN JSON
     // =====================================================
 
     let cleanText =
@@ -477,10 +417,13 @@ Use exactly this structure:
       );
 
       return res.status(500).json({
+
         error:
           "Groq returned invalid JSON.",
+
         details:
           error.message
+
       });
 
     }
@@ -509,65 +452,102 @@ Use exactly this structure:
             hotel.name
         )
         .map(
-          hotel => ({
+          hotel => {
 
-            name:
-              String(
-                hotel.name
-              ),
+            let bookingUrl =
+              hotel.bookingUrl ||
+              "";
 
-            stars:
-              Number(
-                hotel.stars
-              ) || 0,
+            // ------------------------------------------------
+            // SAFE BOOKING.COM SEARCH FALLBACK
+            // ------------------------------------------------
 
-            price:
-              Number.isFinite(
-                Number(
-                  hotel.price
-                )
+            if (
+              !bookingUrl ||
+              !bookingUrl.includes(
+                "booking.com"
               )
-                ? Number(
+            ) {
+
+              bookingUrl =
+                "https://www.booking.com/searchresults.html?ss=" +
+                encodeURIComponent(
+                  hotel.name +
+                  " " +
+                  destination
+                );
+
+            }
+
+
+            return {
+
+              name:
+                String(
+                  hotel.name
+                ),
+
+              stars:
+                Number(
+                  hotel.stars
+                ) || 0,
+
+              price:
+                Number.isFinite(
+                  Number(
                     hotel.price
                   )
-                : null,
+                )
+                  ? Number(
+                      hotel.price
+                    )
+                  : null,
 
-            currency:
-              hotel.currency ||
-              "USD",
+              currency:
+                hotel.currency ||
+                "USD",
 
-            priceType:
-              hotel.priceType ||
-              "estimated per night",
+              priceType:
+                hotel.priceType ||
+                "estimated per night",
 
-            amenities:
-              Array.isArray(
-                hotel.amenities
-              )
-                ? hotel.amenities.slice(
-                    0,
-                    6
-                  )
-                : [],
+              amenities:
+                Array.isArray(
+                  hotel.amenities
+                )
+                  ? hotel.amenities
+                      .slice(
+                        0,
+                        6
+                      )
+                      .map(
+                        item =>
+                          String(
+                            item
+                          )
+                      )
+                  : [],
 
-            description:
-              hotel.description ||
-              "",
+              description:
+                String(
+                  hotel.description ||
+                  ""
+                ),
 
-            bookingUrl:
-              hotel.bookingUrl ||
-              "",
+              bookingUrl,
 
-            imageUrl:
-              "",
+              imageUrl:
+                "",
 
-            photoAttribution:
-              "",
+              photoAttribution:
+                "",
 
-            photoSource:
-              ""
+              photoSource:
+                ""
 
-          })
+            };
+
+          }
         );
 
 
@@ -575,7 +555,8 @@ Use exactly this structure:
     // REMOVE DUPLICATE HOTELS
     // =====================================================
 
-    const uniqueHotels = [];
+    const uniqueHotels =
+      [];
 
     const hotelNames =
       new Set();
@@ -587,7 +568,9 @@ Use exactly this structure:
     ) {
 
       const key =
-        hotel.name
+        String(
+          hotel.name
+        )
           .toLowerCase()
           .trim();
 
@@ -625,7 +608,9 @@ Use exactly this structure:
 
 
     // =====================================================
-    // NO RANDOM HOTEL IMAGES
+    // HOTEL IMAGES
+    // =====================================================
+    // No external hotel image API is used here.
     // =====================================================
 
     travelData.stay =
@@ -656,14 +641,6 @@ Use exactly this structure:
 
 
     // =====================================================
-    // FOURSQUARE API VERSION
-    // =====================================================
-
-    const FOURSQUARE_API_VERSION =
-      "2025-06-17";
-
-
-    // =====================================================
     // GEOCODE DESTINATION
     // =====================================================
 
@@ -683,6 +660,12 @@ Use exactly this structure:
           );
 
 
+        console.log(
+          "Geocoding destination:",
+          destination
+        );
+
+
         const response =
           await fetch(
             url,
@@ -698,6 +681,7 @@ Use exactly this structure:
                   "application/json"
 
               }
+
             }
           );
 
@@ -800,1152 +784,6 @@ Use exactly this structure:
           " "
         )
         .trim();
-
-    }
-
-
-    // =====================================================
-    // CALCULATE NAME SIMILARITY
-    // =====================================================
-
-    function calculateNameSimilarity(
-      firstName,
-      secondName
-    ) {
-
-      const a =
-        normalizePlaceName(
-          firstName
-        );
-
-      const b =
-        normalizePlaceName(
-          secondName
-        );
-
-
-      if (
-        !a ||
-        !b
-      ) {
-
-        return 0;
-
-      }
-
-
-      if (
-        a === b
-      ) {
-
-        return 1;
-
-      }
-
-
-      if (
-        a.includes(b) ||
-        b.includes(a)
-      ) {
-
-        return 0.9;
-
-      }
-
-
-      const aWords =
-        new Set(
-          a.split(
-            /\s+/
-          )
-        );
-
-      const bWords =
-        new Set(
-          b.split(
-            /\s+/
-          )
-        );
-
-
-      let common =
-        0;
-
-
-      for (
-        const word
-        of aWords
-      ) {
-
-        if (
-          bWords.has(
-            word
-          )
-        ) {
-
-          common++;
-
-        }
-
-      }
-
-
-      const total =
-        Math.max(
-          aWords.size,
-          bWords.size
-        );
-
-
-      if (
-        total === 0
-      ) {
-
-        return 0;
-
-      }
-
-
-      return (
-        common /
-        total
-      );
-
-    }
-
-
-    // =====================================================
-    // DISTANCE BETWEEN COORDINATES
-    // =====================================================
-
-    function coordinateDistance(
-      lat1,
-      lon1,
-      lat2,
-      lon2
-    ) {
-
-      const aLat =
-        Number(lat1);
-
-      const aLon =
-        Number(lon1);
-
-      const bLat =
-        Number(lat2);
-
-      const bLon =
-        Number(lon2);
-
-
-      if (
-        !Number.isFinite(aLat) ||
-        !Number.isFinite(aLon) ||
-        !Number.isFinite(bLat) ||
-        !Number.isFinite(bLon)
-      ) {
-
-        return Infinity;
-
-      }
-
-
-      const earthRadius =
-        6371000;
-
-
-      const lat1Rad =
-        aLat *
-        Math.PI /
-        180;
-
-      const lat2Rad =
-        bLat *
-        Math.PI /
-        180;
-
-      const deltaLat =
-        (
-          bLat -
-          aLat
-        ) *
-        Math.PI /
-        180;
-
-      const deltaLon =
-        (
-          bLon -
-          aLon
-        ) *
-        Math.PI /
-        180;
-
-
-      const a =
-        Math.sin(
-          deltaLat / 2
-        ) *
-        Math.sin(
-          deltaLat / 2
-        ) +
-        Math.cos(
-          lat1Rad
-        ) *
-        Math.cos(
-          lat2Rad
-        ) *
-        Math.sin(
-          deltaLon / 2
-        ) *
-        Math.sin(
-          deltaLon / 2
-        );
-
-
-      const c =
-        2 *
-        Math.atan2(
-          Math.sqrt(a),
-          Math.sqrt(
-            1 - a
-          )
-        );
-
-
-      return (
-        earthRadius *
-        c
-      );
-
-    }
-
-
-    // =====================================================
-    // FOURSQUARE SEARCH
-    // =====================================================
-
-    async function findFoursquarePlace(
-      name,
-      latitude,
-      longitude
-    ) {
-
-      try {
-
-        if (
-          !FOURSQUARE_API_KEY
-        ) {
-
-          return null;
-
-        }
-
-
-        if (
-          !name ||
-          !Number.isFinite(
-            Number(latitude)
-          ) ||
-          !Number.isFinite(
-            Number(longitude)
-          )
-        ) {
-
-          return null;
-
-        }
-
-
-        const params =
-          new URLSearchParams();
-
-
-        params.set(
-          "query",
-          name
-        );
-
-        params.set(
-          "ll",
-          `${latitude},${longitude}`
-        );
-
-        params.set(
-          "radius",
-          "1500"
-        );
-
-        params.set(
-          "limit",
-          "10"
-        );
-
-
-        const url =
-          "https://places-api.foursquare.com/places/search?" +
-          params.toString();
-
-
-        console.log(
-          "Foursquare search:",
-          name
-        );
-
-
-        const response =
-          await fetch(
-            url,
-            {
-              method: "GET",
-
-              headers: {
-
-                "Accept":
-                  "application/json",
-
-                "Authorization":
-                  "Bearer " +
-                  FOURSQUARE_API_KEY,
-
-                "X-Places-Api-Version":
-                  FOURSQUARE_API_VERSION
-
-              }
-            }
-          );
-
-
-        const responseText =
-          await response.text();
-
-
-        if (
-          !response.ok
-        ) {
-
-          console.error(
-            "Foursquare search error:",
-            response.status,
-            responseText
-          );
-
-          return null;
-
-        }
-
-
-        let data;
-
-        try {
-
-          data =
-            JSON.parse(
-              responseText
-            );
-
-        } catch {
-
-          console.error(
-            "Foursquare search returned invalid JSON."
-          );
-
-          return null;
-
-        }
-
-
-        if (
-          !data ||
-          !Array.isArray(
-            data.results
-          ) ||
-          data.results.length === 0
-        ) {
-
-          console.log(
-            "No Foursquare results:",
-            name
-          );
-
-          return null;
-
-        }
-
-
-        // -------------------------------------------------
-        // CHOOSE BEST MATCH
-        // -------------------------------------------------
-
-        let best =
-          null;
-
-        let bestScore =
-          -Infinity;
-
-
-        for (
-          const place
-          of data.results
-        ) {
-
-          const placeName =
-            place?.name ||
-            "";
-
-
-          const placeLat =
-            Number(
-              place?.latitude ??
-              place?.geocodes?.main?.latitude
-            );
-
-
-          const placeLon =
-            Number(
-              place?.longitude ??
-              place?.geocodes?.main?.longitude
-            );
-
-
-          const similarity =
-            calculateNameSimilarity(
-              name,
-              placeName
-            );
-
-
-          const distance =
-            coordinateDistance(
-              latitude,
-              longitude,
-              placeLat,
-              placeLon
-            );
-
-
-          const distanceScore =
-            Number.isFinite(
-              distance
-            )
-              ? Math.max(
-                  0,
-                  1 -
-                  (
-                    distance /
-                    1500
-                  )
-                )
-              : 0;
-
-
-          const score =
-            (
-              similarity *
-              0.75
-            ) +
-            (
-              distanceScore *
-              0.25
-            );
-
-
-          console.log(
-            "Foursquare candidate:",
-            placeName,
-            "| similarity:",
-            similarity.toFixed(2),
-            "| distance:",
-            Number.isFinite(
-              distance
-            )
-              ? Math.round(
-                  distance
-                ) + "m"
-              : "unknown",
-            "| score:",
-            score.toFixed(2)
-          );
-
-
-          if (
-            score >
-            bestScore
-          ) {
-
-            bestScore =
-              score;
-
-            best =
-              place;
-
-          }
-
-        }
-
-
-        if (
-          !best
-        ) {
-
-          return null;
-
-        }
-
-
-        // -------------------------------------------------
-        // SAFETY CHECK
-        // -------------------------------------------------
-
-        const finalSimilarity =
-          calculateNameSimilarity(
-            name,
-            best?.name
-          );
-
-
-        const finalDistance =
-          coordinateDistance(
-            latitude,
-            longitude,
-            best?.latitude ??
-              best?.geocodes?.main?.latitude,
-            best?.longitude ??
-              best?.geocodes?.main?.longitude
-          );
-
-
-        if (
-          finalSimilarity < 0.30 &&
-          finalDistance > 500
-        ) {
-
-          console.log(
-            "Foursquare match rejected as unrelated:",
-            name,
-            "=>",
-            best?.name
-          );
-
-          return null;
-
-        }
-
-
-        console.log(
-          "Foursquare best match:",
-          name,
-          "=>",
-          best?.name,
-          "| score:",
-          bestScore.toFixed(2)
-        );
-
-
-        return best;
-
-      } catch (error) {
-
-        console.error(
-          "Foursquare search exception:",
-          error.message
-        );
-
-        return null;
-
-      }
-
-    }
-
-
-    // =====================================================
-    // GET FOURSQUARE PLACE DETAILS
-    // =====================================================
-
-    async function getFoursquarePlaceDetails(
-      fsqPlaceId
-    ) {
-
-      try {
-
-        if (
-          !FOURSQUARE_API_KEY ||
-          !fsqPlaceId
-        ) {
-
-          return null;
-
-        }
-
-
-        const fields = [
-          "fsq_place_id",
-          "name",
-          "rating",
-          "location",
-          "website",
-          "tel",
-          "categories"
-        ].join(",");
-
-
-        const url =
-          "https://places-api.foursquare.com/places/" +
-          encodeURIComponent(
-            fsqPlaceId
-          ) +
-          "?fields=" +
-          encodeURIComponent(
-            fields
-          );
-
-
-        const response =
-          await fetch(
-            url,
-            {
-              method: "GET",
-
-              headers: {
-
-                "Accept":
-                  "application/json",
-
-                "Authorization":
-                  "Bearer " +
-                  FOURSQUARE_API_KEY,
-
-                "X-Places-Api-Version":
-                  FOURSQUARE_API_VERSION
-
-              }
-            }
-          );
-
-
-        const responseText =
-          await response.text();
-
-
-        if (
-          !response.ok
-        ) {
-
-          console.warn(
-            "Foursquare details unavailable:",
-            response.status,
-            responseText
-          );
-
-          return null;
-
-        }
-
-
-        try {
-
-          return JSON.parse(
-            responseText
-          );
-
-        } catch {
-
-          console.warn(
-            "Foursquare details returned invalid JSON."
-          );
-
-          return null;
-
-        }
-
-      } catch (error) {
-
-        console.error(
-          "Foursquare details error:",
-          error.message
-        );
-
-        return null;
-
-      }
-
-    }
-
-
-    // =====================================================
-    // GET FOURSQUARE PLACE PHOTOS
-    // =====================================================
-
-    async function getFoursquarePlacePhotos(
-      fsqPlaceId
-    ) {
-
-      try {
-
-        if (
-          !FOURSQUARE_API_KEY ||
-          !fsqPlaceId
-        ) {
-
-          return [];
-
-        }
-
-
-        const params =
-          new URLSearchParams();
-
-
-        params.set(
-          "limit",
-          "10"
-        );
-
-
-        params.set(
-          "classifications",
-          "food_or_drink,outdoor_building_exterior,outdoor_or_storefront,outdoor"
-        );
-
-
-        const url =
-          "https://places-api.foursquare.com/places/" +
-          encodeURIComponent(
-            fsqPlaceId
-          ) +
-          "/photos?" +
-          params.toString();
-
-
-        console.log(
-          "Foursquare photos request:",
-          fsqPlaceId
-        );
-
-
-        const response =
-          await fetch(
-            url,
-            {
-              method: "GET",
-
-              headers: {
-
-                "Accept":
-                  "application/json",
-
-                "Authorization":
-                  "Bearer " +
-                  FOURSQUARE_API_KEY,
-
-                "X-Places-Api-Version":
-                  FOURSQUARE_API_VERSION
-
-              }
-            }
-          );
-
-
-        const responseText =
-          await response.text();
-
-
-        console.log(
-          "Foursquare photos HTTP status:",
-          response.status
-        );
-
-
-        if (
-          !response.ok
-        ) {
-
-          console.warn(
-            "Foursquare photos error:",
-            response.status,
-            responseText
-          );
-
-          return [];
-
-        }
-
-
-        let data;
-
-        try {
-
-          data =
-            JSON.parse(
-              responseText
-            );
-
-        } catch {
-
-          console.warn(
-            "Could not parse Foursquare photos response:",
-            responseText
-          );
-
-          return [];
-
-        }
-
-
-        if (
-          !Array.isArray(
-            data
-          )
-        ) {
-
-          console.warn(
-            "Foursquare photos response is not an array:",
-            JSON.stringify(
-              data
-            )
-          );
-
-          return [];
-
-        }
-
-
-        console.log(
-          "Foursquare raw photos:",
-          data.length
-        );
-
-
-        const photoUrls =
-          [];
-
-
-        for (
-          const photo
-          of data
-        ) {
-
-          if (
-            photo?.prefix &&
-            photo?.suffix
-          ) {
-
-            const mediumUrl =
-              String(
-                photo.prefix
-              ) +
-              "600x600" +
-              String(
-                photo.suffix
-              );
-
-
-            const originalUrl =
-              String(
-                photo.prefix
-              ) +
-              "original" +
-              String(
-                photo.suffix
-              );
-
-
-            if (
-              mediumUrl
-            ) {
-
-              photoUrls.push({
-
-                url:
-                  mediumUrl,
-
-                originalUrl,
-
-                attribution:
-                  "Foursquare"
-
-              });
-
-            }
-
-          } else if (
-            photo?.url
-          ) {
-
-            photoUrls.push({
-
-              url:
-                String(
-                  photo.url
-                ),
-
-              originalUrl:
-                String(
-                  photo.url
-                ),
-
-              attribution:
-                "Foursquare"
-
-            });
-
-          }
-
-        }
-
-
-        console.log(
-          "Foursquare usable photos:",
-          photoUrls.length
-        );
-
-
-        return photoUrls;
-
-      } catch (error) {
-
-        console.error(
-          "Foursquare photos exception:",
-          error.message
-        );
-
-        return [];
-
-      }
-
-    }
-
-
-    // =====================================================
-    // ENRICH RESTAURANT WITH FOURSQUARE
-    // =====================================================
-
-    async function enrichRestaurantWithFoursquare(
-      restaurant
-    ) {
-
-      try {
-
-        if (
-          !FOURSQUARE_API_KEY
-        ) {
-
-          return restaurant;
-
-        }
-
-
-        if (
-          !restaurant ||
-          !restaurant.name ||
-          !Number.isFinite(
-            Number(
-              restaurant.latitude
-            )
-          ) ||
-          !Number.isFinite(
-            Number(
-              restaurant.longitude
-            )
-          )
-        ) {
-
-          return restaurant;
-
-        }
-
-
-        const place =
-          await findFoursquarePlace(
-            restaurant.name,
-            restaurant.latitude,
-            restaurant.longitude
-          );
-
-
-        if (
-          !place
-        ) {
-
-          console.log(
-            "No Foursquare match:",
-            restaurant.name
-          );
-
-          return restaurant;
-
-        }
-
-
-        const fsqId =
-          place.fsq_place_id ||
-          place.fsq_id ||
-          "";
-
-
-        if (
-          !fsqId
-        ) {
-
-          console.log(
-            "Foursquare result has no ID:",
-            restaurant.name
-          );
-
-          return restaurant;
-
-        }
-
-
-        console.log(
-          "Foursquare ID:",
-          restaurant.name,
-          "=>",
-          fsqId
-        );
-
-
-        const details =
-          await getFoursquarePlaceDetails(
-            fsqId
-          );
-
-
-        const finalPlace =
-          details ||
-          place;
-
-
-        const photos =
-          await getFoursquarePlacePhotos(
-            fsqId
-          );
-
-
-        let photoUrl =
-          "";
-
-        let photoAttribution =
-          "";
-
-
-        if (
-          Array.isArray(
-            photos
-          ) &&
-          photos.length > 0 &&
-          photos[0]?.url
-        ) {
-
-          photoUrl =
-            photos[0].url;
-
-          photoAttribution =
-            photos[0].attribution ||
-            "Foursquare";
-
-        }
-
-
-        let rating =
-          restaurant.rating;
-
-
-        if (
-          finalPlace.rating !== undefined &&
-          finalPlace.rating !== null
-        ) {
-
-          const numericRating =
-            Number(
-              finalPlace.rating
-            );
-
-
-          if (
-            Number.isFinite(
-              numericRating
-            )
-          ) {
-
-            rating =
-              numericRating;
-
-          }
-
-        }
-
-
-        const website =
-          restaurant.website ||
-          finalPlace.website ||
-          "";
-
-
-        const phone =
-          restaurant.phone ||
-          finalPlace.tel ||
-          "";
-
-
-        const foursquareUrl =
-          `https://foursquare.com/place/${encodeURIComponent(
-            fsqId
-          )}`;
-
-
-        console.log(
-          "Restaurant enriched:",
-          restaurant.name,
-          "| Foursquare:",
-          fsqId,
-          "| Photo:",
-          photoUrl
-            ? "YES"
-            : "NO"
-        );
-
-
-        return {
-
-          ...restaurant,
-
-          rating,
-
-          website,
-
-          phone,
-
-          foursquareId:
-            fsqId,
-
-          foursquareUrl,
-
-          imageUrl:
-            photoUrl ||
-            "",
-
-          imageSource:
-            photoUrl
-              ? "Foursquare"
-              : "",
-
-          imageAttribution:
-            photoAttribution ||
-            ""
-
-        };
-
-      } catch (error) {
-
-        console.error(
-          "Restaurant Foursquare enrichment error:",
-          restaurant?.name,
-          error.message
-        );
-
-        return restaurant;
-
-      }
 
     }
 
@@ -2106,9 +944,14 @@ out center tags;
             item.tags || {};
 
 
+          // ------------------------------------------------
+          // NAME
+          // ------------------------------------------------
+
           const name =
             tags.name ||
             tags["name:en"] ||
+            tags["name:fr"] ||
             tags["name:tr"];
 
 
@@ -2120,6 +963,10 @@ out center tags;
 
           }
 
+
+          // ------------------------------------------------
+          // COORDINATES
+          // ------------------------------------------------
 
           let restaurantLat =
             item.lat;
@@ -2141,6 +988,10 @@ out center tags;
 
           }
 
+
+          // ------------------------------------------------
+          // ADDRESS
+          // ------------------------------------------------
 
           const addressParts =
             [];
@@ -2209,10 +1060,18 @@ out center tags;
               : destination;
 
 
+          // ------------------------------------------------
+          // CUISINE
+          // ------------------------------------------------
+
           const cuisine =
             tags.cuisine ||
             "Local cuisine";
 
+
+          // ------------------------------------------------
+          // PRICE LEVEL
+          // ------------------------------------------------
 
           const priceLevel =
             tags["price:level"] ||
@@ -2220,11 +1079,19 @@ out center tags;
             "$$";
 
 
+          // ------------------------------------------------
+          // WEBSITE
+          // ------------------------------------------------
+
           const website =
             tags.website ||
             tags["contact:website"] ||
             "";
 
+
+          // ------------------------------------------------
+          // PHONE
+          // ------------------------------------------------
 
           const phone =
             tags.phone ||
@@ -2232,10 +1099,18 @@ out center tags;
             "";
 
 
+          // ------------------------------------------------
+          // OPENING HOURS
+          // ------------------------------------------------
+
           const openingHours =
             tags.opening_hours ||
             "";
 
+
+          // ------------------------------------------------
+          // RATING
+          // ------------------------------------------------
 
           let rating =
             null;
@@ -2264,6 +1139,10 @@ out center tags;
 
           }
 
+
+          // ------------------------------------------------
+          // REVIEW COUNT
+          // ------------------------------------------------
 
           let reviewCount =
             null;
@@ -2305,6 +1184,10 @@ out center tags;
           }
 
 
+          // ------------------------------------------------
+          // GOOGLE MAPS URL
+          // ------------------------------------------------
+
           let mapsUrl =
             "";
 
@@ -2343,6 +1226,10 @@ out center tags;
           }
 
 
+          // ------------------------------------------------
+          // OSM URL
+          // ------------------------------------------------
+
           let osmUrl =
             "";
 
@@ -2353,18 +1240,24 @@ out center tags;
           ) {
 
             osmUrl =
-              `https://www.openstreetmap.org/${encodeURIComponent(
+              "https://www.openstreetmap.org/" +
+              encodeURIComponent(
                 item.type
-              )}/${encodeURIComponent(
+              ) +
+              "/" +
+              encodeURIComponent(
                 item.id
-              )}`;
+              );
 
           }
 
 
+          // ------------------------------------------------
+          // DESCRIPTION
+          // ------------------------------------------------
+
           let description =
             `${name} is a real local restaurant in ${destination}, listed in OpenStreetMap.`;
-
 
           if (
             cuisine
@@ -2375,6 +1268,10 @@ out center tags;
 
           }
 
+
+          // ------------------------------------------------
+          // RESTAURANT OBJECT
+          // ------------------------------------------------
 
           restaurants.push({
 
@@ -2456,6 +1353,10 @@ out center tags;
           });
 
 
+          // ------------------------------------------------
+          // MAX 50 RESTAURANTS
+          // ------------------------------------------------
+
           if (
             restaurants.length >= 50
           ) {
@@ -2515,96 +1416,11 @@ out center tags;
 
 
         // -------------------------------------------------
-        // FOURSQUARE ENRICHMENT
+        // SORT BY RATING
         // -------------------------------------------------
 
-        const candidates =
-          uniqueRestaurants.slice(
-            0,
-            30
-          );
-
-
-        const enrichedRestaurants =
-          [];
-
-
-        const batchSize =
-          5;
-
-
-        for (
-          let i = 0;
-          i < candidates.length;
-          i += batchSize
-        ) {
-
-          const batch =
-            candidates.slice(
-              i,
-              i + batchSize
-            );
-
-
-          const batchResults =
-            await Promise.all(
-              batch.map(
-                restaurant =>
-                  enrichRestaurantWithFoursquare(
-                    restaurant
-                  )
-              )
-            );
-
-
-          enrichedRestaurants.push(
-            ...batchResults
-          );
-
-
-          console.log(
-            "Foursquare enrichment progress:",
-            Math.min(
-              i + batchSize,
-              candidates.length
-            ),
-            "/",
-            candidates.length
-          );
-
-        }
-
-
-        // -------------------------------------------------
-        // PREFER REAL PHOTOS
-        // -------------------------------------------------
-
-        enrichedRestaurants.sort(
+        uniqueRestaurants.sort(
           (a, b) => {
-
-            const aImage =
-              a.imageUrl
-                ? 1
-                : 0;
-
-            const bImage =
-              b.imageUrl
-                ? 1
-                : 0;
-
-
-            if (
-              bImage !==
-              aImage
-            ) {
-
-              return (
-                bImage -
-                aImage
-              );
-
-            }
-
 
             const aRating =
               Number(
@@ -2626,8 +1442,12 @@ out center tags;
         );
 
 
+        // -------------------------------------------------
+        // RETURN 15 RESTAURANTS
+        // -------------------------------------------------
+
         const finalRestaurants =
-          enrichedRestaurants.slice(
+          uniqueRestaurants.slice(
             0,
             15
           );
@@ -2640,11 +1460,14 @@ out center tags;
 
 
         console.log(
-          "Final restaurant photos:",
-          finalRestaurants.filter(
-            restaurant =>
-              !!restaurant.imageUrl
-          ).length
+          "Restaurant photos:",
+          0
+        );
+
+
+        console.log(
+          "Foursquare requests:",
+          0
         );
 
 
@@ -2710,7 +1533,7 @@ out center tags;
 
 
     // =====================================================
-    // ENSURE RESTAURANTS ARRAY
+    // ENSURE ARRAYS
     // =====================================================
 
     if (
@@ -2725,6 +1548,18 @@ out center tags;
     }
 
 
+    if (
+      !Array.isArray(
+        travelData.stay
+      )
+    ) {
+
+      travelData.stay =
+        [];
+
+    }
+
+
     // =====================================================
     // FINAL LOG
     // =====================================================
@@ -2733,23 +1568,35 @@ out center tags;
       "======================================"
     );
 
-
     console.log(
       "PLAN API SUCCESS"
     );
 
+    console.log(
+      "AI provider: Groq"
+    );
+
+    console.log(
+      "Restaurant provider: OpenStreetMap"
+    );
+
+    console.log(
+      "Gemini requests: 0"
+    );
+
+    console.log(
+      "Foursquare requests: 0"
+    );
 
     console.log(
       "Hotels:",
       travelData.stay.length
     );
 
-
     console.log(
       "Restaurants:",
       travelData.restaurants.length
     );
-
 
     console.log(
       "Restaurant photos:",
@@ -2758,16 +1605,6 @@ out center tags;
           !!restaurant.imageUrl
       ).length
     );
-
-
-    console.log(
-      "Foursquare restaurants:",
-      travelData.restaurants.filter(
-        restaurant =>
-          !!restaurant.foursquareId
-      ).length
-    );
-
 
     console.log(
       "======================================"
