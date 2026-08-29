@@ -81,13 +81,7 @@ module.exports = async (req, res) => {
 
 
     // =====================================================
-    // FOURSQUARE KEY
-    //
-    // IMPORTANT:
-    // Foursquare is optional.
-    //
-    // If the key is missing, the application will STILL
-    // work and restaurants will come from OpenStreetMap.
+    // FOURSQUARE KEY CHECK
     // =====================================================
 
     if (!FOURSQUARE_API_KEY) {
@@ -563,11 +557,6 @@ Use exactly:
 
     // =====================================================
     // NO PEXELS
-    //
-    // IMPORTANT:
-    // Pexels has been completely removed.
-    //
-    // This means PEXELS_API_KEY is NOT required anymore.
     // =====================================================
 
     travelData.stay =
@@ -624,11 +613,13 @@ Use exactly:
               method: "GET",
 
               headers: {
+
                 "User-Agent":
                   OSM_USER_AGENT,
 
                 "Accept":
                   "application/json"
+
               }
             }
           );
@@ -710,8 +701,6 @@ Use exactly:
 
     // =====================================================
     // FOURSQUARE SEARCH
-    //
-    // Uses the current Places API.
     // =====================================================
 
     async function findFoursquarePlace(
@@ -975,7 +964,7 @@ Use exactly:
           ) +
           "?fields=" +
           encodeURIComponent(
-            "fsq_place_id,name,photos,rating,location,website,tel,categories"
+            "fsq_place_id,name,rating,location,website,tel,categories"
           );
 
 
@@ -1002,13 +991,18 @@ Use exactly:
           );
 
 
+        const responseText =
+          await response.text();
+
+
         if (
           !response.ok
         ) {
 
           console.warn(
             "Foursquare details unavailable:",
-            response.status
+            response.status,
+            responseText
           );
 
           return null;
@@ -1016,7 +1010,17 @@ Use exactly:
         }
 
 
-        return await response.json();
+        try {
+
+          return JSON.parse(
+            responseText
+          );
+
+        } catch {
+
+          return null;
+
+        }
 
       } catch (error) {
 
@@ -1033,68 +1037,178 @@ Use exactly:
 
 
     // =====================================================
-    // GET VERIFIED FOURSQUARE PHOTO
+    // GET FOURSQUARE PLACE PHOTOS
     // =====================================================
 
-    function getFoursquarePhotoUrl(
-      place
+    async function getFoursquarePlacePhotos(
+      fsqPlaceId
     ) {
 
       try {
 
-        const photos =
-          place?.photos;
+        if (
+          !FOURSQUARE_API_KEY ||
+          !fsqPlaceId
+        ) {
+
+          return [];
+
+        }
+
+
+        const url =
+          "https://places-api.foursquare.com/places/" +
+          encodeURIComponent(
+            fsqPlaceId
+          ) +
+          "/photos";
+
+
+        console.log(
+          "Foursquare photos request:",
+          fsqPlaceId
+        );
+
+
+        const response =
+          await fetch(
+            url,
+            {
+              method: "GET",
+
+              headers: {
+
+                "Accept":
+                  "application/json",
+
+                "Authorization":
+                  "Bearer " +
+                  FOURSQUARE_API_KEY,
+
+                "X-Places-Api-Version":
+                  "2025-06-17"
+
+              }
+            }
+          );
+
+
+        const responseText =
+          await response.text();
+
+
+        if (
+          !response.ok
+        ) {
+
+          console.warn(
+            "Foursquare photos error:",
+            response.status,
+            responseText
+          );
+
+          return [];
+
+        }
+
+
+        let data;
+
+        try {
+
+          data =
+            JSON.parse(
+              responseText
+            );
+
+        } catch {
+
+          console.warn(
+            "Could not parse Foursquare photos response."
+          );
+
+          return [];
+
+        }
 
 
         if (
           !Array.isArray(
-            photos
-          ) ||
-          photos.length === 0
+            data
+          )
         ) {
 
-          return "";
+          return [];
 
         }
 
 
-        const photo =
-          photos[0];
+        const photoUrls = [];
 
 
-        // New Places API photo object
-        // can expose prefix + suffix.
-
-        if (
-          photo?.prefix &&
-          photo?.suffix
+        for (
+          const photo
+          of data
         ) {
 
-          return (
-            photo.prefix +
-            "original" +
-            photo.suffix
-          );
+          if (
+            photo?.prefix &&
+            photo?.suffix
+          ) {
+
+            const imageUrl =
+              photo.prefix +
+              "original" +
+              photo.suffix;
+
+
+            photoUrls.push({
+
+              url:
+                imageUrl,
+
+              attribution:
+                "Foursquare"
+
+            });
+
+          } else if (
+            photo?.url
+          ) {
+
+            photoUrls.push({
+
+              url:
+                String(
+                  photo.url
+                ),
+
+              attribution:
+                "Foursquare"
+
+            });
+
+          }
 
         }
 
 
-        if (
-          photo?.url
-        ) {
-
-          return String(
-            photo.url
-          );
-
-        }
+        console.log(
+          "Foursquare photos found:",
+          photoUrls.length
+        );
 
 
-        return "";
+        return photoUrls;
 
-      } catch {
+      } catch (error) {
 
-        return "";
+        console.error(
+          "Foursquare photos exception:",
+          error.message
+        );
+
+        return [];
 
       }
 
@@ -1132,6 +1246,11 @@ Use exactly:
           !place
         ) {
 
+          console.log(
+            "No Foursquare match:",
+            restaurant.name
+          );
+
           return restaurant;
 
         }
@@ -1147,13 +1266,18 @@ Use exactly:
           !fsqId
         ) {
 
+          console.log(
+            "Foursquare result has no ID:",
+            restaurant.name
+          );
+
           return restaurant;
 
         }
 
 
         // -------------------------------------------------
-        // Get complete place details
+        // GET PLACE DETAILS
         // -------------------------------------------------
 
         const details =
@@ -1168,13 +1292,38 @@ Use exactly:
 
 
         // -------------------------------------------------
-        // PHOTO
+        // GET PHOTOS
         // -------------------------------------------------
 
-        const photoUrl =
-          getFoursquarePhotoUrl(
-            finalPlace
+        const photos =
+          await getFoursquarePlacePhotos(
+            fsqId
           );
+
+
+        let photoUrl =
+          "";
+
+        let photoAttribution =
+          "";
+
+
+        if (
+          Array.isArray(
+            photos
+          ) &&
+          photos.length > 0 &&
+          photos[0]?.url
+        ) {
+
+          photoUrl =
+            photos[0].url;
+
+          photoAttribution =
+            photos[0].attribution ||
+            "Foursquare";
+
+        }
 
 
         // -------------------------------------------------
@@ -1240,6 +1389,20 @@ Use exactly:
           )}`;
 
 
+        // -------------------------------------------------
+        // FINAL RESTAURANT
+        // -------------------------------------------------
+
+        console.log(
+          "Restaurant enriched:",
+          restaurant.name,
+          "| Photo:",
+          photoUrl
+            ? "YES"
+            : "NO"
+        );
+
+
         return {
 
           ...restaurant,
@@ -1257,20 +1420,16 @@ Use exactly:
 
           imageUrl:
             photoUrl ||
-            restaurant.imageUrl ||
             "",
 
           imageSource:
             photoUrl
               ? "Foursquare"
-              : restaurant.imageSource ||
-                "",
+              : "",
 
           imageAttribution:
-            photoUrl
-              ? "Foursquare"
-              : restaurant.imageAttribution ||
-                ""
+            photoAttribution ||
+            ""
 
         };
 
@@ -1278,6 +1437,7 @@ Use exactly:
 
         console.error(
           "Restaurant Foursquare enrichment error:",
+          restaurant?.name,
           error.message
         );
 
@@ -1834,9 +1994,12 @@ out center tags;
           });
 
 
-          // Collect extra options.
+          // -------------------------------------------------
+          // COLLECT MORE OPTIONS
+          // -------------------------------------------------
+
           if (
-            restaurants.length >= 20
+            restaurants.length >= 50
           ) {
 
             break;
@@ -1896,8 +2059,9 @@ out center tags;
         // -------------------------------------------------
         // FOURSQUARE ENRICHMENT
         //
-        // Process one at a time to avoid excessive
-        // API requests.
+        // Check up to 30 restaurants.
+        // This gives us more chances to find
+        // real Foursquare matches and photos.
         // -------------------------------------------------
 
         const enrichedRestaurants =
@@ -1908,7 +2072,7 @@ out center tags;
           const restaurant
           of uniqueRestaurants.slice(
             0,
-            15
+            30
           )
         ) {
 
@@ -1953,12 +2117,12 @@ out center tags;
 
 
         // -------------------------------------------------
-        // RETURN 10
+        // RETURN 15 RESTAURANTS
         // -------------------------------------------------
 
         return enrichedRestaurants.slice(
           0,
-          10
+          15
         );
 
       } catch (error) {
@@ -2028,19 +2192,23 @@ out center tags;
       "======================================"
     );
 
+
     console.log(
       "PLAN API SUCCESS"
     );
+
 
     console.log(
       "Hotels:",
       travelData.stay.length
     );
 
+
     console.log(
       "Restaurants:",
       travelData.restaurants.length
     );
+
 
     console.log(
       "Restaurant photos:",
@@ -2049,6 +2217,7 @@ out center tags;
           !!restaurant.imageUrl
       ).length
     );
+
 
     console.log(
       "======================================"
