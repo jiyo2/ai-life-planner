@@ -43,6 +43,9 @@ module.exports = async (req, res) => {
     const PEXELS_API_KEY =
       process.env.PEXELS_API_KEY;
 
+    const FOURSQUARE_API_KEY =
+      process.env.FOURSQUARE_API_KEY;
+
     if (!GEMINI_API_KEY) {
 
       console.error("GEMINI_API_KEY missing");
@@ -60,6 +63,17 @@ module.exports = async (req, res) => {
       return res.status(500).json({
         error:
           "Pexels API key is missing. Add PEXELS_API_KEY to Vercel Environment Variables."
+      });
+
+    }
+
+    if (!FOURSQUARE_API_KEY) {
+
+      console.error("FOURSQUARE_API_KEY missing");
+
+      return res.status(500).json({
+        error:
+          "Foursquare API key is missing. Add FOURSQUARE_API_KEY to Vercel Environment Variables."
       });
 
     }
@@ -137,7 +151,7 @@ IMPORTANT RESTAURANT REQUIREMENT:
 
 Do NOT generate restaurant names.
 
-Restaurants will be obtained separately from OpenStreetMap.
+Restaurants will be obtained separately from Foursquare Places API.
 
 Therefore return:
 
@@ -499,7 +513,9 @@ Use exactly:
 
         }
 
+        // ---------------------------------------------------
         // FALLBACK
+        // ---------------------------------------------------
 
         if (
           !response.ok ||
@@ -636,34 +652,712 @@ Use exactly:
       );
 
     // =======================================================
-    // OPENSTREETMAP CONFIG
+    // FOURSQUARE CONFIG
+    // =======================================================
+
+    const FOURSQUARE_API_URL =
+      "https://places-api.foursquare.com";
+
+    const FOURSQUARE_VERSION =
+      "2025-06-17";
+
+    // =======================================================
+    // FOURSQUARE REQUEST HELPER
+    // =======================================================
+
+    async function foursquareRequest(
+      url
+    ) {
+
+      try {
+
+        const response =
+          await fetch(
+            url,
+            {
+              method: "GET",
+
+              headers: {
+
+                "Authorization":
+                  "Bearer " +
+                  FOURSQUARE_API_KEY,
+
+                "X-Places-Api-Version":
+                  FOURSQUARE_VERSION,
+
+                "Accept":
+                  "application/json"
+
+              }
+            }
+          );
+
+        const text =
+          await response.text();
+
+        let data = null;
+
+        try {
+
+          data =
+            JSON.parse(text);
+
+        } catch (error) {
+
+          data = null;
+
+        }
+
+        if (!response.ok) {
+
+          console.error(
+            "Foursquare HTTP error:",
+            response.status,
+            text
+          );
+
+          return null;
+
+        }
+
+        return data;
+
+      } catch (error) {
+
+        console.error(
+          "Foursquare request error:",
+          error.message
+        );
+
+        return null;
+
+      }
+
+    }
+
+    // =======================================================
+    // FOURSQUARE PHOTO
+    // =======================================================
+
+    async function getFoursquarePhoto(
+      fsqPlaceId
+    ) {
+
+      try {
+
+        if (!fsqPlaceId) {
+
+          return {
+            imageUrl: "",
+            imageSource: "",
+            imageAttribution: ""
+          };
+
+        }
+
+        const url =
+          FOURSQUARE_API_URL +
+          "/places/" +
+          encodeURIComponent(
+            fsqPlaceId
+          ) +
+          "/photos?limit=1&sort=POPULAR";
+
+        const data =
+          await foursquareRequest(
+            url
+          );
+
+        if (
+          !data ||
+          !Array.isArray(data)
+        ) {
+
+          return {
+            imageUrl: "",
+            imageSource: "",
+            imageAttribution: ""
+          };
+
+        }
+
+        if (
+          data.length === 0
+        ) {
+
+          return {
+            imageUrl: "",
+            imageSource: "",
+            imageAttribution: ""
+          };
+
+        }
+
+        const photo =
+          data[0];
+
+        const prefix =
+          photo?.prefix ||
+          "";
+
+        const suffix =
+          photo?.suffix ||
+          "";
+
+        if (
+          !prefix ||
+          !suffix
+        ) {
+
+          return {
+            imageUrl: "",
+            imageSource: "",
+            imageAttribution: ""
+          };
+
+        }
+
+        // Foursquare photo URLs use:
+        // prefix + size + suffix
+
+        const imageUrl =
+          prefix +
+          "1200x900" +
+          suffix;
+
+        return {
+
+          imageUrl,
+
+          imageSource:
+            "Foursquare",
+
+          imageAttribution:
+            "Photo via Foursquare"
+
+        };
+
+      } catch (error) {
+
+        console.error(
+          "Foursquare photo error:",
+          error.message
+        );
+
+        return {
+
+          imageUrl: "",
+
+          imageSource: "",
+
+          imageAttribution: ""
+
+        };
+
+      }
+
+    }
+
+    // =======================================================
+    // FOURSQUARE RESTAURANTS
+    // =======================================================
+
+    async function getRestaurantsFromFoursquare(
+      destination
+    ) {
+
+      try {
+
+        console.log(
+          "Foursquare restaurant search:",
+          destination
+        );
+
+        const fields = [
+          "fsq_id",
+          "name",
+          "location",
+          "categories",
+          "price",
+          "rating",
+          "stats",
+          "website",
+          "tel",
+          "description",
+          "geocodes"
+        ].join(",");
+
+        const params =
+          new URLSearchParams();
+
+        params.set(
+          "near",
+          destination
+        );
+
+        params.set(
+          "query",
+          "restaurant"
+        );
+
+        params.set(
+          "fields",
+          fields
+        );
+
+        params.set(
+          "limit",
+          "15"
+        );
+
+        params.set(
+          "sort",
+          "POPULARITY"
+        );
+
+        const searchURL =
+          FOURSQUARE_API_URL +
+          "/places/search?" +
+          params.toString();
+
+        const data =
+          await foursquareRequest(
+            searchURL
+          );
+
+        if (
+          !data ||
+          !Array.isArray(
+            data.results
+          )
+        ) {
+
+          console.error(
+            "Foursquare returned no results."
+          );
+
+          return [];
+
+        }
+
+        console.log(
+          "Foursquare restaurants found:",
+          data.results.length
+        );
+
+        const restaurants = [];
+
+        for (
+          const place
+          of data.results
+        ) {
+
+          if (
+            !place ||
+            !place.name
+          ) {
+
+            continue;
+
+          }
+
+          const location =
+            place.location ||
+            {};
+
+          const categories =
+            Array.isArray(
+              place.categories
+            )
+              ? place.categories
+              : [];
+
+          const primaryCategory =
+            categories.find(
+              category =>
+                category &&
+                category.name
+            );
+
+          const cuisine =
+            primaryCategory?.name ||
+            "Restaurant";
+
+          const latitude =
+            Number(
+              location.latitude ??
+              place?.geocodes?.main?.latitude
+            );
+
+          const longitude =
+            Number(
+              location.longitude ??
+              place?.geocodes?.main?.longitude
+            );
+
+          // -------------------------------------------------
+          // ADDRESS
+          // -------------------------------------------------
+
+          const address =
+            location.formatted_address ||
+            [
+              location.address,
+              location.locality,
+              location.region,
+              location.country
+            ]
+              .filter(Boolean)
+              .join(", ") ||
+            destination;
+
+          // -------------------------------------------------
+          // PRICE
+          // -------------------------------------------------
+
+          let priceLevel =
+            "$$";
+
+          if (
+            Number.isFinite(
+              Number(place.price)
+            )
+          ) {
+
+            const price =
+              Number(place.price);
+
+            if (price <= 1) {
+              priceLevel = "$";
+            } else if (price === 2) {
+              priceLevel = "$$";
+            } else if (price === 3) {
+              priceLevel = "$$$";
+            } else {
+              priceLevel = "$$$$";
+            }
+
+          }
+
+          // -------------------------------------------------
+          // RATING
+          // -------------------------------------------------
+
+          let rating =
+            null;
+
+          if (
+            Number.isFinite(
+              Number(place.rating)
+            )
+          ) {
+
+            rating =
+              Number(place.rating);
+
+          }
+
+          // -------------------------------------------------
+          // REVIEWS
+          // -------------------------------------------------
+
+          let reviewCount =
+            null;
+
+          const stats =
+            place.stats ||
+            {};
+
+          if (
+            Number.isFinite(
+              Number(
+                stats.total_ratings
+              )
+            )
+          ) {
+
+            reviewCount =
+              Number(
+                stats.total_ratings
+              );
+
+          }
+
+          // -------------------------------------------------
+          // MAP URL
+          // -------------------------------------------------
+
+          let mapsUrl = "";
+
+          if (
+            Number.isFinite(
+              latitude
+            ) &&
+            Number.isFinite(
+              longitude
+            )
+          ) {
+
+            mapsUrl =
+              "https://www.google.com/maps/search/?api=1&query=" +
+              encodeURIComponent(
+                latitude +
+                "," +
+                longitude
+              );
+
+          } else {
+
+            mapsUrl =
+              "https://www.google.com/maps/search/?api=1&query=" +
+              encodeURIComponent(
+                place.name +
+                " " +
+                destination
+              );
+
+          }
+
+          // -------------------------------------------------
+          // FOURSQUARE URL
+          // -------------------------------------------------
+
+          const foursquareUrl =
+            place.fsq_id
+              ? "https://foursquare.com/v/" +
+                encodeURIComponent(
+                  place.name
+                ) +
+                "/" +
+                encodeURIComponent(
+                  place.fsq_id
+                )
+              : "";
+
+          // -------------------------------------------------
+          // REAL PHOTO
+          // -------------------------------------------------
+
+          let photoData = {
+
+            imageUrl: "",
+
+            imageSource: "",
+
+            imageAttribution: ""
+
+          };
+
+          if (
+            place.fsq_id
+          ) {
+
+            photoData =
+              await getFoursquarePhoto(
+                place.fsq_id
+              );
+
+          }
+
+          // -------------------------------------------------
+          // DESCRIPTION
+          // -------------------------------------------------
+
+          let description =
+            place.description ||
+            `${place.name} is a real restaurant listed in Foursquare in ${destination}.`;
+
+          if (
+            cuisine &&
+            cuisine !== "Restaurant"
+          ) {
+
+            description +=
+              ` Cuisine: ${cuisine}.`;
+
+          }
+
+          // -------------------------------------------------
+          // RESTAURANT OBJECT
+          // -------------------------------------------------
+
+          restaurants.push({
+
+            name:
+              String(
+                place.name
+              ),
+
+            cuisine:
+              String(
+                cuisine
+              ),
+
+            priceLevel,
+
+            rating,
+
+            reviewCount,
+
+            address:
+              String(
+                address
+              ),
+
+            description:
+              String(
+                description
+              ),
+
+            imageUrl:
+              photoData.imageUrl ||
+              "",
+
+            imageSource:
+              photoData.imageSource ||
+              "",
+
+            imageAttribution:
+              photoData.imageAttribution ||
+              "",
+
+            mapsUrl,
+
+            foursquareUrl,
+
+            website:
+              place.website ||
+              "",
+
+            phone:
+              place.tel ||
+              "",
+
+            openingHours:
+              "",
+
+            latitude:
+              Number.isFinite(
+                latitude
+              )
+                ? latitude
+                : null,
+
+            longitude:
+              Number.isFinite(
+                longitude
+              )
+                ? longitude
+                : null,
+
+            fsqId:
+              place.fsq_id ||
+              ""
+
+          });
+
+        }
+
+        // ===================================================
+        // REMOVE DUPLICATES
+        // ===================================================
+
+        const uniqueRestaurants = [];
+        const restaurantNames =
+          new Set();
+
+        for (
+          const restaurant
+          of restaurants
+        ) {
+
+          const key =
+            restaurant.name
+              .toLowerCase()
+              .trim();
+
+          if (
+            !restaurantNames.has(key)
+          ) {
+
+            restaurantNames.add(
+              key
+            );
+
+            uniqueRestaurants.push(
+              restaurant
+            );
+
+          }
+
+        }
+
+        // ===================================================
+        // PREFER REAL PHOTOS
+        // ===================================================
+
+        uniqueRestaurants.sort(
+          (a, b) => {
+
+            const aImage =
+              a.imageUrl ? 1 : 0;
+
+            const bImage =
+              b.imageUrl ? 1 : 0;
+
+            if (
+              bImage !==
+              aImage
+            ) {
+
+              return (
+                bImage -
+                aImage
+              );
+
+            }
+
+            const aRating =
+              Number(a.rating) ||
+              0;
+
+            const bRating =
+              Number(b.rating) ||
+              0;
+
+            return (
+              bRating -
+              aRating
+            );
+
+          }
+        );
+
+        return uniqueRestaurants.slice(
+          0,
+          10
+        );
+
+      } catch (error) {
+
+        console.error(
+          "Foursquare restaurant error:",
+          error
+        );
+
+        return [];
+
+      }
+
+    }
+
+    // =======================================================
+    // OPENSTREETMAP HELPERS
     // =======================================================
 
     const OSM_USER_AGENT =
       "AI-Life-Planner/1.0";
-
-    // =======================================================
-    // SAFE URL CHECK
-    // =======================================================
-
-    function isValidHttpUrl(
-      value
-    ) {
-
-      if (
-        !value ||
-        typeof value !== "string"
-      ) {
-
-        return false;
-
-      }
-
-      return /^https?:\/\//i.test(
-        value.trim()
-      );
-
-    }
 
     // =======================================================
     // WIKIMEDIA COMMONS IMAGE
@@ -686,10 +1380,6 @@ Use exactly:
 
         const value =
           commonsValue.trim();
-
-        // Only direct File references.
-        // We do NOT treat Category pages as
-        // an exact restaurant photograph.
 
         if (
           !/^File:/i.test(value)
@@ -718,19 +1408,12 @@ Use exactly:
 
               headers: {
                 "User-Agent":
-                  OSM_USER_AGENT,
-                "Accept":
-                  "application/json"
+                  OSM_USER_AGENT
               }
             }
           );
 
         if (!response.ok) {
-
-          console.error(
-            "Wikimedia HTTP error:",
-            response.status
-          );
 
           return "";
 
@@ -749,20 +1432,16 @@ Use exactly:
         }
 
         const page =
-          Object.values(pages)[0];
+          Object.values(
+            pages
+          )[0];
 
         const image =
           page?.imageinfo?.[0];
 
-        if (!image) {
-
-          return "";
-
-        }
-
         return (
-          image.thumburl ||
-          image.url ||
+          image?.thumburl ||
+          image?.url ||
           ""
         );
 
@@ -826,19 +1505,12 @@ Use exactly:
 
               headers: {
                 "User-Agent":
-                  OSM_USER_AGENT,
-                "Accept":
-                  "application/json"
+                  OSM_USER_AGENT
               }
             }
           );
 
         if (!response.ok) {
-
-          console.error(
-            "Wikidata HTTP error:",
-            response.status
-          );
 
           return "";
 
@@ -850,17 +1522,13 @@ Use exactly:
         const entity =
           data?.entities?.[id];
 
-        if (!entity) {
-
-          return "";
-
-        }
-
         const imageClaims =
           entity?.claims?.P18;
 
         if (
-          !Array.isArray(imageClaims) ||
+          !Array.isArray(
+            imageClaims
+          ) ||
           imageClaims.length === 0
         ) {
 
@@ -884,7 +1552,8 @@ Use exactly:
         }
 
         return await getWikimediaImage(
-          "File:" + imageValue
+          "File:" +
+          imageValue
         );
 
       } catch (error) {
@@ -901,7 +1570,7 @@ Use exactly:
     }
 
     // =======================================================
-    // RESTAURANT IMAGE RESOLVER
+    // OSM IMAGE RESOLVER
     // =======================================================
 
     async function resolveRestaurantImage(
@@ -910,11 +1579,8 @@ Use exactly:
 
       try {
 
-        tags =
-          tags || {};
-
         // ---------------------------------------------------
-        // 1. DIRECT IMAGE IN OPENSTREETMAP
+        // DIRECT OSM IMAGE
         // ---------------------------------------------------
 
         const directImage =
@@ -925,32 +1591,33 @@ Use exactly:
           "";
 
         if (
-          isValidHttpUrl(
-            String(directImage)
+          directImage &&
+          /^https?:\/\//i.test(
+            String(
+              directImage
+            )
           )
         ) {
-
-          console.log(
-            "Verified OSM restaurant image found."
-          );
 
           return {
 
             imageUrl:
-              String(directImage).trim(),
+              String(
+                directImage
+              ),
 
             imageSource:
               "OpenStreetMap",
 
             imageAttribution:
-              "Image linked in OpenStreetMap"
+              "OpenStreetMap data"
 
           };
 
         }
 
         // ---------------------------------------------------
-        // 2. WIKIMEDIA COMMONS
+        // WIKIMEDIA COMMONS
         // ---------------------------------------------------
 
         const commons =
@@ -959,21 +1626,12 @@ Use exactly:
 
         if (commons) {
 
-          console.log(
-            "Checking Wikimedia Commons:",
-            commons
-          );
-
           const commonsImage =
             await getWikimediaImage(
               commons
             );
 
-          if (
-            isValidHttpUrl(
-              commonsImage
-            )
-          ) {
+          if (commonsImage) {
 
             return {
 
@@ -993,7 +1651,7 @@ Use exactly:
         }
 
         // ---------------------------------------------------
-        // 3. WIKIDATA
+        // WIKIDATA
         // ---------------------------------------------------
 
         const wikidata =
@@ -1002,21 +1660,12 @@ Use exactly:
 
         if (wikidata) {
 
-          console.log(
-            "Checking Wikidata:",
-            wikidata
-          );
-
           const wikidataImage =
             await getWikidataImage(
               wikidata
             );
 
-          if (
-            isValidHttpUrl(
-              wikidataImage
-            )
-          ) {
+          if (wikidataImage) {
 
             return {
 
@@ -1035,20 +1684,13 @@ Use exactly:
 
         }
 
-        // ---------------------------------------------------
-        // 4. NO VERIFIED IMAGE
-        // ---------------------------------------------------
-
         return {
 
-          imageUrl:
-            "",
+          imageUrl: "",
 
-          imageSource:
-            "",
+          imageSource: "",
 
-          imageAttribution:
-            ""
+          imageAttribution: ""
 
         };
 
@@ -1061,14 +1703,11 @@ Use exactly:
 
         return {
 
-          imageUrl:
-            "",
+          imageUrl: "",
 
-          imageSource:
-            "",
+          imageSource: "",
 
-          imageAttribution:
-            ""
+          imageAttribution: ""
 
         };
 
@@ -1077,7 +1716,7 @@ Use exactly:
     }
 
     // =======================================================
-    // OPENSTREETMAP RESTAURANTS
+    // OPENSTREETMAP RESTAURANTS FALLBACK
     // =======================================================
 
     async function getRestaurantsFromOSM(
@@ -1087,12 +1726,12 @@ Use exactly:
       try {
 
         console.log(
-          "OpenStreetMap restaurant search:",
+          "OpenStreetMap fallback search:",
           destination
         );
 
         // ---------------------------------------------------
-        // STEP 1 — GEOCODE DESTINATION
+        // GEOCODE
         // ---------------------------------------------------
 
         const geocodeURL =
@@ -1100,7 +1739,9 @@ Use exactly:
           "?format=json" +
           "&limit=1" +
           "&q=" +
-          encodeURIComponent(destination);
+          encodeURIComponent(
+            destination
+          );
 
         const geocodeResponse =
           await fetch(
@@ -1109,15 +1750,20 @@ Use exactly:
               method: "GET",
 
               headers: {
+
                 "User-Agent":
                   OSM_USER_AGENT,
+
                 "Accept":
                   "application/json"
+
               }
             }
           );
 
-        if (!geocodeResponse.ok) {
+        if (
+          !geocodeResponse.ok
+        ) {
 
           console.error(
             "Nominatim error:",
@@ -1132,14 +1778,11 @@ Use exactly:
           await geocodeResponse.json();
 
         if (
-          !Array.isArray(locations) ||
+          !Array.isArray(
+            locations
+          ) ||
           locations.length === 0
         ) {
-
-          console.log(
-            "Destination not found in OSM:",
-            destination
-          );
 
           return [];
 
@@ -1160,22 +1803,12 @@ Use exactly:
           !Number.isFinite(lon)
         ) {
 
-          console.error(
-            "Invalid destination coordinates."
-          );
-
           return [];
 
         }
 
-        console.log(
-          "Destination coordinates:",
-          lat,
-          lon
-        );
-
         // ---------------------------------------------------
-        // STEP 2 — OVERPASS
+        // OVERPASS
         // ---------------------------------------------------
 
         const overpassQuery = `
@@ -1200,12 +1833,16 @@ out center tags;
               method: "POST",
 
               headers: {
+
                 "Content-Type":
                   "application/x-www-form-urlencoded",
+
                 "User-Agent":
                   OSM_USER_AGENT,
+
                 "Accept":
                   "application/json"
+
               },
 
               body:
@@ -1213,10 +1850,13 @@ out center tags;
                 encodeURIComponent(
                   overpassQuery
                 )
+
             }
           );
 
-        if (!osmResponse.ok) {
+        if (
+          !osmResponse.ok
+        ) {
 
           console.error(
             "Overpass error:",
@@ -1241,15 +1881,6 @@ out center tags;
 
         }
 
-        console.log(
-          "OSM restaurants found:",
-          osmData.elements.length
-        );
-
-        // ---------------------------------------------------
-        // STEP 3 — NORMALIZE
-        // ---------------------------------------------------
-
         const restaurants = [];
 
         for (
@@ -1266,7 +1897,9 @@ out center tags;
             tags["name:tr"];
 
           if (!name) {
+
             continue;
+
           }
 
           let restaurantLat =
@@ -1345,7 +1978,7 @@ out center tags;
           }
 
           const address =
-            addressParts.length > 0
+            addressParts.length
               ? addressParts.join(", ")
               : destination;
 
@@ -1358,12 +1991,12 @@ out center tags;
             "Local cuisine";
 
           // -------------------------------------------------
-          // PRICE LEVEL
+          // PRICE
           // -------------------------------------------------
 
           const priceLevel =
             tags["price:level"] ||
-            tags["price_range"] ||
+            tags.price_range ||
             "$$";
 
           // -------------------------------------------------
@@ -1385,14 +2018,6 @@ out center tags;
             "";
 
           // -------------------------------------------------
-          // OPENING HOURS
-          // -------------------------------------------------
-
-          const openingHours =
-            tags.opening_hours ||
-            "";
-
-          // -------------------------------------------------
           // RATING
           // -------------------------------------------------
 
@@ -1404,7 +2029,9 @@ out center tags;
           ) {
 
             const numericRating =
-              Number(tags.rating);
+              Number(
+                tags.rating
+              );
 
             if (
               Number.isFinite(
@@ -1420,98 +2047,63 @@ out center tags;
           }
 
           // -------------------------------------------------
-          // REVIEW COUNT
+          // MAPS URL
           // -------------------------------------------------
 
-          let reviewCount =
-            null;
-
-          const reviewValue =
-            tags["review:count"] ||
-            tags.reviews ||
-            "";
-
-          if (reviewValue) {
-
-            const numericReviews =
-              Number(
-                String(
-                  reviewValue
-                ).replace(
-                  /[^\d]/g,
-                  ""
-                )
-              );
-
-            if (
-              Number.isFinite(
-                numericReviews
-              ) &&
-              numericReviews > 0
-            ) {
-
-              reviewCount =
-                numericReviews;
-
-            }
-
-          }
-
-          // -------------------------------------------------
-          // GOOGLE MAPS URL
-          // -------------------------------------------------
-
-          let mapsURL = "";
+          let mapsUrl = "";
 
           if (
             Number.isFinite(
-              Number(restaurantLat)
+              Number(
+                restaurantLat
+              )
             ) &&
             Number.isFinite(
-              Number(restaurantLon)
+              Number(
+                restaurantLon
+              )
             )
           ) {
 
-            mapsURL =
-              `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+            mapsUrl =
+              "https://www.google.com/maps/search/?api=1&query=" +
+              encodeURIComponent(
                 restaurantLat +
                 "," +
                 restaurantLon
-              )}`;
+              );
 
           } else {
 
-            mapsURL =
-              `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+            mapsUrl =
+              "https://www.google.com/maps/search/?api=1&query=" +
+              encodeURIComponent(
                 name +
                 " " +
                 destination
-              )}`;
+              );
 
           }
 
           // -------------------------------------------------
-          // OPENSTREETMAP URL
+          // OSM URL
           // -------------------------------------------------
 
-          let osmURL = "";
-
-          if (
+          const osmUrl =
             item.type &&
             item.id
-          ) {
-
-            osmURL =
-              `https://www.openstreetmap.org/${encodeURIComponent(
-                item.type
-              )}/${encodeURIComponent(
-                item.id
-              )}`;
-
-          }
+              ? "https://www.openstreetmap.org/" +
+                encodeURIComponent(
+                  item.type
+                ) +
+                "/" +
+                encodeURIComponent(
+                  item.id
+                )
+              : "";
 
           // -------------------------------------------------
-          // VERIFIED IMAGE
+          // IMAGE
           // -------------------------------------------------
 
           const imageData =
@@ -1520,44 +2112,39 @@ out center tags;
             );
 
           // -------------------------------------------------
-          // DESCRIPTION
-          // -------------------------------------------------
-
-          let description =
-            `${name} is a real local restaurant in ${destination}, listed in OpenStreetMap.`;
-
-          if (cuisine) {
-
-            description +=
-              ` Cuisine: ${cuisine}.`;
-
-          }
-
-          // -------------------------------------------------
           // RESTAURANT OBJECT
           // -------------------------------------------------
 
           restaurants.push({
 
             name:
-              String(name),
+              String(
+                name
+              ),
 
             cuisine:
-              String(cuisine),
+              String(
+                cuisine
+              ),
 
             priceLevel:
-              String(priceLevel),
+              String(
+                priceLevel
+              ),
 
             rating,
 
-            reviewCount,
+            reviewCount:
+              null,
 
             address:
-              String(address),
+              String(
+                address
+              ),
 
-            description,
+            description:
+              `${name} is a real local restaurant in ${destination}, listed in OpenStreetMap.`,
 
-            // VERIFIED IMAGE ONLY
             imageUrl:
               imageData.imageUrl ||
               "",
@@ -1578,37 +2165,39 @@ out center tags;
 
             phone,
 
-            openingHours,
+            openingHours:
+              tags.opening_hours ||
+              "",
 
             latitude:
               Number.isFinite(
-                Number(restaurantLat)
+                Number(
+                  restaurantLat
+                )
               )
-                ? Number(restaurantLat)
+                ? Number(
+                    restaurantLat
+                  )
                 : null,
 
             longitude:
               Number.isFinite(
-                Number(restaurantLon)
+                Number(
+                  restaurantLon
+                )
               )
-                ? Number(restaurantLon)
+                ? Number(
+                    restaurantLon
+                  )
                 : null,
 
-            osmType:
-              item.type ||
-              "",
-
-            osmId:
-              item.id ||
-              null
+            fsqId:
+              ""
 
           });
 
-          // Collect a few extra options
-          // before selecting the final 10.
-
           if (
-            restaurants.length >= 20
+            restaurants.length >= 15
           ) {
 
             break;
@@ -1622,7 +2211,8 @@ out center tags;
         // ---------------------------------------------------
 
         const uniqueRestaurants = [];
-        const restaurantNames = new Set();
+        const restaurantNames =
+          new Set();
 
         for (
           const restaurant
@@ -1635,10 +2225,14 @@ out center tags;
               .trim();
 
           if (
-            !restaurantNames.has(key)
+            !restaurantNames.has(
+              key
+            )
           ) {
 
-            restaurantNames.add(key);
+            restaurantNames.add(
+              key
+            );
 
             uniqueRestaurants.push(
               restaurant
@@ -1649,29 +2243,19 @@ out center tags;
         }
 
         // ---------------------------------------------------
-        // PREFER VERIFIED PHOTOS
+        // VERIFIED PHOTO FIRST
         // ---------------------------------------------------
 
         uniqueRestaurants.sort(
           (a, b) => {
 
-            const aHasImage =
-              a.imageUrl ? 1 : 0;
-
-            const bHasImage =
-              b.imageUrl ? 1 : 0;
-
             return (
-              bHasImage -
-              aHasImage
+              (b.imageUrl ? 1 : 0) -
+              (a.imageUrl ? 1 : 0)
             );
 
           }
         );
-
-        // ---------------------------------------------------
-        // LIMIT TO 10
-        // ---------------------------------------------------
 
         return uniqueRestaurants.slice(
           0,
@@ -1681,8 +2265,8 @@ out center tags;
       } catch (error) {
 
         console.error(
-          "OpenStreetMap restaurant error:",
-          error
+          "OpenStreetMap fallback error:",
+          error.message
         );
 
         return [];
@@ -1696,18 +2280,49 @@ out center tags;
     // =======================================================
 
     console.log(
-      "Starting OpenStreetMap restaurant search..."
+      "Starting Foursquare restaurant search..."
     );
 
-    travelData.restaurants =
-      await getRestaurantsFromOSM(
+    let restaurants =
+      await getRestaurantsFromFoursquare(
         destination
       );
 
     console.log(
-      "Restaurants returned:",
-      travelData.restaurants.length
+      "Foursquare restaurants returned:",
+      restaurants.length
     );
+
+    // =======================================================
+    // OSM FALLBACK
+    // =======================================================
+
+    if (
+      restaurants.length === 0
+    ) {
+
+      console.log(
+        "Foursquare returned no restaurants."
+      );
+
+      console.log(
+        "Starting OpenStreetMap fallback..."
+      );
+
+      restaurants =
+        await getRestaurantsFromOSM(
+          destination
+        );
+
+      console.log(
+        "OSM fallback restaurants returned:",
+        restaurants.length
+      );
+
+    }
+
+    travelData.restaurants =
+      restaurants;
 
     // =======================================================
     // FALLBACK CONTENT
@@ -1735,6 +2350,11 @@ out center tags;
 
     console.log(
       "PLAN API SUCCESS"
+    );
+
+    console.log(
+      "Final restaurant count:",
+      travelData.restaurants.length
     );
 
     console.log(
