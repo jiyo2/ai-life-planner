@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let formData = {};
 
   // =========================================================
-  // HOTEL / PLAN STYLES
+  // HOTEL + RESTAURANT STYLES
   // =========================================================
 
   if (!document.getElementById("aiPlannerHotelStyles")) {
@@ -60,10 +60,6 @@ document.addEventListener("DOMContentLoaded", () => {
         box-shadow: 0 12px 32px rgba(0,0,0,0.09);
       }
 
-      /* =====================================================
-         HOTEL IMAGE
-      ===================================================== */
-
       .hotel-image-wrap {
         width: 100%;
         height: 220px;
@@ -90,17 +86,12 @@ document.addEventListener("DOMContentLoaded", () => {
         font-size: 14px;
         text-align: center;
         padding: 20px;
-        background:
-          linear-gradient(
-            135deg,
-            #f5f6f8 0%,
-            #e8eaf0 100%
-          );
+        background: linear-gradient(
+          135deg,
+          #f5f6f8 0%,
+          #e8eaf0 100%
+        );
       }
-
-      /* =====================================================
-         HOTEL CONTENT
-      ===================================================== */
 
       .hotel-info {
         display: flex;
@@ -169,10 +160,6 @@ document.addEventListener("DOMContentLoaded", () => {
         margin-bottom: 15px;
       }
 
-      /* =====================================================
-         AMENITIES
-      ===================================================== */
-
       .hotel-amenities-title {
         font-size: 13px;
         font-weight: 700;
@@ -195,10 +182,6 @@ document.addEventListener("DOMContentLoaded", () => {
         font-size: 12px;
         color: #50555f;
       }
-
-      /* =====================================================
-         BOOKING BUTTON
-      ===================================================== */
 
       .hotel-actions {
         margin-top: auto;
@@ -232,10 +215,6 @@ document.addEventListener("DOMContentLoaded", () => {
         font-size: 16px;
       }
 
-      /* =====================================================
-         HOTEL SECTION INTRO
-      ===================================================== */
-
       .hotel-intro {
         margin-bottom: 4px;
       }
@@ -251,24 +230,192 @@ document.addEventListener("DOMContentLoaded", () => {
         line-height: 1.6;
       }
 
+
+      /* =====================================================
+         RESTAURANT LIST
+      ===================================================== */
+
+      .restaurant-list {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        margin-top: 24px;
+      }
+
+      .restaurant-card {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        gap: 24px;
+        background: #ffffff;
+        border: 1px solid #e8e8ee;
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+        transition: transform .2s ease, box-shadow .2s ease;
+        overflow: hidden;
+      }
+
+      .restaurant-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.09);
+      }
+
+      .restaurant-image-wrap {
+        width: 100%;
+        height: 220px;
+        border-radius: 15px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #f2f3f7, #e5e7ec);
+      }
+
+      .restaurant-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .restaurant-image-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #8b8f9a;
+        font-size: 14px;
+        text-align: center;
+        padding: 20px;
+        background: linear-gradient(
+          135deg,
+          #f5f6f8 0%,
+          #e8eaf0 100%
+        );
+      }
+
+      .restaurant-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .restaurant-number {
+        font-size: 12px;
+        font-weight: 700;
+        color: #8b8f9a;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        margin-bottom: 6px;
+      }
+
+      .restaurant-name {
+        font-size: 24px;
+        line-height: 1.2;
+        font-weight: 750;
+        color: #17181c;
+        margin: 0 0 10px;
+      }
+
+      .restaurant-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .restaurant-cuisine,
+      .restaurant-price {
+        background: #f5f6f8;
+        border: 1px solid #e9eaee;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        color: #50555f;
+        font-weight: 600;
+      }
+
+      .restaurant-rating {
+        font-size: 14px;
+        font-weight: 700;
+        color: #d49b20;
+      }
+
+      .restaurant-address {
+        font-size: 13px;
+        line-height: 1.5;
+        color: #666b76;
+        margin-bottom: 10px;
+      }
+
+      .restaurant-description {
+        font-size: 14px;
+        line-height: 1.65;
+        color: #555b66;
+        margin-bottom: 18px;
+      }
+
+      .restaurant-actions {
+        margin-top: auto;
+      }
+
+      .maps-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 11px;
+        background: #111827;
+        color: #ffffff !important;
+        text-decoration: none !important;
+        font-size: 14px;
+        font-weight: 700;
+        transition: all .2s ease;
+      }
+
+      .maps-button:hover {
+        background: #252b38;
+        transform: translateY(-1px);
+      }
+
+      .restaurant-intro {
+        margin-bottom: 4px;
+      }
+
+      .restaurant-intro h3 {
+        margin: 0 0 6px;
+        font-size: 20px;
+      }
+
+      .restaurant-intro p {
+        margin: 0;
+        color: #70757f;
+        line-height: 1.6;
+      }
+
+
       /* =====================================================
          MOBILE
       ===================================================== */
 
       @media (max-width: 700px) {
 
-        .hotel-card {
+        .hotel-card,
+        .restaurant-card {
           grid-template-columns: 1fr;
           gap: 16px;
           padding: 14px;
           border-radius: 17px;
         }
 
-        .hotel-image-wrap {
+        .hotel-image-wrap,
+        .restaurant-image-wrap {
           height: 200px;
         }
 
-        .hotel-name {
+        .hotel-name,
+        .restaurant-name {
           font-size: 21px;
         }
 
@@ -276,11 +423,13 @@ document.addEventListener("DOMContentLoaded", () => {
           font-size: 22px;
         }
 
-        .hotel-actions {
+        .hotel-actions,
+        .restaurant-actions {
           margin-top: 5px;
         }
 
-        .booking-button {
+        .booking-button,
+        .maps-button {
           width: 100%;
         }
       }
@@ -412,15 +561,6 @@ document.addEventListener("DOMContentLoaded", () => {
       JSON.stringify(formData)
     );
 
-    /*
-      DEMO MODE
-
-      We are NOT connecting real payment yet.
-
-      This flag simply simulates successful payment
-      so we can test the AI planner.
-    */
-
     localStorage.setItem("hasPaid", "true");
 
     appScreen.classList.add("hidden");
@@ -437,14 +577,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.addEventListener("load", () => {
 
-    const hasPaid = localStorage.getItem("hasPaid");
-    const savedData = localStorage.getItem("pendingTripData");
+    const hasPaid =
+      localStorage.getItem("hasPaid");
+
+    const savedData =
+      localStorage.getItem("pendingTripData");
 
     if (hasPaid === "true" && savedData) {
 
       try {
 
-        const parsedData = JSON.parse(savedData);
+        const parsedData =
+          JSON.parse(savedData);
 
         localStorage.removeItem("hasPaid");
         localStorage.removeItem("pendingTripData");
@@ -457,7 +601,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       } catch (error) {
 
-        console.error("Saved trip data error:", error);
+        console.error(
+          "Saved trip data error:",
+          error
+        );
 
       }
 
@@ -485,25 +632,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
 
-      const response = await fetch("/api/plan", {
+      const response =
+        await fetch("/api/plan", {
 
-        method: "POST",
+          method: "POST",
 
-        headers: {
-          "Content-Type": "application/json"
-        },
+          headers: {
+            "Content-Type": "application/json"
+          },
 
-        body: JSON.stringify(tripData)
+          body: JSON.stringify(tripData)
 
-      });
+        });
 
-      const rawResponse = await response.text();
+      const rawResponse =
+        await response.text();
 
       let data;
 
       try {
 
-        data = JSON.parse(rawResponse);
+        data =
+          JSON.parse(rawResponse);
 
       } catch (jsonError) {
 
@@ -548,24 +698,44 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       // =====================================================
+      // RESTAURANTS
+      // =====================================================
+
+      renderRestaurants(
+        data.restaurants,
+        tripData.destination
+      );
+
+      // =====================================================
       // OTHER SECTIONS
       // =====================================================
 
-      document.getElementById("transportContent").innerHTML =
+      document.getElementById(
+        "transportContent"
+      ).innerHTML =
         safeHTML(data.transport);
 
-      document.getElementById("experiencesContent").innerHTML =
+      document.getElementById(
+        "experiencesContent"
+      ).innerHTML =
         safeHTML(data.experiences);
 
-      document.getElementById("moneyContent").innerHTML =
+      document.getElementById(
+        "moneyContent"
+      ).innerHTML =
         safeHTML(data.money);
 
-      document.getElementById("daysContent").innerHTML =
+      document.getElementById(
+        "daysContent"
+      ).innerHTML =
         safeHTML(data.daysPlan);
 
     } catch (error) {
 
-      console.error("PLAN GENERATION ERROR:", error);
+      console.error(
+        "PLAN GENERATION ERROR:",
+        error
+      );
 
       planTitle.textContent =
         "Generation Error";
@@ -573,7 +743,9 @@ document.addEventListener("DOMContentLoaded", () => {
       planIntro.textContent =
         "The travel plan could not be generated.";
 
-      document.getElementById("stayContent").innerHTML = `
+      document.getElementById(
+        "stayContent"
+      ).innerHTML = `
 
         <div style="
           padding:20px;
@@ -583,7 +755,9 @@ document.addEventListener("DOMContentLoaded", () => {
           color:#a33;
         ">
 
-          <strong>Something went wrong.</strong>
+          <strong>
+            Something went wrong.
+          </strong>
 
           <div style="
             margin-top:8px;
@@ -601,15 +775,21 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================================================
-  // RENDER 10 HOTELS
+  // RENDER HOTELS
   // =========================================================
 
-  function renderHotels(stayData, destination) {
+  function renderHotels(
+    stayData,
+    destination
+  ) {
 
     const container =
       document.getElementById("stayContent");
 
-    if (!Array.isArray(stayData) || stayData.length === 0) {
+    if (
+      !Array.isArray(stayData) ||
+      stayData.length === 0
+    ) {
 
       container.innerHTML = `
 
@@ -619,7 +799,8 @@ document.addEventListener("DOMContentLoaded", () => {
           border-radius:14px;
           color:#666;
         ">
-          No accommodation recommendations were returned.
+          No accommodation recommendations
+          were returned.
         </div>
 
       `;
@@ -627,39 +808,32 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    /*
-      IMPORTANT:
-
-      Display maximum 10 hotels.
-
-      If Gemini returns exactly 10,
-      all 10 will appear.
-
-      If it returns fewer,
-      we do NOT invent fake hotels.
-    */
-
-    const hotels = stayData.slice(0, 10);
+    const hotels =
+      stayData.slice(0, 10);
 
     const intro = `
 
       <div class="hotel-intro">
 
         <h3>
-          Recommended stays in ${escapeHTML(destination)}
+          Recommended stays in
+          ${escapeHTML(destination)}
         </h3>
 
         <p>
-          Compare accommodation options selected for your trip.
+          Compare accommodation options selected
+          for your trip.
         </p>
 
       </div>
 
     `;
 
-    const hotelList = document.createElement("div");
+    const hotelList =
+      document.createElement("div");
 
-    hotelList.className = "hotel-list";
+    hotelList.className =
+      "hotel-list";
 
     hotels.forEach((hotel, index) => {
 
@@ -679,10 +853,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const introWrapper =
       document.createElement("div");
 
-    introWrapper.innerHTML = intro;
+    introWrapper.innerHTML =
+      intro;
 
-    container.appendChild(introWrapper);
-    container.appendChild(hotelList);
+    container.appendChild(
+      introWrapper
+    );
+
+    container.appendChild(
+      hotelList
+    );
 
   }
 
@@ -699,7 +879,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const card =
       document.createElement("article");
 
-    card.className = "hotel-card";
+    card.className =
+      "hotel-card";
 
     const name =
       hotel?.name ||
@@ -714,10 +895,6 @@ document.addEventListener("DOMContentLoaded", () => {
       hotel?.price !== ""
         ? hotel.price
         : null;
-
-    const currency =
-      hotel?.currency ||
-      "USD";
 
     const priceType =
       hotel?.priceType ||
@@ -739,10 +916,6 @@ document.addEventListener("DOMContentLoaded", () => {
       hotel?.photoUrl ||
       "";
 
-    // =====================================================
-    // IMAGE
-    // =====================================================
-
     let imageHTML = "";
 
     if (image) {
@@ -754,7 +927,10 @@ document.addEventListener("DOMContentLoaded", () => {
           src="${escapeAttribute(image)}"
           alt="${escapeAttribute(name)}"
           loading="lazy"
-          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+          onerror="
+            this.style.display='none';
+            this.nextElementSibling.style.display='flex';
+          "
         >
 
         <div
@@ -778,10 +954,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
-    // =====================================================
-    // STARS
-    // =====================================================
-
     let starsHTML = "";
 
     if (stars > 0) {
@@ -791,7 +963,9 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="hotel-rating">
 
           <span class="hotel-stars">
-            ${"★".repeat(Math.min(stars, 5))}
+            ${"★".repeat(
+              Math.min(stars, 5)
+            )}
           </span>
 
           <span class="hotel-star-text">
@@ -804,10 +978,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
-    // =====================================================
-    // PRICE
-    // =====================================================
-
     let priceHTML = "";
 
     if (price !== null) {
@@ -817,11 +987,15 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="hotel-price">
 
           <span class="hotel-price-value">
-            $${escapeHTML(String(price))}
+            $${escapeHTML(
+              String(price)
+            )}
           </span>
 
           <span class="hotel-price-label">
-            ${escapeHTML(priceType)}
+            ${escapeHTML(
+              priceType
+            )}
           </span>
 
         </div>
@@ -829,10 +1003,6 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
 
     }
-
-    // =====================================================
-    // AMENITIES
-    // =====================================================
 
     let amenitiesHTML = "";
 
@@ -851,7 +1021,9 @@ document.addEventListener("DOMContentLoaded", () => {
             .map(
               amenity => `
                 <span class="hotel-amenity">
-                  ${escapeHTML(String(amenity))}
+                  ${escapeHTML(
+                    String(amenity)
+                  )}
                 </span>
               `
             )
@@ -864,10 +1036,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
-    // =====================================================
-    // BOOKING LINK
-    // =====================================================
-
     const bookingURL =
       createBookingSearchURL(
         name,
@@ -877,9 +1045,7 @@ document.addEventListener("DOMContentLoaded", () => {
     card.innerHTML = `
 
       <div class="hotel-image-wrap">
-
         ${imageHTML}
-
       </div>
 
       <div class="hotel-info">
@@ -906,12 +1072,310 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <a
             class="booking-button"
-            href="${escapeAttribute(bookingURL)}"
+            href="${escapeAttribute(
+              bookingURL
+            )}"
             target="_blank"
             rel="noopener noreferrer"
           >
             Check availability on Booking.com
-            <span class="booking-arrow">↗</span>
+            <span class="booking-arrow">
+              ↗
+            </span>
+          </a>
+
+        </div>
+
+      </div>
+
+    `;
+
+    return card;
+
+  }
+
+  // =========================================================
+  // RENDER RESTAURANTS
+  // =========================================================
+
+  function renderRestaurants(
+    restaurantData,
+    destination
+  ) {
+
+    const container =
+      document.getElementById(
+        "experiencesContent"
+      );
+
+    if (
+      !Array.isArray(restaurantData) ||
+      restaurantData.length === 0
+    ) {
+
+      container.innerHTML = `
+
+        <div>
+
+          ${safeHTML(
+            container.innerHTML
+          )}
+
+          <div style="
+            margin-top:30px;
+            padding:20px;
+            background:#f7f7f8;
+            border-radius:14px;
+            color:#666;
+          ">
+            No restaurant recommendations
+            were returned.
+          </div>
+
+        </div>
+
+      `;
+
+      return;
+
+    }
+
+    const restaurants =
+      restaurantData.slice(0, 10);
+
+    const existingExperiences =
+      safeHTML(
+        container.innerHTML
+      );
+
+    const intro = `
+
+      <div class="restaurant-intro"
+           style="margin-top:32px;">
+
+        <h3>
+          Recommended restaurants in
+          ${escapeHTML(destination)}
+        </h3>
+
+        <p>
+          A selection of restaurants based on
+          your destination and interests.
+        </p>
+
+      </div>
+
+    `;
+
+    const restaurantList =
+      document.createElement("div");
+
+    restaurantList.className =
+      "restaurant-list";
+
+    restaurants.forEach(
+      (restaurant, index) => {
+
+        const card =
+          createRestaurantCard(
+            restaurant,
+            index + 1,
+            destination
+          );
+
+        restaurantList.appendChild(
+          card
+        );
+
+      }
+    );
+
+    container.innerHTML =
+      existingExperiences;
+
+    const introWrapper =
+      document.createElement("div");
+
+    introWrapper.innerHTML =
+      intro;
+
+    container.appendChild(
+      introWrapper
+    );
+
+    container.appendChild(
+      restaurantList
+    );
+
+  }
+
+  // =========================================================
+  // CREATE RESTAURANT CARD
+  // =========================================================
+
+  function createRestaurantCard(
+    restaurant,
+    number,
+    destination
+  ) {
+
+    const card =
+      document.createElement("article");
+
+    card.className =
+      "restaurant-card";
+
+    const name =
+      restaurant?.name ||
+      "Recommended Restaurant";
+
+    const cuisine =
+      restaurant?.cuisine ||
+      "Local cuisine";
+
+    const priceLevel =
+      restaurant?.priceLevel ||
+      "$$";
+
+    const rating =
+      restaurant?.rating !== undefined &&
+      restaurant?.rating !== null &&
+      restaurant?.rating !== ""
+        ? restaurant.rating
+        : null;
+
+    const address =
+      restaurant?.address ||
+      "Address unavailable";
+
+    const description =
+      restaurant?.description ||
+      "A recommended restaurant selected for your trip.";
+
+    const image =
+      restaurant?.image ||
+      restaurant?.imageUrl ||
+      restaurant?.photo ||
+      restaurant?.photoUrl ||
+      "";
+
+    const mapsURL =
+      restaurant?.mapsUrl ||
+      createGoogleMapsSearchURL(
+        name,
+        destination
+      );
+
+    let imageHTML = "";
+
+    if (image) {
+
+      imageHTML = `
+
+        <img
+          class="restaurant-image"
+          src="${escapeAttribute(image)}"
+          alt="${escapeAttribute(name)}"
+          loading="lazy"
+          onerror="
+            this.style.display='none';
+            this.nextElementSibling.style.display='flex';
+          "
+        >
+
+        <div
+          class="restaurant-image-placeholder"
+          style="display:none;"
+        >
+          Restaurant photo unavailable
+        </div>
+
+      `;
+
+    } else {
+
+      imageHTML = `
+
+        <div class="restaurant-image-placeholder">
+          Restaurant photo unavailable
+        </div>
+
+      `;
+
+    }
+
+    let ratingHTML = "";
+
+    if (rating !== null) {
+
+      ratingHTML = `
+
+        <span class="restaurant-rating">
+          ★ ${escapeHTML(
+            String(rating)
+          )}
+        </span>
+
+      `;
+
+    }
+
+    card.innerHTML = `
+
+      <div class="restaurant-image-wrap">
+
+        ${imageHTML}
+
+      </div>
+
+      <div class="restaurant-info">
+
+        <div class="restaurant-number">
+          Option ${number}
+        </div>
+
+        <h3 class="restaurant-name">
+          ${escapeHTML(name)}
+        </h3>
+
+        <div class="restaurant-meta">
+
+          <span class="restaurant-cuisine">
+            ${escapeHTML(
+              String(cuisine)
+            )}
+          </span>
+
+          <span class="restaurant-price">
+            ${escapeHTML(
+              String(priceLevel)
+            )}
+          </span>
+
+          ${ratingHTML}
+
+        </div>
+
+        <div class="restaurant-address">
+          ${escapeHTML(address)}
+        </div>
+
+        <div class="restaurant-description">
+          ${escapeHTML(description)}
+        </div>
+
+        <div class="restaurant-actions">
+
+          <a
+            class="maps-button"
+            href="${escapeAttribute(
+              mapsURL
+            )}"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View on Google Maps
+            <span>↗</span>
           </a>
 
         </div>
@@ -943,6 +1407,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================================================
+  // GOOGLE MAPS SEARCH URL
+  // =========================================================
+
+  function createGoogleMapsSearchURL(
+    restaurantName,
+    destination
+  ) {
+
+    const query =
+      encodeURIComponent(
+        `${restaurantName} ${destination}`
+      );
+
+    return `https://www.google.com/maps/search/?api=1&query=${query}`;
+
+  }
+
+  // =========================================================
   // SAFE HTML
   // =========================================================
 
@@ -968,11 +1450,26 @@ document.addEventListener("DOMContentLoaded", () => {
   function escapeHTML(value) {
 
     return String(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+      .replace(
+        /&/g,
+        "&amp;"
+      )
+      .replace(
+        /</g,
+        "&lt;"
+      )
+      .replace(
+        />/g,
+        "&gt;"
+      )
+      .replace(
+        /"/g,
+        "&quot;"
+      )
+      .replace(
+        /'/g,
+        "&#039;"
+      );
 
   }
 
@@ -991,36 +1488,59 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================================
 
   const tabs =
-    document.querySelectorAll(".plan-tab");
+    document.querySelectorAll(
+      ".plan-tab"
+    );
 
   const sections =
-    document.querySelectorAll(".plan-section");
+    document.querySelectorAll(
+      ".plan-section"
+    );
 
   tabs.forEach((tab) => {
 
-    tab.addEventListener("click", () => {
+    tab.addEventListener(
+      "click",
+      () => {
 
-      const targetSectionId =
-        tab.getAttribute("data-target");
+        const targetSectionId =
+          tab.getAttribute(
+            "data-target"
+          );
 
-      tabs.forEach((t) => {
-        t.classList.remove("active");
-      });
+        tabs.forEach((t) => {
+          t.classList.remove(
+            "active"
+          );
+        });
 
-      sections.forEach((section) => {
-        section.classList.add("hidden");
-      });
+        sections.forEach(
+          (section) => {
+            section.classList.add(
+              "hidden"
+            );
+          }
+        );
 
-      tab.classList.add("active");
+        tab.classList.add(
+          "active"
+        );
 
-      const target =
-        document.getElementById(targetSectionId);
+        const target =
+          document.getElementById(
+            targetSectionId
+          );
 
-      if (target) {
-        target.classList.remove("hidden");
+        if (target) {
+
+          target.classList.remove(
+            "hidden"
+          );
+
+        }
+
       }
-
-    });
+    );
 
   });
 
