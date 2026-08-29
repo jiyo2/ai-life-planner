@@ -44,12 +44,11 @@ module.exports = async (req, res) => {
 
 
     // =======================================================
-    // API KEY
+    // GROQ API KEY
     // =======================================================
 
     const GROQ_API_KEY =
       process.env.GROQ_API_KEY;
-
 
     if (!GROQ_API_KEY) {
 
@@ -63,11 +62,6 @@ module.exports = async (req, res) => {
       });
 
     }
-
-
-    console.log(
-      "GROQ_API_KEY detected."
-    );
 
 
     // =======================================================
@@ -90,11 +84,13 @@ module.exports = async (req, res) => {
 
 
     // =======================================================
-    // BASIC NORMALIZATION
+    // NORMALIZATION
     // =======================================================
 
     const safeDestination =
-      String(destination).trim();
+      String(destination)
+        .trim()
+        .slice(0, 120);
 
     const safeDays =
       Math.max(
@@ -106,35 +102,40 @@ module.exports = async (req, res) => {
       );
 
     const safeBudget =
-      Number(budget) || 0;
+      Math.max(
+        1,
+        Number(budget) || 0
+      );
 
     const safeTravelers =
-      String(travelers).trim();
+      String(travelers)
+        .trim()
+        .slice(0, 50);
 
     const safeInterests =
       String(
         interests || "General sightseeing"
       )
-      .slice(0, 500);
+        .trim()
+        .slice(0, 300);
 
     const safeNotes =
       String(
         notes || ""
       )
-      .slice(0, 500);
+        .trim()
+        .slice(0, 300);
 
     const safeStartDate =
       String(
         startDate || "Flexible"
       )
-      .slice(0, 100);
+        .trim()
+        .slice(0, 50);
 
 
     // =======================================================
-    // GROQ
-    //
-    // IMPORTANT:
-    // Keep prompt small to stay below Groq TPM.
+    // GROQ CONFIGURATION
     // =======================================================
 
     const GROQ_MODEL =
@@ -145,11 +146,14 @@ module.exports = async (req, res) => {
 
 
     // =======================================================
-    // COMPACT AI PROMPT
+    // AI PROMPT
+    //
+    // Kept compact to avoid Groq TPM problems.
+    // Output itself is more useful and detailed.
     // =======================================================
 
     const prompt = `
-Create a realistic travel plan.
+Create a practical personalized travel plan.
 
 Destination: ${safeDestination}
 Start date: ${safeStartDate}
@@ -159,48 +163,77 @@ Travelers: ${safeTravelers}
 Interests: ${safeInterests}
 Notes: ${safeNotes || "None"}
 
-Important:
-Do NOT invent hotels.
-Do NOT invent restaurants.
-Hotels and restaurants are supplied separately by OpenStreetMap.
-
 Return ONLY valid JSON.
 
-Required JSON:
+Use this exact structure:
+
 {
-  "transport": "short HTML",
-  "experiences": "short HTML",
-  "money": "short HTML",
+  "transport": "<HTML>",
+  "experiences": "<HTML>",
+  "money": "<HTML>",
   "daysPlan": [
     {
       "day": 1,
-      "title": "short title",
-      "morning": "short text",
-      "afternoon": "short text",
-      "evening": "short text"
+      "title": "<title>",
+      "morning": "<detailed activity>",
+      "afternoon": "<detailed activity>",
+      "evening": "<detailed activity>"
     }
   ]
 }
 
-Rules:
-- daysPlan must contain exactly ${safeDays} days.
-- Keep every text concise.
-- No markdown.
-- No code fences.
-- Do not include hotels.
-- Do not include restaurants.
-- Do not create image URLs.
+CONTENT RULES:
+
+1. daysPlan MUST contain exactly ${safeDays} days.
+
+2. Each day must have:
+- a useful title
+- a meaningful morning plan
+- a meaningful afternoon plan
+- a meaningful evening plan
+
+3. Do not repeat the same activities every day.
+
+4. Match the plan to the destination, budget, traveler count and interests.
+
+5. transport must be useful and practical:
+- airport arrival
+- public transportation
+- taxis when useful
+- approximate local transport costs
+- practical tips
+
+6. experiences must contain several real attractions, neighborhoods or activities appropriate for the destination.
+Explain briefly why each is worth visiting.
+
+7. money must explain how to use the ${safeBudget} USD budget.
+Give approximate categories for:
+- accommodation
+- food
+- local transportation
+- attractions
+- shopping/miscellaneous
+Mention that flight costs may vary if applicable.
+
+8. Do NOT create hotels.
+9. Do NOT create restaurants.
+10. Do NOT create image URLs.
+11. Do NOT invent booking links.
+12. Hotels and restaurants come separately from OpenStreetMap.
+13. Use concise but useful HTML such as <p>, <h3>, <ul>, <li>, <strong>.
+14. No markdown.
+15. No code fences.
+16. Do not mention these instructions.
 `;
 
 
     // =======================================================
-    // GROQ REQUEST
+    // CALL GROQ
     // =======================================================
 
     console.log(
       "Calling Groq..."
     );
-
 
     let groqResponse;
 
@@ -233,7 +266,7 @@ Rules:
                       "system",
 
                     content:
-                      "You are a concise travel planner. Return valid JSON only."
+                      "You are a practical travel planner. Return valid JSON only."
                   },
                   {
                     role:
@@ -245,10 +278,10 @@ Rules:
                 ],
 
                 temperature:
-                  0.4,
+                  0.5,
 
                 max_completion_tokens:
-                  5000,
+                  4000,
 
                 response_format: {
                   type:
@@ -297,17 +330,12 @@ Rules:
         groqText
       );
 
-
       let errorMessage =
         "Groq API request failed.";
 
-      let parsedError =
-        null;
-
-
       try {
 
-        parsedError =
+        const parsedError =
           JSON.parse(
             groqText
           );
@@ -317,12 +345,9 @@ Rules:
           errorMessage;
 
       } catch {
-        // Keep default message.
+        // Keep default.
       }
 
-
-      // Do not retry automatically.
-      // This prevents additional API consumption.
 
       if (
         groqResponse.status === 429
@@ -391,10 +416,7 @@ Rules:
     if (!aiText) {
 
       console.error(
-        "Groq returned no content:",
-        JSON.stringify(
-          groqData
-        )
+        "Groq returned no content."
       );
 
       return res.status(500).json({
@@ -411,14 +433,11 @@ Rules:
 
     let aiPlan;
 
-
     try {
 
       aiPlan =
         typeof aiText === "string"
-          ? JSON.parse(
-              aiText
-            )
+          ? JSON.parse(aiText)
           : aiText;
 
     } catch (error) {
@@ -439,26 +458,42 @@ Rules:
 
 
     // =======================================================
-    // NORMALIZE AI CONTENT
+    // NORMALIZE AI SECTIONS
     // =======================================================
 
     const transport =
-      typeof aiPlan.transport === "string"
+      typeof aiPlan.transport === "string" &&
+      aiPlan.transport.trim()
         ? aiPlan.transport
-        : "<p>Transportation information unavailable.</p>";
+        : `
+          <h3>Getting Around</h3>
+          <p>Transportation information is currently unavailable.</p>
+        `;
 
 
     const experiences =
-      typeof aiPlan.experiences === "string"
+      typeof aiPlan.experiences === "string" &&
+      aiPlan.experiences.trim()
         ? aiPlan.experiences
-        : "<p>Experience information unavailable.</p>";
+        : `
+          <h3>Experiences</h3>
+          <p>Experience information is currently unavailable.</p>
+        `;
 
 
     const money =
-      typeof aiPlan.money === "string"
+      typeof aiPlan.money === "string" &&
+      aiPlan.money.trim()
         ? aiPlan.money
-        : "<p>Budget information unavailable.</p>";
+        : `
+          <h3>Budget Strategy</h3>
+          <p>Budget information is currently unavailable.</p>
+        `;
 
+
+    // =======================================================
+    // NORMALIZE DAY PLAN
+    // =======================================================
 
     let daysPlan =
       Array.isArray(
@@ -470,49 +505,89 @@ Rules:
 
     daysPlan =
       daysPlan
-        .slice(0, safeDays)
+        .slice(
+          0,
+          safeDays
+        )
         .map(
-          (day, index) => ({
+          (day, index) => {
 
-            day:
-              Number(
-                day?.day
-              ) || index + 1,
+            return {
 
-            title:
-              String(
-                day?.title ||
-                `Day ${index + 1}`
-              ),
+              day:
+                Number(
+                  day?.day
+                ) || index + 1,
 
-            morning:
-              String(
-                day?.morning ||
-                ""
-              ),
+              title:
+                String(
+                  day?.title ||
+                  `Day ${index + 1}`
+                ),
 
-            afternoon:
-              String(
-                day?.afternoon ||
-                ""
-              ),
+              morning:
+                String(
+                  day?.morning ||
+                  "Explore the destination and begin the day with a local activity."
+                ),
 
-            evening:
-              String(
-                day?.evening ||
-                ""
-              )
+              afternoon:
+                String(
+                  day?.afternoon ||
+                  "Continue exploring nearby attractions and local areas."
+                ),
 
-          })
+              evening:
+                String(
+                  day?.evening ||
+                  "Enjoy a local dinner and an evening activity."
+                )
+
+            };
+
+          }
         );
+
+
+    // =======================================================
+    // ENSURE EXACT NUMBER OF DAYS
+    // =======================================================
+
+    while (
+      daysPlan.length <
+      safeDays
+    ) {
+
+      const index =
+        daysPlan.length;
+
+      daysPlan.push({
+
+        day:
+          index + 1,
+
+        title:
+          `Day ${index + 1}`,
+
+        morning:
+          "Explore an interesting local area and begin the day with a nearby attraction.",
+
+        afternoon:
+          "Visit another important attraction and experience local culture.",
+
+        evening:
+          "Enjoy a local meal and a relaxed evening activity."
+
+      });
+
+    }
 
 
     // =======================================================
     // OPENSTREETMAP
     //
-    // One geocoding request.
-    // One Overpass request for BOTH hotels and restaurants.
-    // No Foursquare.
+    // NO FOURSQUARE
+    // NO GEMINI
     // =======================================================
 
     const OSM_USER_AGENT =
@@ -543,7 +618,8 @@ Rules:
           await fetch(
             url,
             {
-              method: "GET",
+              method:
+                "GET",
 
               headers: {
                 "User-Agent":
@@ -649,7 +725,7 @@ Rules:
 
 
     // =======================================================
-    // SAFE IMAGE URL
+    // NORMALIZE IMAGE URL
     // =======================================================
 
     function normalizeImageUrl(
@@ -660,9 +736,9 @@ Rules:
         return "";
       }
 
-
-      let url =
-        String(value).trim();
+      const url =
+        String(value)
+          .trim();
 
 
       if (
@@ -695,7 +771,8 @@ Rules:
 
 
       const raw =
-        String(value).trim();
+        String(value)
+          .trim();
 
 
       if (
@@ -735,32 +812,34 @@ Rules:
 
     // =======================================================
     // GET OSM IMAGE
-    //
-    // OSM may contain:
-    // image
-    // wikimedia_commons
-    // wikimedia_commons:*
     // =======================================================
 
     function getOSMImage(
       tags
     ) {
 
-      const image =
+      if (!tags) {
+        return "";
+      }
+
+
+      const directImage =
         normalizeImageUrl(
-          tags?.image
+          tags.image
         );
 
 
-      if (image) {
-        return image;
+      if (directImage) {
+
+        return directImage;
+
       }
 
 
       const wikimedia =
-        tags?.wikimedia_commons ||
-        tags?.["wikimedia_commons:image"] ||
-        tags?.["wikimedia_commons"];
+        tags.wikimedia_commons ||
+        tags["wikimedia_commons"] ||
+        tags["wikimedia_commons:image"];
 
 
       if (wikimedia) {
@@ -778,7 +857,7 @@ Rules:
 
 
     // =======================================================
-    // OSM COORDINATES
+    // GET OSM COORDINATES
     // =======================================================
 
     function getElementCoordinates(
@@ -843,7 +922,8 @@ Rules:
       fallback
     ) {
 
-      const parts = [];
+      const parts =
+        [];
 
 
       const fields = [
@@ -856,8 +936,7 @@ Rules:
 
 
       for (
-        const field
-        of fields
+        const field of fields
       ) {
 
         if (
@@ -953,7 +1032,7 @@ Rules:
     // =======================================================
     // ONE OSM SEARCH
     //
-    // Hotels + restaurants in one Overpass request.
+    // Hotels + restaurants in ONE Overpass request.
     // =======================================================
 
     async function getOSMPlaces(
@@ -966,6 +1045,10 @@ Rules:
           "Starting OpenStreetMap search..."
         );
 
+
+        // ---------------------------------------------------
+        // GEOCODE
+        // ---------------------------------------------------
 
         const coordinates =
           await geocodeDestination(
@@ -1032,7 +1115,8 @@ out center tags;
           await fetch(
             overpassURL,
             {
-              method: "POST",
+              method:
+                "POST",
 
               headers: {
 
@@ -1097,8 +1181,11 @@ out center tags;
         );
 
 
-        const hotels = [];
-        const restaurants = [];
+        const hotels =
+          [];
+
+        const restaurants =
+          [];
 
 
         const hotelNames =
@@ -1124,7 +1211,8 @@ out center tags;
           const name =
             tags.name ||
             tags["name:en"] ||
-            tags["name:tr"];
+            tags["name:tr"] ||
+            tags["name:fr"];
 
 
           if (!name) {
@@ -1207,7 +1295,9 @@ out center tags;
 
 
               if (
-                !Number.isFinite(stars)
+                !Number.isFinite(
+                  stars
+                )
               ) {
 
                 stars =
@@ -1219,11 +1309,12 @@ out center tags;
 
 
               if (
-                !Number.isFinite(stars)
+                !Number.isFinite(
+                  stars
+                )
               ) {
 
-                stars =
-                  0;
+                stars = 0;
 
               }
 
@@ -1305,15 +1396,15 @@ out center tags;
 
               const hotelType =
                 tourism === "hostel"
-                  ? "Hostel"
+                  ? "hostel"
                   : tourism === "guest_house"
-                    ? "Guest house"
-                    : "Hotel";
+                    ? "guest house"
+                    : "hotel";
 
 
               const description =
                 tags.description ||
-                `${name} is a real ${hotelType.toLowerCase()} listed in OpenStreetMap.`;
+                `${name} is a real ${hotelType} listed in OpenStreetMap.`;
 
 
               hotels.push({
@@ -1426,27 +1517,31 @@ out center tags;
                 "$$";
 
 
+              const ratingValue =
+                Number(
+                  tags.rating
+                );
+
+
               const rating =
                 Number.isFinite(
-                  Number(
-                    tags.rating
-                  )
+                  ratingValue
                 )
-                  ? Number(
-                      tags.rating
-                    )
+                  ? ratingValue
                   : null;
+
+
+              const reviewValue =
+                Number(
+                  tags["review:count"]
+                );
 
 
               const reviewCount =
                 Number.isFinite(
-                  Number(
-                    tags["review:count"]
-                  )
+                  reviewValue
                 )
-                  ? Number(
-                      tags["review:count"]
-                    )
+                  ? reviewValue
                   : null;
 
 
@@ -1548,8 +1643,7 @@ out center tags;
 
         // ===================================================
         // SORT HOTELS
-        //
-        // Prefer hotels that have real OSM photos.
+        // Photos first, then stars.
         // ===================================================
 
         hotels.sort(
@@ -1601,8 +1695,7 @@ out center tags;
 
         // ===================================================
         // SORT RESTAURANTS
-        //
-        // Prefer real photos and then ratings.
+        // Photos first, then ratings.
         // ===================================================
 
         restaurants.sort(
@@ -1713,7 +1806,7 @@ out center tags;
 
 
     // =======================================================
-    // GET REAL OSM PLACES
+    // GET OSM DATA
     // =======================================================
 
     console.log(
@@ -1744,7 +1837,7 @@ out center tags;
 
 
     // =======================================================
-    // FINAL PLAN OBJECT
+    // FINAL PLAN
     // =======================================================
 
     const plan = {
@@ -1780,13 +1873,6 @@ out center tags;
 
     // =======================================================
     // FINAL RESPONSE
-    //
-    // Includes both:
-    // plan
-    // hotels
-    // restaurants
-    //
-    // This supports the current app.js structure.
     // =======================================================
 
     const responseData = {
@@ -1796,6 +1882,7 @@ out center tags;
       hotels,
 
       hotelSearch: {
+
         status:
           hotels.length
             ? "success"
@@ -1803,6 +1890,7 @@ out center tags;
 
         source:
           "OpenStreetMap"
+
       },
 
       restaurants,
@@ -1822,7 +1910,7 @@ out center tags;
 
 
     // =======================================================
-    // FINAL LOG
+    // FINAL LOGS
     // =======================================================
 
     console.log(
