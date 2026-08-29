@@ -48,6 +48,9 @@ module.exports = async (req, res) => {
     console.log("======================================");
     console.log("PLAN API START");
     console.log("Destination:", destination);
+    console.log("Days:", days);
+    console.log("Budget:", budget);
+    console.log("Travelers:", travelers);
     console.log("======================================");
 
 
@@ -91,7 +94,7 @@ module.exports = async (req, res) => {
       );
 
       console.warn(
-        "Restaurants will still load from OpenStreetMap, but verified Foursquare photos will not be available."
+        "Restaurants will still load from OpenStreetMap, but Foursquare photos will not be available."
       );
 
     } else {
@@ -556,7 +559,7 @@ Use exactly:
 
 
     // =====================================================
-    // NO PEXELS
+    // NO HOTEL IMAGE PROVIDER
     // =====================================================
 
     travelData.stay =
@@ -584,6 +587,14 @@ Use exactly:
 
     const OSM_USER_AGENT =
       "AI-Life-Planner/1.0";
+
+
+    // =====================================================
+    // FOURSQUARE API VERSION
+    // =====================================================
+
+    const FOURSQUARE_API_VERSION =
+      "2025-06-17";
 
 
     // =====================================================
@@ -700,6 +711,250 @@ Use exactly:
 
 
     // =====================================================
+    // NORMALIZE PLACE NAME
+    // =====================================================
+
+    function normalizePlaceName(
+      name
+    ) {
+
+      return String(
+        name || ""
+      )
+        .toLowerCase()
+        .normalize(
+          "NFD"
+        )
+        .replace(
+          /[\u0300-\u036f]/g,
+          ""
+        )
+        .replace(
+          /[^\p{L}\p{N}]+/gu,
+          " "
+        )
+        .trim();
+
+    }
+
+
+    // =====================================================
+    // CALCULATE NAME SIMILARITY
+    // =====================================================
+
+    function calculateNameSimilarity(
+      firstName,
+      secondName
+    ) {
+
+      const a =
+        normalizePlaceName(
+          firstName
+        );
+
+      const b =
+        normalizePlaceName(
+          secondName
+        );
+
+
+      if (
+        !a ||
+        !b
+      ) {
+
+        return 0;
+
+      }
+
+
+      if (
+        a === b
+      ) {
+
+        return 1;
+
+      }
+
+
+      if (
+        a.includes(b) ||
+        b.includes(a)
+      ) {
+
+        return 0.9;
+
+      }
+
+
+      const aWords =
+        new Set(
+          a.split(
+            /\s+/
+          )
+        );
+
+      const bWords =
+        new Set(
+          b.split(
+            /\s+/
+          )
+        );
+
+
+      let common =
+        0;
+
+
+      for (
+        const word
+        of aWords
+      ) {
+
+        if (
+          bWords.has(
+            word
+          )
+        ) {
+
+          common++;
+
+        }
+
+      }
+
+
+      const total =
+        Math.max(
+          aWords.size,
+          bWords.size
+        );
+
+
+      if (
+        total === 0
+      ) {
+
+        return 0;
+
+      }
+
+
+      return (
+        common /
+        total
+      );
+
+    }
+
+
+    // =====================================================
+    // DISTANCE BETWEEN COORDINATES
+    // =====================================================
+
+    function coordinateDistance(
+      lat1,
+      lon1,
+      lat2,
+      lon2
+    ) {
+
+      const aLat =
+        Number(lat1);
+
+      const aLon =
+        Number(lon1);
+
+      const bLat =
+        Number(lat2);
+
+      const bLon =
+        Number(lon2);
+
+
+      if (
+        !Number.isFinite(aLat) ||
+        !Number.isFinite(aLon) ||
+        !Number.isFinite(bLat) ||
+        !Number.isFinite(bLon)
+      ) {
+
+        return Infinity;
+
+      }
+
+
+      const earthRadius =
+        6371000;
+
+
+      const lat1Rad =
+        aLat *
+        Math.PI /
+        180;
+
+      const lat2Rad =
+        bLat *
+        Math.PI /
+        180;
+
+      const deltaLat =
+        (
+          bLat -
+          aLat
+        ) *
+        Math.PI /
+        180;
+
+      const deltaLon =
+        (
+          bLon -
+          aLon
+        ) *
+        Math.PI /
+        180;
+
+
+      const a =
+        Math.sin(
+          deltaLat / 2
+        ) *
+        Math.sin(
+          deltaLat / 2
+        ) +
+        Math.cos(
+          lat1Rad
+        ) *
+        Math.cos(
+          lat2Rad
+        ) *
+        Math.sin(
+          deltaLon / 2
+        ) *
+        Math.sin(
+          deltaLon / 2
+        );
+
+
+      const c =
+        2 *
+        Math.atan2(
+          Math.sqrt(a),
+          Math.sqrt(
+            1 - a
+          )
+        );
+
+
+      return (
+        earthRadius *
+        c
+      );
+
+    }
+
+
+    // =====================================================
     // FOURSQUARE SEARCH
     // =====================================================
 
@@ -756,7 +1011,7 @@ Use exactly:
 
         params.set(
           "limit",
-          "5"
+          "10"
         );
 
 
@@ -787,7 +1042,7 @@ Use exactly:
                   FOURSQUARE_API_KEY,
 
                 "X-Places-Api-Version":
-                  "2025-06-17"
+                  FOURSQUARE_API_VERSION
 
               }
             }
@@ -824,6 +1079,10 @@ Use exactly:
 
         } catch {
 
+          console.error(
+            "Foursquare search returned invalid JSON."
+          );
+
           return null;
 
         }
@@ -837,21 +1096,25 @@ Use exactly:
           data.results.length === 0
         ) {
 
+          console.log(
+            "No Foursquare results:",
+            name
+          );
+
           return null;
 
         }
 
 
         // -------------------------------------------------
-        // Choose closest reasonable result
+        // CHOOSE BEST MATCH
         // -------------------------------------------------
 
         let best =
-          data.results[0];
+          null;
 
-
-        let bestDistance =
-          Infinity;
+        let bestScore =
+          -Infinity;
 
 
         for (
@@ -859,11 +1122,17 @@ Use exactly:
           of data.results
         ) {
 
+          const placeName =
+            place?.name ||
+            "";
+
+
           const placeLat =
             Number(
               place?.latitude ??
               place?.geocodes?.main?.latitude
             );
+
 
           const placeLon =
             Number(
@@ -872,46 +1141,76 @@ Use exactly:
             );
 
 
-          if (
-            !Number.isFinite(
-              placeLat
-            ) ||
-            !Number.isFinite(
-              placeLon
-            )
-          ) {
-
-            continue;
-
-          }
-
-
-          const distance =
-            Math.sqrt(
-              Math.pow(
-                placeLat -
-                  Number(
-                    latitude
-                  ),
-                2
-              ) +
-              Math.pow(
-                placeLon -
-                  Number(
-                    longitude
-                  ),
-                2
-              )
+          const similarity =
+            calculateNameSimilarity(
+              name,
+              placeName
             );
 
 
+          const distance =
+            coordinateDistance(
+              latitude,
+              longitude,
+              placeLat,
+              placeLon
+            );
+
+
+          // Distance score.
+          // 0m = 1.0
+          // 1500m = approximately 0
+          const distanceScore =
+            Number.isFinite(
+              distance
+            )
+              ? Math.max(
+                  0,
+                  1 -
+                  (
+                    distance /
+                    1500
+                  )
+                )
+              : 0;
+
+
+          const score =
+            (
+              similarity *
+              0.75
+            ) +
+            (
+              distanceScore *
+              0.25
+            );
+
+
+          console.log(
+            "Foursquare candidate:",
+            placeName,
+            "| similarity:",
+            similarity.toFixed(2),
+            "| distance:",
+            Number.isFinite(
+              distance
+            )
+              ? Math.round(
+                  distance
+                ) + "m"
+              : "unknown",
+            "| score:",
+            score.toFixed(2)
+          );
+
+
           if (
-            distance <
-            bestDistance
+            score >
+            bestScore
           ) {
 
-            bestDistance =
-              distance;
+            bestScore =
+              score;
 
             best =
               place;
@@ -919,6 +1218,66 @@ Use exactly:
           }
 
         }
+
+
+        if (
+          !best
+        ) {
+
+          return null;
+
+        }
+
+
+        // -------------------------------------------------
+        // SAFETY CHECK
+        // -------------------------------------------------
+        // Do not attach a clearly unrelated Foursquare
+        // business to an OSM restaurant.
+        // -------------------------------------------------
+
+        const finalSimilarity =
+          calculateNameSimilarity(
+            name,
+            best?.name
+          );
+
+
+        const finalDistance =
+          coordinateDistance(
+            latitude,
+            longitude,
+            best?.latitude ??
+              best?.geocodes?.main?.latitude,
+            longitude
+          );
+
+
+        if (
+          finalSimilarity < 0.30 &&
+          finalDistance > 500
+        ) {
+
+          console.log(
+            "Foursquare match rejected as unrelated:",
+            name,
+            "=>",
+            best?.name
+          );
+
+          return null;
+
+        }
+
+
+        console.log(
+          "Foursquare best match:",
+          name,
+          "=>",
+          best?.name,
+          "| score:",
+          bestScore.toFixed(2)
+        );
 
 
         return best;
@@ -957,6 +1316,17 @@ Use exactly:
         }
 
 
+        const fields = [
+          "fsq_place_id",
+          "name",
+          "rating",
+          "location",
+          "website",
+          "tel",
+          "categories"
+        ].join(",");
+
+
         const url =
           "https://places-api.foursquare.com/places/" +
           encodeURIComponent(
@@ -964,7 +1334,7 @@ Use exactly:
           ) +
           "?fields=" +
           encodeURIComponent(
-            "fsq_place_id,name,rating,location,website,tel,categories"
+            fields
           );
 
 
@@ -984,7 +1354,7 @@ Use exactly:
                   FOURSQUARE_API_KEY,
 
                 "X-Places-Api-Version":
-                  "2025-06-17"
+                  FOURSQUARE_API_VERSION
 
               }
             }
@@ -1017,6 +1387,10 @@ Use exactly:
           );
 
         } catch {
+
+          console.warn(
+            "Foursquare details returned invalid JSON."
+          );
 
           return null;
 
@@ -1056,12 +1430,31 @@ Use exactly:
         }
 
 
+        const params =
+          new URLSearchParams();
+
+
+        // Ask Foursquare for multiple photos.
+        params.set(
+          "limit",
+          "10"
+        );
+
+
+        // Prefer restaurant-related imagery.
+        params.set(
+          "classifications",
+          "food_or_drink,outdoor_building_exterior,outdoor_or_storefront,outdoor"
+        );
+
+
         const url =
           "https://places-api.foursquare.com/places/" +
           encodeURIComponent(
             fsqPlaceId
           ) +
-          "/photos";
+          "/photos?" +
+          params.toString();
 
 
         console.log(
@@ -1086,7 +1479,7 @@ Use exactly:
                   FOURSQUARE_API_KEY,
 
                 "X-Places-Api-Version":
-                  "2025-06-17"
+                  FOURSQUARE_API_VERSION
 
               }
             }
@@ -1095,6 +1488,12 @@ Use exactly:
 
         const responseText =
           await response.text();
+
+
+        console.log(
+          "Foursquare photos HTTP status:",
+          response.status
+        );
 
 
         if (
@@ -1124,7 +1523,8 @@ Use exactly:
         } catch {
 
           console.warn(
-            "Could not parse Foursquare photos response."
+            "Could not parse Foursquare photos response:",
+            responseText
           );
 
           return [];
@@ -1138,12 +1538,26 @@ Use exactly:
           )
         ) {
 
+          console.warn(
+            "Foursquare photos response is not an array:",
+            JSON.stringify(
+              data
+            )
+          );
+
           return [];
 
         }
 
 
-        const photoUrls = [];
+        console.log(
+          "Foursquare raw photos:",
+          data.length
+        );
+
+
+        const photoUrls =
+          [];
 
 
         for (
@@ -1151,26 +1565,72 @@ Use exactly:
           of data
         ) {
 
+          // ------------------------------------------------
+          // FOURSQUARE PHOTO FORMAT
+          // ------------------------------------------------
+
           if (
             photo?.prefix &&
             photo?.suffix
           ) {
 
-            const imageUrl =
-              photo.prefix +
+            /*
+             * Foursquare returns:
+             *
+             * prefix
+             * suffix
+             *
+             * The URL is assembled by inserting a size
+             * between them.
+             *
+             * Example:
+             * prefix + "original" + suffix
+             */
+
+            const originalUrl =
+              String(
+                photo.prefix
+              ) +
               "original" +
-              photo.suffix;
+              String(
+                photo.suffix
+              );
 
 
-            photoUrls.push({
+            const mediumUrl =
+              String(
+                photo.prefix
+              ) +
+              "600x600" +
+              String(
+                photo.suffix
+              );
 
-              url:
-                imageUrl,
 
-              attribution:
-                "Foursquare"
+            // Prefer 600x600 because it is lighter for the
+            // website while still providing a real photo.
+            const imageUrl =
+              mediumUrl ||
+              originalUrl;
 
-            });
+
+            if (
+              imageUrl
+            ) {
+
+              photoUrls.push({
+
+                url:
+                  imageUrl,
+
+                originalUrl,
+
+                attribution:
+                  "Foursquare"
+
+              });
+
+            }
 
           } else if (
             photo?.url
@@ -1179,6 +1639,11 @@ Use exactly:
             photoUrls.push({
 
               url:
+                String(
+                  photo.url
+                ),
+
+              originalUrl:
                 String(
                   photo.url
                 ),
@@ -1194,7 +1659,7 @@ Use exactly:
 
 
         console.log(
-          "Foursquare photos found:",
+          "Foursquare usable photos:",
           photoUrls.length
         );
 
@@ -1234,6 +1699,30 @@ Use exactly:
         }
 
 
+        if (
+          !restaurant ||
+          !restaurant.name ||
+          !Number.isFinite(
+            Number(
+              restaurant.latitude
+            )
+          ) ||
+          !Number.isFinite(
+            Number(
+              restaurant.longitude
+            )
+          )
+        ) {
+
+          return restaurant;
+
+        }
+
+
+        // -------------------------------------------------
+        // SEARCH FOURSQUARE
+        // -------------------------------------------------
+
         const place =
           await findFoursquarePlace(
             restaurant.name,
@@ -1256,6 +1745,10 @@ Use exactly:
         }
 
 
+        // -------------------------------------------------
+        // GET FSQ ID
+        // -------------------------------------------------
+
         const fsqId =
           place.fsq_place_id ||
           place.fsq_id ||
@@ -1274,6 +1767,14 @@ Use exactly:
           return restaurant;
 
         }
+
+
+        console.log(
+          "Foursquare ID:",
+          restaurant.name,
+          "=>",
+          fsqId
+        );
 
 
         // -------------------------------------------------
@@ -1396,6 +1897,8 @@ Use exactly:
         console.log(
           "Restaurant enriched:",
           restaurant.name,
+          "| Foursquare:",
+          fsqId,
           "| Photo:",
           photoUrl
             ? "YES"
@@ -1502,7 +2005,7 @@ Use exactly:
 
 
         // -------------------------------------------------
-        // OVERPASS
+        // OVERPASS QUERY
         // -------------------------------------------------
 
         const overpassQuery = `
@@ -1591,7 +2094,8 @@ out center tags;
         // BUILD RESTAURANT LIST
         // -------------------------------------------------
 
-        const restaurants = [];
+        const restaurants =
+          [];
 
 
         for (
@@ -1609,8 +2113,12 @@ out center tags;
             tags["name:tr"];
 
 
-          if (!name) {
+          if (
+            !name
+          ) {
+
             continue;
+
           }
 
 
@@ -1643,7 +2151,8 @@ out center tags;
           // ADDRESS
           // -------------------------------------------------
 
-          const addressParts = [];
+          const addressParts =
+            [];
 
 
           if (
@@ -1837,7 +2346,8 @@ out center tags;
           // GOOGLE MAPS URL
           // -------------------------------------------------
 
-          let mapsUrl = "";
+          let mapsUrl =
+            "";
 
 
           if (
@@ -1878,7 +2388,8 @@ out center tags;
           // OSM URL
           // -------------------------------------------------
 
-          let osmUrl = "";
+          let osmUrl =
+            "";
 
 
           if (
@@ -1921,10 +2432,14 @@ out center tags;
           restaurants.push({
 
             name:
-              String(name),
+              String(
+                name
+              ),
 
             cuisine:
-              String(cuisine),
+              String(
+                cuisine
+              ),
 
             priceLevel:
               String(
@@ -2026,9 +2541,9 @@ out center tags;
         ) {
 
           const key =
-            restaurant.name
-              .toLowerCase()
-              .trim();
+            normalizePlaceName(
+              restaurant.name
+            );
 
 
           if (
@@ -2059,38 +2574,76 @@ out center tags;
         // -------------------------------------------------
         // FOURSQUARE ENRICHMENT
         //
-        // Check up to 30 restaurants.
-        // This gives us more chances to find
-        // real Foursquare matches and photos.
+        // We check up to 30 real OSM restaurants.
         // -------------------------------------------------
+
+        const candidates =
+          uniqueRestaurants.slice(
+            0,
+            30
+          );
+
 
         const enrichedRestaurants =
           [];
 
 
+        /*
+         * Process in small batches.
+         *
+         * This avoids sending all 30 requests at once,
+         * while being considerably faster than doing
+         * everything sequentially.
+         */
+
+        const batchSize =
+          5;
+
+
         for (
-          const restaurant
-          of uniqueRestaurants.slice(
-            0,
-            30
-          )
+          let i = 0;
+          i < candidates.length;
+          i += batchSize
         ) {
 
-          const enriched =
-            await enrichRestaurantWithFoursquare(
-              restaurant
+          const batch =
+            candidates.slice(
+              i,
+              i + batchSize
+            );
+
+
+          const batchResults =
+            await Promise.all(
+              batch.map(
+                restaurant =>
+                  enrichRestaurantWithFoursquare(
+                    restaurant
+                  )
+              )
             );
 
 
           enrichedRestaurants.push(
-            enriched
+            ...batchResults
+          );
+
+
+          console.log(
+            "Foursquare enrichment progress:",
+            Math.min(
+              i + batchSize,
+              candidates.length
+            ),
+            "/",
+            candidates.length
           );
 
         }
 
 
         // -------------------------------------------------
-        // PREFER VERIFIED PHOTOS
+        // PREFER RESTAURANTS WITH REAL PHOTOS
         // -------------------------------------------------
 
         enrichedRestaurants.sort(
@@ -2107,9 +2660,34 @@ out center tags;
                 : 0;
 
 
-            return (
-              bImage -
+            if (
+              bImage !==
               aImage
+            ) {
+
+              return (
+                bImage -
+                aImage
+              );
+
+            }
+
+
+            // Then prefer higher ratings.
+            const aRating =
+              Number(
+                a.rating
+              ) || 0;
+
+            const bRating =
+              Number(
+                b.rating
+              ) || 0;
+
+
+            return (
+              bRating -
+              aRating
             );
 
           }
@@ -2120,10 +2698,29 @@ out center tags;
         // RETURN 15 RESTAURANTS
         // -------------------------------------------------
 
-        return enrichedRestaurants.slice(
-          0,
-          15
+        const finalRestaurants =
+          enrichedRestaurants.slice(
+            0,
+            15
+          );
+
+
+        console.log(
+          "Final restaurants:",
+          finalRestaurants.length
         );
+
+
+        console.log(
+          "Final restaurant photos:",
+          finalRestaurants.filter(
+            restaurant =>
+              !!restaurant.imageUrl
+          ).length
+        );
+
+
+        return finalRestaurants;
 
       } catch (error) {
 
@@ -2185,6 +2782,22 @@ out center tags;
 
 
     // =====================================================
+    // ENSURE RESTAURANTS ARRAY
+    // =====================================================
+
+    if (
+      !Array.isArray(
+        travelData.restaurants
+      )
+    ) {
+
+      travelData.restaurants =
+        [];
+
+    }
+
+
+    // =====================================================
     // FINAL LOG
     // =====================================================
 
@@ -2215,6 +2828,15 @@ out center tags;
       travelData.restaurants.filter(
         restaurant =>
           !!restaurant.imageUrl
+      ).length
+    );
+
+
+    console.log(
+      "Foursquare restaurants:",
+      travelData.restaurants.filter(
+        restaurant =>
+          !!restaurant.foursquareId
       ).length
     );
 
