@@ -1,9 +1,5 @@
 module.exports = async (req, res) => {
 
-  // =======================================================
-  // CORS
-  // =======================================================
-
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -34,10 +30,8 @@ module.exports = async (req, res) => {
       notes
     } = req.body || {};
 
-    console.log("========================================");
     console.log("PLAN API START");
     console.log("Destination:", destination);
-    console.log("========================================");
 
     // =======================================================
     // API KEYS
@@ -71,7 +65,7 @@ module.exports = async (req, res) => {
     }
 
     // =======================================================
-    // VALIDATION
+    // VALIDATE
     // =======================================================
 
     if (
@@ -132,7 +126,8 @@ Prices are estimates only.
 
 Never claim live availability.
 
-If you do not know the exact hotel Booking.com URL,
+For bookingUrl:
+If you do not know the exact hotel Booking.com page,
 create a Booking.com search URL for that hotel and destination.
 
 Do NOT return image URLs.
@@ -176,7 +171,7 @@ Use exactly:
         "Breakfast Available"
       ],
       "description": "Short description.",
-      "bookingUrl": ""
+      "bookingUrl": "https://www.booking.com/..."
     }
   ],
   "restaurants": [],
@@ -395,7 +390,7 @@ Use exactly:
               Array.isArray(
                 hotel.amenities
               )
-                ? hotel.amenities.slice(0, 8)
+                ? hotel.amenities.slice(0, 6)
                 : [],
 
             description:
@@ -504,9 +499,7 @@ Use exactly:
 
         }
 
-        // ---------------------------------------------------
-        // HOTEL IMAGE FALLBACK
-        // ---------------------------------------------------
+        // FALLBACK
 
         if (
           !response.ok ||
@@ -592,7 +585,7 @@ Use exactly:
       } catch (error) {
 
         console.error(
-          "Pexels hotel error:",
+          "Pexels error:",
           error.message
         );
 
@@ -643,6 +636,412 @@ Use exactly:
       );
 
     // =======================================================
+    // OPENSTREETMAP HELPERS
+    // =======================================================
+
+    const OSM_USER_AGENT =
+      "AI-Life-Planner/1.0";
+
+    // =======================================================
+    // WIKIMEDIA COMMONS IMAGE
+    // =======================================================
+
+    async function getWikimediaImage(
+      commonsValue
+    ) {
+
+      try {
+
+        if (
+          !commonsValue ||
+          typeof commonsValue !== "string"
+        ) {
+
+          return "";
+
+        }
+
+        const value =
+          commonsValue.trim();
+
+        // We only resolve direct File references.
+        // Category references are not automatically
+        // treated as the restaurant's exact photo.
+
+        if (
+          !/^File:/i.test(value)
+        ) {
+
+          return "";
+
+        }
+
+        const apiURL =
+          "https://commons.wikimedia.org/w/api.php" +
+          "?action=query" +
+          "&format=json" +
+          "&origin=*" +
+          "&prop=imageinfo" +
+          "&iiprop=url" +
+          "&iiurlwidth=1200" +
+          "&titles=" +
+          encodeURIComponent(value);
+
+        const response =
+          await fetch(
+            apiURL,
+            {
+              method: "GET",
+
+              headers: {
+                "User-Agent":
+                  OSM_USER_AGENT
+              }
+            }
+          );
+
+        if (!response.ok) {
+
+          console.error(
+            "Wikimedia image HTTP error:",
+            response.status
+          );
+
+          return "";
+
+        }
+
+        const data =
+          await response.json();
+
+        const pages =
+          data?.query?.pages;
+
+        if (!pages) {
+
+          return "";
+
+        }
+
+        const page =
+          Object.values(pages)[0];
+
+        const image =
+          page?.imageinfo?.[0];
+
+        return (
+          image?.thumburl ||
+          image?.url ||
+          ""
+        );
+
+      } catch (error) {
+
+        console.error(
+          "Wikimedia image error:",
+          error.message
+        );
+
+        return "";
+
+      }
+
+    }
+
+    // =======================================================
+    // WIKIDATA IMAGE
+    // =======================================================
+
+    async function getWikidataImage(
+      wikidataId
+    ) {
+
+      try {
+
+        if (
+          !wikidataId ||
+          typeof wikidataId !== "string"
+        ) {
+
+          return "";
+
+        }
+
+        const id =
+          wikidataId.trim();
+
+        if (
+          !/^Q\d+$/i.test(id)
+        ) {
+
+          return "";
+
+        }
+
+        const apiURL =
+          "https://www.wikidata.org/w/api.php" +
+          "?action=wbgetentities" +
+          "&format=json" +
+          "&origin=*" +
+          "&props=claims" +
+          "&ids=" +
+          encodeURIComponent(id);
+
+        const response =
+          await fetch(
+            apiURL,
+            {
+              method: "GET",
+
+              headers: {
+                "User-Agent":
+                  OSM_USER_AGENT
+              }
+            }
+          );
+
+        if (!response.ok) {
+
+          return "";
+
+        }
+
+        const data =
+          await response.json();
+
+        const entity =
+          data?.entities?.[id];
+
+        const claims =
+          entity?.claims;
+
+        const imageClaims =
+          claims?.P18;
+
+        if (
+          !Array.isArray(imageClaims) ||
+          imageClaims.length === 0
+        ) {
+
+          return "";
+
+        }
+
+        const imageValue =
+          imageClaims[0]
+            ?.mainsnak
+            ?.datavalue
+            ?.value;
+
+        if (
+          !imageValue ||
+          typeof imageValue !== "string"
+        ) {
+
+          return "";
+
+        }
+
+        return await getWikimediaImage(
+          "File:" + imageValue
+        );
+
+      } catch (error) {
+
+        console.error(
+          "Wikidata image error:",
+          error.message
+        );
+
+        return "";
+
+      }
+
+    }
+
+    // =======================================================
+    // OSM IMAGE RESOLVER
+    // =======================================================
+
+    async function resolveRestaurantImage(
+      tags
+    ) {
+
+      try {
+
+        // ---------------------------------------------------
+        // 1. DIRECT OSM IMAGE
+        // ---------------------------------------------------
+
+        const directImage =
+          tags.image ||
+          tags.photo ||
+          tags.picture ||
+          tags["url:photo"] ||
+          "";
+
+        if (
+          directImage &&
+          /^https?:\/\//i.test(
+            String(directImage)
+          )
+        ) {
+
+          return {
+
+            imageUrl:
+              String(directImage),
+
+            imageSource:
+              "OpenStreetMap",
+
+            imageAttribution:
+              "OpenStreetMap data"
+
+          };
+
+        }
+
+        // ---------------------------------------------------
+        // 2. WIKIMEDIA COMMONS
+        // ---------------------------------------------------
+
+        const commons =
+          tags.wikimedia_commons ||
+          "";
+
+        if (commons) {
+
+          const commonsImage =
+            await getWikimediaImage(
+              commons
+            );
+
+          if (commonsImage) {
+
+            return {
+
+              imageUrl:
+                commonsImage,
+
+              imageSource:
+                "Wikimedia Commons",
+
+              imageAttribution:
+                "Wikimedia Commons"
+
+            };
+
+          }
+
+        }
+
+        // ---------------------------------------------------
+        // 3. WIKIDATA
+        // ---------------------------------------------------
+
+        const wikidata =
+          tags.wikidata ||
+          "";
+
+        if (wikidata) {
+
+          const wikidataImage =
+            await getWikidataImage(
+              wikidata
+            );
+
+          if (wikidataImage) {
+
+            return {
+
+              imageUrl:
+                wikidataImage,
+
+              imageSource:
+                "Wikimedia Commons via Wikidata",
+
+              imageAttribution:
+                "Wikimedia Commons"
+
+            };
+
+          }
+
+        }
+
+        // ---------------------------------------------------
+        // 4. MAPILLARY
+        // ---------------------------------------------------
+
+        const mapillary =
+          tags.mapillary ||
+          "";
+
+        if (mapillary) {
+
+          return {
+
+            imageUrl:
+              "",
+
+            imageSource:
+              "Mapillary",
+
+            imageAttribution:
+              "Mapillary",
+
+            mapillaryUrl:
+              `https://www.mapillary.com/app/?pKey=${encodeURIComponent(
+                mapillary
+              )}`
+
+          };
+
+        }
+
+        // ---------------------------------------------------
+        // NO VERIFIED IMAGE
+        // ---------------------------------------------------
+
+        return {
+
+          imageUrl:
+            "",
+
+          imageSource:
+            "",
+
+          imageAttribution:
+            ""
+
+        };
+
+      } catch (error) {
+
+        console.error(
+          "Restaurant image resolver error:",
+          error.message
+        );
+
+        return {
+
+          imageUrl:
+            "",
+
+          imageSource:
+            "",
+
+          imageAttribution:
+            ""
+
+        };
+
+      }
+
+    }
+
+    // =======================================================
     // OPENSTREETMAP RESTAURANTS
     // =======================================================
 
@@ -653,27 +1052,19 @@ Use exactly:
       try {
 
         console.log(
-          "========================================"
-        );
-
-        console.log(
           "OpenStreetMap restaurant search:",
           destination
         );
 
-        console.log(
-          "========================================"
-        );
-
-        // ===================================================
-        // STEP 1 — NOMINATIM GEOCODING
-        // ===================================================
+        // ---------------------------------------------------
+        // STEP 1
+        // GEOCODE DESTINATION
+        // ---------------------------------------------------
 
         const geocodeURL =
           "https://nominatim.openstreetmap.org/search" +
           "?format=json" +
           "&limit=1" +
-          "&addressdetails=1" +
           "&q=" +
           encodeURIComponent(destination);
 
@@ -685,7 +1076,9 @@ Use exactly:
 
               headers: {
                 "User-Agent":
-                  "AI-Life-Planner/1.0 (travel planner application)"
+                  OSM_USER_AGENT,
+                "Accept":
+                  "application/json"
               }
             }
           );
@@ -710,7 +1103,7 @@ Use exactly:
         ) {
 
           console.log(
-            "Destination not found:",
+            "Destination not found in OSM:",
             destination
           );
 
@@ -734,7 +1127,7 @@ Use exactly:
         ) {
 
           console.error(
-            "Invalid coordinates from Nominatim"
+            "Invalid destination coordinates."
           );
 
           return [];
@@ -747,12 +1140,13 @@ Use exactly:
           lon
         );
 
-        // ===================================================
-        // STEP 2 — OVERPASS
-        // ===================================================
+        // ---------------------------------------------------
+        // STEP 2
+        // OVERPASS QUERY
+        // ---------------------------------------------------
 
         const overpassQuery = `
-[out:json][timeout:40];
+[out:json][timeout:30];
 
 (
   node["amenity"="restaurant"](around:15000,${lat},${lon});
@@ -775,9 +1169,10 @@ out center tags;
               headers: {
                 "Content-Type":
                   "application/x-www-form-urlencoded",
-
                 "User-Agent":
-                  "AI-Life-Planner/1.0"
+                  OSM_USER_AGENT,
+                "Accept":
+                  "application/json"
               },
 
               body:
@@ -809,22 +1204,19 @@ out center tags;
           )
         ) {
 
-          console.error(
-            "Invalid Overpass response"
-          );
-
           return [];
 
         }
 
         console.log(
-          "OSM restaurant elements found:",
+          "OSM restaurants found:",
           osmData.elements.length
         );
 
-        // ===================================================
-        // STEP 3 — NORMALIZE RESTAURANTS
-        // ===================================================
+        // ---------------------------------------------------
+        // STEP 3
+        // NORMALIZE RESTAURANTS
+        // ---------------------------------------------------
 
         const restaurants = [];
 
@@ -836,22 +1228,16 @@ out center tags;
           const tags =
             item.tags || {};
 
-          // -------------------------------------------------
-          // REAL NAME ONLY
-          // -------------------------------------------------
-
           const name =
             tags.name ||
             tags["name:en"] ||
             tags["name:tr"];
 
+          // Ignore unnamed restaurants
+
           if (!name) {
             continue;
           }
-
-          // -------------------------------------------------
-          // COORDINATES
-          // -------------------------------------------------
 
           let restaurantLat =
             item.lat;
@@ -871,12 +1257,6 @@ out center tags;
               item.center.lon;
 
           }
-
-          restaurantLat =
-            Number(restaurantLat);
-
-          restaurantLon =
-            Number(restaurantLon);
 
           // -------------------------------------------------
           // ADDRESS
@@ -900,6 +1280,16 @@ out center tags;
 
             addressParts.push(
               tags["addr:street"]
+            );
+
+          }
+
+          if (
+            tags["addr:suburb"]
+          ) {
+
+            addressParts.push(
+              tags["addr:suburb"]
             );
 
           }
@@ -938,12 +1328,12 @@ out center tags;
             "Local cuisine";
 
           // -------------------------------------------------
-          // PRICE
+          // PRICE LEVEL
           // -------------------------------------------------
 
           const priceLevel =
             tags["price:level"] ||
-            tags["price_level"] ||
+            tags["price_range"] ||
             "$$";
 
           // -------------------------------------------------
@@ -964,254 +1354,158 @@ out center tags;
             tags["contact:phone"] ||
             "";
 
-          // =================================================
-          // IMAGE FROM OPENSTREETMAP
-          // =================================================
+          // -------------------------------------------------
+          // OPENING HOURS
+          // -------------------------------------------------
 
-          let imageUrl =
-            tags.image ||
-            tags["contact:image"] ||
+          const openingHours =
+            tags.opening_hours ||
             "";
 
           // -------------------------------------------------
-          // WIKIMEDIA COMMONS
+          // REAL OSM RATING IF PRESENT
           // -------------------------------------------------
 
-          const wikimediaCommons =
-            tags.wikimedia_commons ||
-            tags["wikimedia_commons"] ||
-            "";
-
-          // -------------------------------------------------
-          // IF OSM IMAGE IS NOT A DIRECT IMAGE URL,
-          // TRY TO CONVERT COMMON WIKIMEDIA TAG
-          // -------------------------------------------------
+          let rating =
+            null;
 
           if (
-            !imageUrl &&
-            wikimediaCommons
+            tags.rating !== undefined
           ) {
 
-            const commonsValue =
-              String(
-                wikimediaCommons
-              ).trim();
+            const numericRating =
+              Number(tags.rating);
 
             if (
-              commonsValue
-                .toLowerCase()
-                .startsWith("file:")
+              Number.isFinite(
+                numericRating
+              )
             ) {
 
-              const fileName =
-                commonsValue
-                  .replace(
-                    /^File:/i,
-                    ""
-                  )
-                  .trim();
-
-              imageUrl =
-                "https://commons.wikimedia.org/wiki/Special:Redirect/file/" +
-                encodeURIComponent(
-                  fileName
-                );
+              rating =
+                numericRating;
 
             }
 
           }
 
-          // =================================================
-          // STARS
-          // =================================================
+          // -------------------------------------------------
+          // REAL REVIEW COUNT IF PRESENT
+          // -------------------------------------------------
 
-          let starValue =
+          let reviewCount =
             null;
 
-          if (
-            tags.stars !== undefined &&
-            tags.stars !== null &&
-            tags.stars !== ""
-          ) {
+          const reviewValue =
+            tags["review:count"] ||
+            tags.reviews ||
+            "";
 
-            const parsedStars =
+          if (reviewValue) {
+
+            const numericReviews =
               Number(
                 String(
-                  tags.stars
+                  reviewValue
                 ).replace(
-                  ",",
-                  "."
+                  /[^\d]/g,
+                  ""
                 )
               );
 
             if (
               Number.isFinite(
-                parsedStars
-              )
+                numericReviews
+              ) &&
+              numericReviews > 0
             ) {
 
-              starValue =
-                parsedStars;
+              reviewCount =
+                numericReviews;
 
             }
 
           }
 
           // -------------------------------------------------
-          // OTHER POSSIBLE RATING TAGS
+          // GOOGLE MAPS URL
           // -------------------------------------------------
 
-          let ratingValue =
-            null;
-
-          const possibleRatings = [
-
-            tags.rating,
-
-            tags["rating:overall"],
-
-            tags["check_date:rating"]
-
-          ];
-
-          for (
-            const possible
-            of possibleRatings
-          ) {
-
-            if (
-              possible !== undefined &&
-              possible !== null &&
-              possible !== ""
-            ) {
-
-              const parsed =
-                Number(
-                  String(possible)
-                    .replace(
-                      ",",
-                      "."
-                    )
-                );
-
-              if (
-                Number.isFinite(parsed)
-              ) {
-
-                ratingValue =
-                  parsed;
-
-                break;
-
-              }
-
-            }
-
-          }
-
-          // =================================================
-          // OSM MAP URL
-          // =================================================
-
-          let osmUrl = "";
+          let mapsURL = "";
 
           if (
             Number.isFinite(
-              restaurantLat
+              Number(restaurantLat)
             ) &&
             Number.isFinite(
-              restaurantLon
+              Number(restaurantLon)
             )
           ) {
 
-            osmUrl =
-              "https://www.openstreetmap.org/" +
-              "?" +
-              "mlat=" +
-              encodeURIComponent(
-                restaurantLat
-              ) +
-              "&mlon=" +
-              encodeURIComponent(
-                restaurantLon
-              ) +
-              "#map=19/" +
-              encodeURIComponent(
-                restaurantLat
-              ) +
-              "/" +
-              encodeURIComponent(
-                restaurantLon
-              );
-
-          } else {
-
-            osmUrl =
-              "https://www.openstreetmap.org/search?query=" +
-              encodeURIComponent(
-                name + " " + destination
-              );
-
-          }
-
-          // =================================================
-          // GOOGLE MAPS LINK
-          // NO API KEY REQUIRED
-          //
-          // This is ONLY a normal website link.
-          // =================================================
-
-          let mapsUrl = "";
-
-          if (
-            Number.isFinite(
-              restaurantLat
-            ) &&
-            Number.isFinite(
-              restaurantLon
-            )
-          ) {
-
-            mapsUrl =
-              "https://www.google.com/maps/search/?api=1&query=" +
-              encodeURIComponent(
+            mapsURL =
+              `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
                 restaurantLat +
                 "," +
                 restaurantLon
-              );
+              )}`;
 
           } else {
 
-            mapsUrl =
-              "https://www.google.com/maps/search/?api=1&query=" +
-              encodeURIComponent(
+            mapsURL =
+              `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
                 name +
                 " " +
                 destination
-              );
+              )}`;
 
           }
 
-          // =================================================
-          // DESCRIPTION
-          // =================================================
+          // -------------------------------------------------
+          // OPENSTREETMAP URL
+          // -------------------------------------------------
 
-          let description =
-            `${name} is a real local place listed in OpenStreetMap in ${destination}.`;
+          let osmURL = "";
 
           if (
-            cuisine &&
-            cuisine !== "Local cuisine"
+            item.type &&
+            item.id
           ) {
 
-            description =
-              `${name} is a real local restaurant in ${destination}, listed in OpenStreetMap. Cuisine: ${cuisine}.`;
+            osmURL =
+              `https://www.openstreetmap.org/${encodeURIComponent(
+                item.type
+              )}/${encodeURIComponent(
+                item.id
+              )}`;
 
           }
 
-          // =================================================
+          // -------------------------------------------------
+          // IMAGE
+          // -------------------------------------------------
+
+          const imageData =
+            await resolveRestaurantImage(
+              tags
+            );
+
+          // -------------------------------------------------
+          // DESCRIPTION
+          // -------------------------------------------------
+
+          let description =
+            `${name} is a real local restaurant in ${destination}, listed in OpenStreetMap.`;
+
+          if (cuisine) {
+
+            description +=
+              ` Cuisine: ${cuisine}.`;
+
+          }
+
+          // -------------------------------------------------
           // RESTAURANT OBJECT
-          // =================================================
+          // -------------------------------------------------
 
           restaurants.push({
 
@@ -1224,84 +1518,88 @@ out center tags;
             priceLevel:
               String(priceLevel),
 
-            rating:
-              ratingValue !== null
-                ? ratingValue
-                : starValue,
+            rating,
 
-            ratingType:
-              ratingValue !== null
-                ? "rating"
-                : (
-                    starValue !== null
-                      ? "stars"
-                      : ""
-                  ),
-
-            stars:
-              starValue,
+            reviewCount,
 
             address:
               String(address),
 
-            description:
-              description,
+            description,
 
             imageUrl:
-              imageUrl
-                ? String(imageUrl)
-                : "",
+              imageData.imageUrl ||
+              "",
 
-            image:
-              imageUrl
-                ? String(imageUrl)
-                : "",
+            imageSource:
+              imageData.imageSource ||
+              "",
 
-            wikimediaCommons:
-              wikimediaCommons
-                ? String(
-                    wikimediaCommons
-                  )
-                : "",
+            imageAttribution:
+              imageData.imageAttribution ||
+              "",
+
+            mapillaryUrl:
+              imageData.mapillaryUrl ||
+              "",
 
             mapsUrl,
 
             osmUrl,
 
-            website:
-              website
-                ? String(website)
-                : "",
+            website,
 
-            phone:
-              phone
-                ? String(phone)
-                : "",
+            phone,
+
+            openingHours,
 
             latitude:
               Number.isFinite(
-                restaurantLat
+                Number(restaurantLat)
               )
-                ? restaurantLat
+                ? Number(restaurantLat)
                 : null,
 
             longitude:
               Number.isFinite(
-                restaurantLon
+                Number(restaurantLon)
               )
-                ? restaurantLon
-                : null
+                ? Number(restaurantLon)
+                : null,
+
+            osmType:
+              item.type ||
+              "",
+
+            osmId:
+              item.id ||
+              null
 
           });
 
+          // -------------------------------------------------
+          // STOP AFTER 15
+          //
+          // We collect a few extra restaurants first,
+          // then remove duplicates and select 10.
+          // -------------------------------------------------
+
+          if (
+            restaurants.length >= 15
+          ) {
+
+            break;
+
+          }
+
         }
 
-        // ===================================================
+        // ---------------------------------------------------
         // REMOVE DUPLICATES
-        // ===================================================
+        // ---------------------------------------------------
 
         const uniqueRestaurants = [];
-        const restaurantKeys = new Set();
+        const restaurantNames = new Set();
 
         for (
           const restaurant
@@ -1314,10 +1612,10 @@ out center tags;
               .trim();
 
           if (
-            !restaurantKeys.has(key)
+            !restaurantNames.has(key)
           ) {
 
-            restaurantKeys.add(key);
+            restaurantNames.add(key);
 
             uniqueRestaurants.push(
               restaurant
@@ -1327,63 +1625,35 @@ out center tags;
 
         }
 
-        // ===================================================
-        // PRIORITIZE RESTAURANTS WITH IMAGES
-        // ===================================================
+        // ---------------------------------------------------
+        // PREFER RESTAURANTS WITH VERIFIED PHOTOS
+        // ---------------------------------------------------
 
         uniqueRestaurants.sort(
           (a, b) => {
 
-            const aScore =
-              (a.imageUrl ? 10 : 0) +
-              (a.stars !== null ? 3 : 0) +
-              (a.rating !== null ? 2 : 0) +
-              (a.website ? 1 : 0);
+            const aHasImage =
+              a.imageUrl ? 1 : 0;
 
-            const bScore =
-              (b.imageUrl ? 10 : 0) +
-              (b.stars !== null ? 3 : 0) +
-              (b.rating !== null ? 2 : 0) +
-              (b.website ? 1 : 0);
+            const bHasImage =
+              b.imageUrl ? 1 : 0;
 
-            return bScore - aScore;
-
-          }
-        );
-
-        // ===================================================
-        // LIMIT TO 10
-        // ===================================================
-
-        const finalRestaurants =
-          uniqueRestaurants.slice(
-            0,
-            10
-          );
-
-        console.log(
-          "Final OSM restaurants:",
-          finalRestaurants.length
-        );
-
-        finalRestaurants.forEach(
-          (restaurant, index) => {
-
-            console.log(
-              `Restaurant ${index + 1}:`,
-              restaurant.name,
-              "| image:",
-              !!restaurant.imageUrl,
-              "| stars:",
-              restaurant.stars,
-              "| rating:",
-              restaurant.rating
+            return (
+              bHasImage -
+              aHasImage
             );
 
           }
         );
 
-        return finalRestaurants;
+        // ---------------------------------------------------
+        // LIMIT 10
+        // ---------------------------------------------------
+
+        return uniqueRestaurants.slice(
+          0,
+          10
+        );
 
       } catch (error) {
 
@@ -1399,7 +1669,7 @@ out center tags;
     }
 
     // =======================================================
-    // GET REAL RESTAURANTS
+    // RESTAURANTS
     // =======================================================
 
     console.log(
@@ -1437,43 +1707,20 @@ out center tags;
       "<p>Itinerary information unavailable.</p>";
 
     // =======================================================
-    // FINAL NORMALIZATION
-    // =======================================================
-
-    if (
-      !Array.isArray(
-        travelData.restaurants
-      )
-    ) {
-
-      travelData.restaurants = [];
-
-    }
-
-    // =======================================================
     // SUCCESS
     // =======================================================
-
-    console.log(
-      "========================================"
-    );
 
     console.log(
       "PLAN API SUCCESS"
     );
 
     console.log(
-      "Hotels:",
-      travelData.stay.length
-    );
-
-    console.log(
-      "Restaurants:",
-      travelData.restaurants.length
-    );
-
-    console.log(
-      "========================================"
+      "Final restaurants:",
+      JSON.stringify(
+        travelData.restaurants,
+        null,
+        2
+      )
     );
 
     return res.status(200).json(
