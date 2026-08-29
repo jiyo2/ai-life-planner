@@ -4,9 +4,20 @@ module.exports = async (req, res) => {
   // CORS
   // =======================================================
 
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "*"
+  );
+
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type"
+  );
+
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "POST, OPTIONS"
+  );
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
@@ -20,9 +31,9 @@ module.exports = async (req, res) => {
 
   try {
 
-    // =======================================================
+    // =====================================================
     // TRIP DATA
-    // =======================================================
+    // =====================================================
 
     const {
       destination,
@@ -39,22 +50,21 @@ module.exports = async (req, res) => {
     console.log("Destination:", destination);
     console.log("======================================");
 
-    // =======================================================
+
+    // =====================================================
     // API KEYS
-    // =======================================================
+    // =====================================================
 
     const GEMINI_API_KEY =
       process.env.GEMINI_API_KEY;
 
-    const PEXELS_API_KEY =
-      process.env.PEXELS_API_KEY || "";
-
     const FOURSQUARE_API_KEY =
-      process.env.FOURSQUARE_API_KEY || "";
+      process.env.FOURSQUARE_API_KEY;
 
-    // =======================================================
-    // GEMINI KEY IS REQUIRED
-    // =======================================================
+
+    // =====================================================
+    // GEMINI KEY CHECK
+    // =====================================================
 
     if (!GEMINI_API_KEY) {
 
@@ -69,32 +79,25 @@ module.exports = async (req, res) => {
 
     }
 
-    // =======================================================
+
+    // =====================================================
+    // FOURSQUARE KEY
+    //
     // IMPORTANT:
-    // PEXELS IS OPTIONAL
+    // Foursquare is optional.
     //
-    // Missing Pexels must NOT stop the application.
-    // =======================================================
-
-    if (!PEXELS_API_KEY) {
-
-      console.warn(
-        "PEXELS_API_KEY missing - continuing without hotel images."
-      );
-
-    }
-
-    // =======================================================
-    // FOURSQUARE IS OPTIONAL FOR APP TO WORK
-    //
-    // But if present, it will be used for restaurant
-    // matching and real restaurant photos.
-    // =======================================================
+    // If the key is missing, the application will STILL
+    // work and restaurants will come from OpenStreetMap.
+    // =====================================================
 
     if (!FOURSQUARE_API_KEY) {
 
       console.warn(
-        "FOURSQUARE_API_KEY missing - restaurant photos unavailable."
+        "FOURSQUARE_API_KEY missing."
+      );
+
+      console.warn(
+        "Restaurants will still load from OpenStreetMap, but verified Foursquare photos will not be available."
       );
 
     } else {
@@ -105,9 +108,10 @@ module.exports = async (req, res) => {
 
     }
 
-    // =======================================================
-    // VALIDATE
-    // =======================================================
+
+    // =====================================================
+    // VALIDATION
+    // =====================================================
 
     if (
       !destination ||
@@ -123,9 +127,10 @@ module.exports = async (req, res) => {
 
     }
 
-    // =======================================================
+
+    // =====================================================
     // GEMINI URL
-    // =======================================================
+    // =====================================================
 
     const GEMINI_URL =
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" +
@@ -133,9 +138,10 @@ module.exports = async (req, res) => {
         GEMINI_API_KEY
       );
 
-    // =======================================================
+
+    // =====================================================
     // GEMINI PROMPT
-    // =======================================================
+    // =====================================================
 
     const prompt = `
 You are an expert travel planner.
@@ -177,8 +183,9 @@ For bookingUrl:
 If you do not know the exact hotel Booking.com page,
 create a Booking.com search URL for that hotel and destination.
 
-Do NOT return image URLs.
-Hotel images will be obtained separately.
+Do NOT return hotel image URLs.
+
+Hotel images are handled separately.
 
 IMPORTANT RESTAURANT REQUIREMENT:
 
@@ -229,9 +236,10 @@ Use exactly:
 }
 `;
 
-    // =======================================================
+
+    // =====================================================
     // GEMINI REQUEST
-    // =======================================================
+    // =====================================================
 
     const geminiResponse =
       await fetch(
@@ -265,17 +273,20 @@ Use exactly:
         }
       );
 
+
     const geminiText =
       await geminiResponse.text();
+
 
     console.log(
       "Gemini HTTP status:",
       geminiResponse.status
     );
 
-    // =======================================================
+
+    // =====================================================
     // GEMINI ERROR
-    // =======================================================
+    // =====================================================
 
     if (!geminiResponse.ok) {
 
@@ -295,9 +306,10 @@ Use exactly:
 
     }
 
-    // =======================================================
+
+    // =====================================================
     // PARSE GEMINI RESPONSE
-    // =======================================================
+    // =====================================================
 
     let geminiData;
 
@@ -324,15 +336,17 @@ Use exactly:
 
     }
 
-    // =======================================================
+
+    // =====================================================
     // GET GEMINI TEXT
-    // =======================================================
+    // =====================================================
 
     const text =
       geminiData
         ?.candidates?.[0]
         ?.content?.parts?.[0]
         ?.text;
+
 
     if (!text) {
 
@@ -354,9 +368,10 @@ Use exactly:
 
     }
 
-    // =======================================================
-    // CLEAN JSON
-    // =======================================================
+
+    // =====================================================
+    // CLEAN GEMINI JSON
+    // =====================================================
 
     let cleanText =
       text.trim();
@@ -377,9 +392,10 @@ Use exactly:
         )
         .trim();
 
-    // =======================================================
+
+    // =====================================================
     // TRAVEL DATA
-    // =======================================================
+    // =====================================================
 
     let travelData;
 
@@ -406,9 +422,10 @@ Use exactly:
 
     }
 
-    // =======================================================
+
+    // =====================================================
     // NORMALIZE HOTELS
-    // =======================================================
+    // =====================================================
 
     if (
       !Array.isArray(
@@ -419,6 +436,7 @@ Use exactly:
       travelData.stay = [];
 
     }
+
 
     travelData.stay =
       travelData.stay
@@ -489,14 +507,16 @@ Use exactly:
           })
         );
 
-    // =======================================================
+
+    // =====================================================
     // REMOVE DUPLICATE HOTELS
-    // =======================================================
+    // =====================================================
 
     const uniqueHotels = [];
 
     const hotelNames =
       new Set();
+
 
     for (
       const hotel
@@ -507,6 +527,7 @@ Use exactly:
         hotel.name
           .toLowerCase()
           .trim();
+
 
       if (
         !hotelNames.has(
@@ -526,723 +547,75 @@ Use exactly:
 
     }
 
+
     travelData.stay =
       uniqueHotels.slice(
         0,
         10
       );
 
+
     console.log(
       "Hotels returned:",
       travelData.stay.length
     );
 
-    // =======================================================
-    // PEXELS HOTEL IMAGE
-    // OPTIONAL
-    // =======================================================
 
-    async function getHotelImage(
-      hotelName,
-      destination
-    ) {
-
-      if (!PEXELS_API_KEY) {
-
-        return {
-          imageUrl: "",
-          photoAttribution: "",
-          photoSource: ""
-        };
-
-      }
-
-      try {
-
-        const query =
-          `${hotelName} ${destination}`;
-
-        console.log(
-          "Pexels hotel search:",
-          query
-        );
-
-        const response =
-          await fetch(
-            "https://api.pexels.com/v1/search?query=" +
-            encodeURIComponent(
-              query
-            ) +
-            "&per_page=5",
-            {
-              method: "GET",
-
-              headers: {
-                Authorization:
-                  PEXELS_API_KEY
-              }
-            }
-          );
-
-        if (!response.ok) {
-
-          console.warn(
-            "Pexels HTTP error:",
-            response.status
-          );
-
-          return {
-            imageUrl: "",
-            photoAttribution: "",
-            photoSource: ""
-          };
-
-        }
-
-        const data =
-          await response.json();
-
-        if (
-          !data ||
-          !Array.isArray(
-            data.photos
-          ) ||
-          data.photos.length === 0
-        ) {
-
-          return {
-            imageUrl: "",
-            photoAttribution: "",
-            photoSource: ""
-          };
-
-        }
-
-        const photo =
-          data.photos[0];
-
-        return {
-
-          imageUrl:
-            photo?.src?.large2x ||
-            photo?.src?.large ||
-            photo?.src?.original ||
-            "",
-
-          photoAttribution:
-            photo?.photographer ||
-            "",
-
-          photoSource:
-            photo?.photographer_url ||
-            "https://www.pexels.com/"
-
-        };
-
-      } catch (error) {
-
-        console.error(
-          "Pexels error:",
-          error.message
-        );
-
-        return {
-          imageUrl: "",
-          photoAttribution: "",
-          photoSource: ""
-        };
-
-      }
-
-    }
-
-    // =======================================================
-    // HOTEL IMAGES
-    // =======================================================
-
-    const hotelImages =
-      await Promise.all(
-        travelData.stay.map(
-          hotel =>
-            getHotelImage(
-              hotel.name,
-              destination
-            )
-        )
-      );
+    // =====================================================
+    // NO PEXELS
+    //
+    // IMPORTANT:
+    // Pexels has been completely removed.
+    //
+    // This means PEXELS_API_KEY is NOT required anymore.
+    // =====================================================
 
     travelData.stay =
       travelData.stay.map(
-        (
-          hotel,
-          index
-        ) => ({
+        hotel => ({
 
           ...hotel,
 
           imageUrl:
-            hotelImages[index]
-              ?.imageUrl ||
             "",
 
           photoAttribution:
-            hotelImages[index]
-              ?.photoAttribution ||
             "",
 
           photoSource:
-            hotelImages[index]
-              ?.photoSource ||
             ""
 
         })
       );
 
-    // =======================================================
-    // OSM CONSTANTS
-    // =======================================================
+
+    // =====================================================
+    // OPENSTREETMAP SETTINGS
+    // =====================================================
 
     const OSM_USER_AGENT =
       "AI-Life-Planner/1.0";
 
-    // =======================================================
-    // WIKIMEDIA COMMONS IMAGE
-    // =======================================================
 
-    async function getWikimediaImage(
-      commonsValue
+    // =====================================================
+    // GEOCODE DESTINATION
+    // =====================================================
+
+    async function geocodeDestination(
+      destination
     ) {
 
       try {
 
-        if (
-          !commonsValue ||
-          typeof commonsValue !==
-            "string"
-        ) {
-
-          return "";
-
-        }
-
-        const value =
-          commonsValue.trim();
-
-        if (
-          !/^File:/i.test(
-            value
-          )
-        ) {
-
-          return "";
-
-        }
-
-        const apiURL =
-          "https://commons.wikimedia.org/w/api.php" +
-          "?action=query" +
-          "&format=json" +
-          "&origin=*" +
-          "&prop=imageinfo" +
-          "&iiprop=url" +
-          "&iiurlwidth=1200" +
-          "&titles=" +
+        const url =
+          "https://nominatim.openstreetmap.org/search" +
+          "?format=json" +
+          "&limit=1" +
+          "&q=" +
           encodeURIComponent(
-            value
-          );
-
-        const response =
-          await fetch(
-            apiURL,
-            {
-              method: "GET",
-
-              headers: {
-                "User-Agent":
-                  OSM_USER_AGENT
-              }
-            }
-          );
-
-        if (!response.ok) {
-
-          return "";
-
-        }
-
-        const data =
-          await response.json();
-
-        const pages =
-          data?.query?.pages;
-
-        if (!pages) {
-
-          return "";
-
-        }
-
-        const page =
-          Object.values(
-            pages
-          )[0];
-
-        const image =
-          page?.imageinfo?.[0];
-
-        return (
-          image?.thumburl ||
-          image?.url ||
-          ""
-        );
-
-      } catch (error) {
-
-        console.error(
-          "Wikimedia image error:",
-          error.message
-        );
-
-        return "";
-
-      }
-
-    }
-
-    // =======================================================
-    // WIKIDATA IMAGE
-    // =======================================================
-
-    async function getWikidataImage(
-      wikidataId
-    ) {
-
-      try {
-
-        if (
-          !wikidataId ||
-          typeof wikidataId !==
-            "string"
-        ) {
-
-          return "";
-
-        }
-
-        const id =
-          wikidataId.trim();
-
-        if (
-          !/^Q\d+$/i.test(
-            id
-          )
-        ) {
-
-          return "";
-
-        }
-
-        const apiURL =
-          "https://www.wikidata.org/w/api.php" +
-          "?action=wbgetentities" +
-          "&format=json" +
-          "&origin=*" +
-          "&props=claims" +
-          "&ids=" +
-          encodeURIComponent(
-            id
-          );
-
-        const response =
-          await fetch(
-            apiURL,
-            {
-              method: "GET",
-
-              headers: {
-                "User-Agent":
-                  OSM_USER_AGENT
-              }
-            }
-          );
-
-        if (!response.ok) {
-
-          return "";
-
-        }
-
-        const data =
-          await response.json();
-
-        const entity =
-          data?.entities?.[id];
-
-        const imageClaims =
-          entity?.claims?.P18;
-
-        if (
-          !Array.isArray(
-            imageClaims
-          ) ||
-          imageClaims.length === 0
-        ) {
-
-          return "";
-
-        }
-
-        const imageValue =
-          imageClaims[0]
-            ?.mainsnak
-            ?.datavalue
-            ?.value;
-
-        if (
-          !imageValue ||
-          typeof imageValue !==
-            "string"
-        ) {
-
-          return "";
-
-        }
-
-        return await getWikimediaImage(
-          "File:" +
-          imageValue
-        );
-
-      } catch (error) {
-
-        console.error(
-          "Wikidata image error:",
-          error.message
-        );
-
-        return "";
-
-      }
-
-    }
-
-    // =======================================================
-    // OSM DIRECT IMAGE
-    // =======================================================
-
-    async function resolveOSMImage(
-      tags
-    ) {
-
-      try {
-
-        const directImage =
-          tags.image ||
-          tags.photo ||
-          tags.picture ||
-          tags["url:photo"] ||
-          "";
-
-        if (
-          directImage &&
-          /^https?:\/\//i.test(
-            String(
-              directImage
-            )
-          )
-        ) {
-
-          return {
-            imageUrl:
-              String(
-                directImage
-              ),
-
-            imageSource:
-              "OpenStreetMap",
-
-            imageAttribution:
-              "OpenStreetMap"
-          };
-
-        }
-
-        const commons =
-          tags.wikimedia_commons ||
-          "";
-
-        if (commons) {
-
-          const image =
-            await getWikimediaImage(
-              commons
-            );
-
-          if (image) {
-
-            return {
-              imageUrl:
-                image,
-
-              imageSource:
-                "Wikimedia Commons",
-
-              imageAttribution:
-                "Wikimedia Commons"
-            };
-
-          }
-
-        }
-
-        const wikidata =
-          tags.wikidata ||
-          "";
-
-        if (wikidata) {
-
-          const image =
-            await getWikidataImage(
-              wikidata
-            );
-
-          if (image) {
-
-            return {
-              imageUrl:
-                image,
-
-              imageSource:
-                "Wikimedia Commons via Wikidata",
-
-              imageAttribution:
-                "Wikimedia Commons"
-            };
-
-          }
-
-        }
-
-        return {
-          imageUrl: "",
-          imageSource: "",
-          imageAttribution: ""
-        };
-
-      } catch (error) {
-
-        console.error(
-          "OSM image resolver error:",
-          error.message
-        );
-
-        return {
-          imageUrl: "",
-          imageSource: "",
-          imageAttribution: ""
-        };
-
-      }
-
-    }
-
-    // =======================================================
-    // FOURSQUARE NORMALIZE NAME
-    // =======================================================
-
-    function normalizePlaceName(
-      value
-    ) {
-
-      return String(
-        value || ""
-      )
-        .toLowerCase()
-        .normalize(
-          "NFD"
-        )
-        .replace(
-          /[\u0300-\u036f]/g,
-          ""
-        )
-        .replace(
-          /[^a-z0-9\u0600-\u06ff\u00c0-\u024f]+/gi,
-          " "
-        )
-        .trim();
-
-    }
-
-    // =======================================================
-    // DISTANCE BETWEEN TWO POINTS
-    // =======================================================
-
-    function distanceMeters(
-      lat1,
-      lon1,
-      lat2,
-      lon2
-    ) {
-
-      if (
-        !Number.isFinite(
-          Number(lat1)
-        ) ||
-        !Number.isFinite(
-          Number(lon1)
-        ) ||
-        !Number.isFinite(
-          Number(lat2)
-        ) ||
-        !Number.isFinite(
-          Number(lon2)
-        )
-      ) {
-
-        return Infinity;
-
-      }
-
-      const R =
-        6371000;
-
-      const dLat =
-        (
-          Number(lat2) -
-          Number(lat1)
-        ) *
-        Math.PI /
-        180;
-
-      const dLon =
-        (
-          Number(lon2) -
-          Number(lon1)
-        ) *
-        Math.PI /
-        180;
-
-      const a =
-        Math.sin(
-          dLat / 2
-        ) *
-        Math.sin(
-          dLat / 2
-        ) +
-        Math.cos(
-          Number(lat1) *
-          Math.PI /
-          180
-        ) *
-        Math.cos(
-          Number(lat2) *
-          Math.PI /
-          180
-        ) *
-        Math.sin(
-          dLon / 2
-        ) *
-        Math.sin(
-          dLon / 2
-        );
-
-      const c =
-        2 *
-        Math.atan2(
-          Math.sqrt(a),
-          Math.sqrt(
-            1 - a
-          )
-        );
-
-      return R * c;
-
-    }
-
-    // =======================================================
-    // FOURSQUARE SEARCH
-    // =======================================================
-
-    async function searchFoursquarePlace(
-      restaurantName,
-      destination,
-      latitude,
-      longitude
-    ) {
-
-      if (!FOURSQUARE_API_KEY) {
-
-        return null;
-
-      }
-
-      try {
-
-        const params =
-          new URLSearchParams();
-
-        params.set(
-          "query",
-          restaurantName
-        );
-
-        if (
-          Number.isFinite(
-            Number(latitude)
-          ) &&
-          Number.isFinite(
-            Number(longitude)
-          )
-        ) {
-
-          params.set(
-            "ll",
-            `${latitude},${longitude}`
-          );
-
-          params.set(
-            "radius",
-            "3000"
-          );
-
-        } else {
-
-          params.set(
-            "near",
             destination
           );
 
-        }
-
-        params.set(
-          "limit",
-          "10"
-        );
-
-        params.set(
-          "sort",
-          "RELEVANCE"
-        );
-
-        params.set(
-          "fields",
-          [
-            "fsq_place_id",
-            "name",
-            "latitude",
-            "longitude",
-            "location",
-            "categories",
-            "rating",
-            "price",
-            "website",
-            "tel"
-          ].join(",")
-        );
-
-        const url =
-          "https://places-api.foursquare.com/places/search?" +
-          params.toString();
 
         const response =
           await fetch(
@@ -1251,6 +624,172 @@ Use exactly:
               method: "GET",
 
               headers: {
+                "User-Agent":
+                  OSM_USER_AGENT,
+
+                "Accept":
+                  "application/json"
+              }
+            }
+          );
+
+
+        if (
+          !response.ok
+        ) {
+
+          console.error(
+            "Nominatim error:",
+            response.status
+          );
+
+          return null;
+
+        }
+
+
+        const data =
+          await response.json();
+
+
+        if (
+          !Array.isArray(
+            data
+          ) ||
+          data.length === 0
+        ) {
+
+          return null;
+
+        }
+
+
+        const lat =
+          Number(
+            data[0].lat
+          );
+
+        const lon =
+          Number(
+            data[0].lon
+          );
+
+
+        if (
+          !Number.isFinite(
+            lat
+          ) ||
+          !Number.isFinite(
+            lon
+          )
+        ) {
+
+          return null;
+
+        }
+
+
+        return {
+          lat,
+          lon
+        };
+
+      } catch (error) {
+
+        console.error(
+          "Geocoding error:",
+          error.message
+        );
+
+        return null;
+
+      }
+
+    }
+
+
+    // =====================================================
+    // FOURSQUARE SEARCH
+    //
+    // Uses the current Places API.
+    // =====================================================
+
+    async function findFoursquarePlace(
+      name,
+      latitude,
+      longitude
+    ) {
+
+      try {
+
+        if (
+          !FOURSQUARE_API_KEY
+        ) {
+
+          return null;
+
+        }
+
+
+        if (
+          !name ||
+          !Number.isFinite(
+            Number(latitude)
+          ) ||
+          !Number.isFinite(
+            Number(longitude)
+          )
+        ) {
+
+          return null;
+
+        }
+
+
+        const params =
+          new URLSearchParams();
+
+
+        params.set(
+          "query",
+          name
+        );
+
+        params.set(
+          "ll",
+          `${latitude},${longitude}`
+        );
+
+        params.set(
+          "radius",
+          "1500"
+        );
+
+        params.set(
+          "limit",
+          "5"
+        );
+
+
+        const url =
+          "https://places-api.foursquare.com/places/search?" +
+          params.toString();
+
+
+        console.log(
+          "Foursquare search:",
+          name
+        );
+
+
+        const response =
+          await fetch(
+            url,
+            {
+              method: "GET",
+
+              headers: {
+
                 "Accept":
                   "application/json",
 
@@ -1260,194 +799,130 @@ Use exactly:
 
                 "X-Places-Api-Version":
                   "2025-06-17"
+
               }
             }
           );
 
-        if (!response.ok) {
 
-          const errorText =
-            await response.text();
+        const responseText =
+          await response.text();
+
+
+        if (
+          !response.ok
+        ) {
 
           console.error(
             "Foursquare search error:",
             response.status,
-            errorText
+            responseText
           );
 
           return null;
 
         }
 
-        const data =
-          await response.json();
 
-        const results =
-          Array.isArray(
-            data?.results
-          )
-            ? data.results
-            : [];
+        let data;
+
+        try {
+
+          data =
+            JSON.parse(
+              responseText
+            );
+
+        } catch {
+
+          return null;
+
+        }
+
 
         if (
-          results.length === 0
+          !data ||
+          !Array.isArray(
+            data.results
+          ) ||
+          data.results.length === 0
         ) {
-
-          console.log(
-            "Foursquare no match:",
-            restaurantName
-          );
 
           return null;
 
         }
 
-        const osmName =
-          normalizePlaceName(
-            restaurantName
-          );
+
+        // -------------------------------------------------
+        // Choose closest reasonable result
+        // -------------------------------------------------
 
         let best =
-          null;
+          data.results[0];
 
-        let bestScore =
-          -Infinity;
+
+        let bestDistance =
+          Infinity;
+
 
         for (
           const place
-          of results
+          of data.results
         ) {
 
-          const fsqName =
-            normalizePlaceName(
-              place?.name
+          const placeLat =
+            Number(
+              place?.latitude ??
+              place?.geocodes?.main?.latitude
             );
 
-          if (!fsqName) {
-            continue;
-          }
+          const placeLon =
+            Number(
+              place?.longitude ??
+              place?.geocodes?.main?.longitude
+            );
 
-          let score = 0;
-
-          // Exact name match
-
-          if (
-            fsqName === osmName
-          ) {
-
-            score += 100;
-
-          }
-
-          // One contains the other
 
           if (
-            fsqName.includes(
-              osmName
+            !Number.isFinite(
+              placeLat
             ) ||
-            osmName.includes(
-              fsqName
+            !Number.isFinite(
+              placeLon
             )
           ) {
 
-            score += 60;
+            continue;
 
           }
 
-          // Word overlap
-
-          const osmWords =
-            new Set(
-              osmName
-                .split(/\s+/)
-                .filter(Boolean)
-            );
-
-          const fsqWords =
-            new Set(
-              fsqName
-                .split(/\s+/)
-                .filter(Boolean)
-            );
-
-          let commonWords =
-            0;
-
-          for (
-            const word
-            of osmWords
-          ) {
-
-            if (
-              fsqWords.has(
-                word
-              )
-            ) {
-
-              commonWords++;
-
-            }
-
-          }
-
-          score +=
-            commonWords * 10;
-
-          // Distance bonus
 
           const distance =
-            distanceMeters(
-              latitude,
-              longitude,
-              place?.latitude,
-              place?.longitude
+            Math.sqrt(
+              Math.pow(
+                placeLat -
+                  Number(
+                    latitude
+                  ),
+                2
+              ) +
+              Math.pow(
+                placeLon -
+                  Number(
+                    longitude
+                  ),
+                2
+              )
             );
 
-          if (
-            Number.isFinite(
-              distance
-            )
-          ) {
-
-            if (
-              distance <= 50
-            ) {
-
-              score += 50;
-
-            } else if (
-              distance <= 150
-            ) {
-
-              score += 35;
-
-            } else if (
-              distance <= 500
-            ) {
-
-              score += 20;
-
-            } else if (
-              distance <= 1500
-            ) {
-
-              score += 5;
-
-            } else {
-
-              score -= 20;
-
-            }
-
-          }
 
           if (
-            score >
-            bestScore
+            distance <
+            bestDistance
           ) {
 
-            bestScore =
-              score;
+            bestDistance =
+              distance;
 
             best =
               place;
@@ -1456,32 +931,6 @@ Use exactly:
 
         }
 
-        // Do not accept a weak unrelated match.
-
-        if (
-          !best ||
-          bestScore < 25
-        ) {
-
-          console.log(
-            "Foursquare weak match rejected:",
-            restaurantName,
-            best?.name,
-            bestScore
-          );
-
-          return null;
-
-        }
-
-        console.log(
-          "Foursquare match:",
-          restaurantName,
-          "=>",
-          best.name,
-          "score:",
-          bestScore
-        );
 
         return best;
 
@@ -1498,31 +947,37 @@ Use exactly:
 
     }
 
-    // =======================================================
-    // FOURSQUARE PHOTO
-    // =======================================================
 
-    async function getFoursquarePhoto(
+    // =====================================================
+    // GET FOURSQUARE PLACE DETAILS
+    // =====================================================
+
+    async function getFoursquarePlaceDetails(
       fsqPlaceId
     ) {
 
-      if (
-        !FOURSQUARE_API_KEY ||
-        !fsqPlaceId
-      ) {
-
-        return null;
-
-      }
-
       try {
+
+        if (
+          !FOURSQUARE_API_KEY ||
+          !fsqPlaceId
+        ) {
+
+          return null;
+
+        }
+
 
         const url =
           "https://places-api.foursquare.com/places/" +
           encodeURIComponent(
             fsqPlaceId
           ) +
-          "/photos?limit=1&sort=POPULAR";
+          "?fields=" +
+          encodeURIComponent(
+            "fsq_place_id,name,photos,rating,location,website,tel,categories"
+          );
+
 
         const response =
           await fetch(
@@ -1531,6 +986,7 @@ Use exactly:
               method: "GET",
 
               headers: {
+
                 "Accept":
                   "application/json",
 
@@ -1540,113 +996,32 @@ Use exactly:
 
                 "X-Places-Api-Version":
                   "2025-06-17"
+
               }
             }
           );
 
-        if (!response.ok) {
 
-          const errorText =
-            await response.text();
+        if (
+          !response.ok
+        ) {
 
-          console.error(
-            "Foursquare photo error:",
-            response.status,
-            errorText
+          console.warn(
+            "Foursquare details unavailable:",
+            response.status
           );
 
           return null;
 
         }
 
-        const data =
-          await response.json();
 
-        const photos =
-          Array.isArray(
-            data
-          )
-            ? data
-            : Array.isArray(
-                data?.photos
-              )
-              ? data.photos
-              : [];
-
-        if (
-          photos.length === 0
-        ) {
-
-          console.log(
-            "Foursquare has no photo:",
-            fsqPlaceId
-          );
-
-          return null;
-
-        }
-
-        const photo =
-          photos[0];
-
-        // Foursquare photo responses use
-        // prefix + size + suffix.
-
-        if (
-          photo?.prefix &&
-          photo?.suffix
-        ) {
-
-          const imageUrl =
-            photo.prefix +
-            "original" +
-            photo.suffix;
-
-          return {
-
-            imageUrl,
-
-            imageSource:
-              "Foursquare",
-
-            imageAttribution:
-              "Photo via Foursquare"
-
-          };
-
-        }
-
-        // Some responses may already expose
-        // a direct URL.
-
-        if (
-          photo?.url &&
-          /^https?:\/\//i.test(
-            photo.url
-          )
-        ) {
-
-          return {
-
-            imageUrl:
-              photo.url,
-
-            imageSource:
-              "Foursquare",
-
-            imageAttribution:
-              "Photo via Foursquare"
-
-          };
-
-        }
-
-        return null;
+        return await response.json();
 
       } catch (error) {
 
         console.error(
-          "Foursquare photo exception:",
+          "Foursquare details error:",
           error.message
         );
 
@@ -1656,141 +1031,266 @@ Use exactly:
 
     }
 
-    // =======================================================
-    // GET REAL RESTAURANT PHOTO
-    //
-    // Priority:
-    //
-    // 1. Exact OSM image
-    // 2. Wikimedia image attached to OSM
-    // 3. Foursquare exact place match + photo
-    //
-    // Never use a random restaurant image.
-    // =======================================================
 
-    async function getVerifiedRestaurantImage(
-      tags,
-      restaurantName,
-      destination,
-      latitude,
-      longitude
+    // =====================================================
+    // GET VERIFIED FOURSQUARE PHOTO
+    // =====================================================
+
+    function getFoursquarePhotoUrl(
+      place
     ) {
 
-      // ---------------------------------------------------
-      // FIRST: OSM / WIKIMEDIA
-      // ---------------------------------------------------
+      try {
 
-      const osmImage =
-        await resolveOSMImage(
-          tags
-        );
+        const photos =
+          place?.photos;
 
-      if (
-        osmImage?.imageUrl
-      ) {
 
-        return {
+        if (
+          !Array.isArray(
+            photos
+          ) ||
+          photos.length === 0
+        ) {
 
-          ...osmImage,
+          return "";
 
-          matchedPlace:
-            restaurantName,
+        }
 
-          photoVerified:
-            true
 
-        };
+        const photo =
+          photos[0];
+
+
+        // New Places API photo object
+        // can expose prefix + suffix.
+
+        if (
+          photo?.prefix &&
+          photo?.suffix
+        ) {
+
+          return (
+            photo.prefix +
+            "original" +
+            photo.suffix
+          );
+
+        }
+
+
+        if (
+          photo?.url
+        ) {
+
+          return String(
+            photo.url
+          );
+
+        }
+
+
+        return "";
+
+      } catch {
+
+        return "";
 
       }
 
-      // ---------------------------------------------------
-      // SECOND: FOURSQUARE
-      // ---------------------------------------------------
+    }
 
-      if (
-        FOURSQUARE_API_KEY
-      ) {
 
-        const fsqPlace =
-          await searchFoursquarePlace(
-            restaurantName,
-            destination,
-            latitude,
-            longitude
-          );
+    // =====================================================
+    // ENRICH RESTAURANT WITH FOURSQUARE
+    // =====================================================
+
+    async function enrichRestaurantWithFoursquare(
+      restaurant
+    ) {
+
+      try {
 
         if (
-          fsqPlace?.fsq_place_id
+          !FOURSQUARE_API_KEY
         ) {
 
-          const photo =
-            await getFoursquarePhoto(
-              fsqPlace.fsq_place_id
+          return restaurant;
+
+        }
+
+
+        const place =
+          await findFoursquarePlace(
+            restaurant.name,
+            restaurant.latitude,
+            restaurant.longitude
+          );
+
+
+        if (
+          !place
+        ) {
+
+          return restaurant;
+
+        }
+
+
+        const fsqId =
+          place.fsq_place_id ||
+          place.fsq_id ||
+          "";
+
+
+        if (
+          !fsqId
+        ) {
+
+          return restaurant;
+
+        }
+
+
+        // -------------------------------------------------
+        // Get complete place details
+        // -------------------------------------------------
+
+        const details =
+          await getFoursquarePlaceDetails(
+            fsqId
+          );
+
+
+        const finalPlace =
+          details ||
+          place;
+
+
+        // -------------------------------------------------
+        // PHOTO
+        // -------------------------------------------------
+
+        const photoUrl =
+          getFoursquarePhotoUrl(
+            finalPlace
+          );
+
+
+        // -------------------------------------------------
+        // RATING
+        // -------------------------------------------------
+
+        let rating =
+          restaurant.rating;
+
+
+        if (
+          finalPlace.rating !== undefined &&
+          finalPlace.rating !== null
+        ) {
+
+          const numericRating =
+            Number(
+              finalPlace.rating
             );
 
+
           if (
-            photo?.imageUrl
+            Number.isFinite(
+              numericRating
+            )
           ) {
 
-            return {
-
-              imageUrl:
-                photo.imageUrl,
-
-              imageSource:
-                photo.imageSource,
-
-              imageAttribution:
-                photo.imageAttribution,
-
-              matchedPlace:
-                fsqPlace.name,
-
-              fsqPlaceId:
-                fsqPlace.fsq_place_id,
-
-              photoVerified:
-                true
-
-            };
+            rating =
+              numericRating;
 
           }
 
         }
 
+
+        // -------------------------------------------------
+        // WEBSITE
+        // -------------------------------------------------
+
+        const website =
+          restaurant.website ||
+          finalPlace.website ||
+          "";
+
+
+        // -------------------------------------------------
+        // PHONE
+        // -------------------------------------------------
+
+        const phone =
+          restaurant.phone ||
+          finalPlace.tel ||
+          "";
+
+
+        // -------------------------------------------------
+        // FOURSQUARE URL
+        // -------------------------------------------------
+
+        const foursquareUrl =
+          `https://foursquare.com/place/${encodeURIComponent(
+            fsqId
+          )}`;
+
+
+        return {
+
+          ...restaurant,
+
+          rating,
+
+          website,
+
+          phone,
+
+          foursquareId:
+            fsqId,
+
+          foursquareUrl,
+
+          imageUrl:
+            photoUrl ||
+            restaurant.imageUrl ||
+            "",
+
+          imageSource:
+            photoUrl
+              ? "Foursquare"
+              : restaurant.imageSource ||
+                "",
+
+          imageAttribution:
+            photoUrl
+              ? "Foursquare"
+              : restaurant.imageAttribution ||
+                ""
+
+        };
+
+      } catch (error) {
+
+        console.error(
+          "Restaurant Foursquare enrichment error:",
+          error.message
+        );
+
+        return restaurant;
+
       }
-
-      // ---------------------------------------------------
-      // NO VERIFIED IMAGE
-      // ---------------------------------------------------
-
-      return {
-
-        imageUrl:
-          "",
-
-        imageSource:
-          "",
-
-        imageAttribution:
-          "",
-
-        matchedPlace:
-          "",
-
-        fsqPlaceId:
-          "",
-
-        photoVerified:
-          false
-
-      };
 
     }
 
-    // =======================================================
+
+    // =====================================================
     // OPENSTREETMAP RESTAURANTS
-    // =======================================================
+    // =====================================================
 
     async function getRestaurantsFromOSM(
       destination
@@ -1799,106 +1299,40 @@ Use exactly:
       try {
 
         console.log(
-          "======================================"
-        );
-
-        console.log(
           "OpenStreetMap restaurant search:",
           destination
         );
 
-        console.log(
-          "======================================"
-        );
 
-        // ---------------------------------------------------
-        // STEP 1
-        // GEOCODE DESTINATION
-        // ---------------------------------------------------
+        // -------------------------------------------------
+        // GEOCODE
+        // -------------------------------------------------
 
-        const geocodeURL =
-          "https://nominatim.openstreetmap.org/search" +
-          "?format=json" +
-          "&limit=1" +
-          "&q=" +
-          encodeURIComponent(
+        const coordinates =
+          await geocodeDestination(
             destination
           );
 
-        const geocodeResponse =
-          await fetch(
-            geocodeURL,
-            {
-              method: "GET",
-
-              headers: {
-                "User-Agent":
-                  OSM_USER_AGENT,
-
-                "Accept":
-                  "application/json"
-              }
-            }
-          );
 
         if (
-          !geocodeResponse.ok
+          !coordinates
         ) {
 
           console.error(
-            "Nominatim error:",
-            geocodeResponse.status
+            "Could not geocode destination."
           );
 
           return [];
 
         }
 
-        const locations =
-          await geocodeResponse.json();
 
-        if (
-          !Array.isArray(
-            locations
-          ) ||
-          locations.length === 0
-        ) {
+        const {
+          lat,
+          lon
+        } =
+          coordinates;
 
-          console.log(
-            "Destination not found:",
-            destination
-          );
-
-          return [];
-
-        }
-
-        const lat =
-          Number(
-            locations[0].lat
-          );
-
-        const lon =
-          Number(
-            locations[0].lon
-          );
-
-        if (
-          !Number.isFinite(
-            lat
-          ) ||
-          !Number.isFinite(
-            lon
-          )
-        ) {
-
-          console.error(
-            "Invalid destination coordinates."
-          );
-
-          return [];
-
-        }
 
         console.log(
           "Destination coordinates:",
@@ -1906,10 +1340,10 @@ Use exactly:
           lon
         );
 
-        // ---------------------------------------------------
-        // STEP 2
+
+        // -------------------------------------------------
         // OVERPASS
-        // ---------------------------------------------------
+        // -------------------------------------------------
 
         const overpassQuery = `
 [out:json][timeout:30];
@@ -1923,8 +1357,10 @@ Use exactly:
 out center tags;
 `;
 
+
         const overpassURL =
           "https://overpass-api.de/api/interpreter";
+
 
         const osmResponse =
           await fetch(
@@ -1933,6 +1369,7 @@ out center tags;
               method: "POST",
 
               headers: {
+
                 "Content-Type":
                   "application/x-www-form-urlencoded",
 
@@ -1941,6 +1378,7 @@ out center tags;
 
                 "Accept":
                   "application/json"
+
               },
 
               body:
@@ -1948,8 +1386,10 @@ out center tags;
                 encodeURIComponent(
                   overpassQuery
                 )
+
             }
           );
+
 
         if (
           !osmResponse.ok
@@ -1964,8 +1404,10 @@ out center tags;
 
         }
 
+
         const osmData =
           await osmResponse.json();
+
 
         if (
           !osmData ||
@@ -1978,18 +1420,19 @@ out center tags;
 
         }
 
+
         console.log(
           "OSM restaurants found:",
           osmData.elements.length
         );
 
-        // ---------------------------------------------------
-        // STEP 3
-        // NORMALIZE
-        // ---------------------------------------------------
 
-        const restaurants =
-          [];
+        // -------------------------------------------------
+        // BUILD RESTAURANT LIST
+        // -------------------------------------------------
+
+        const restaurants = [];
+
 
         for (
           const item
@@ -1999,14 +1442,21 @@ out center tags;
           const tags =
             item.tags || {};
 
+
           const name =
             tags.name ||
             tags["name:en"] ||
             tags["name:tr"];
 
+
           if (!name) {
             continue;
           }
+
+
+          // -------------------------------------------------
+          // COORDINATES
+          // -------------------------------------------------
 
           let restaurantLat =
             item.lat;
@@ -2014,9 +1464,9 @@ out center tags;
           let restaurantLon =
             item.lon;
 
+
           if (
-            restaurantLat ===
-              undefined &&
+            restaurantLat === undefined &&
             item.center
           ) {
 
@@ -2028,80 +1478,76 @@ out center tags;
 
           }
 
+
           // -------------------------------------------------
           // ADDRESS
           // -------------------------------------------------
 
-          const addressParts =
-            [];
+          const addressParts = [];
+
 
           if (
             tags["addr:housenumber"]
           ) {
 
             addressParts.push(
-              tags[
-                "addr:housenumber"
-              ]
+              tags["addr:housenumber"]
             );
 
           }
+
 
           if (
             tags["addr:street"]
           ) {
 
             addressParts.push(
-              tags[
-                "addr:street"
-              ]
+              tags["addr:street"]
             );
 
           }
+
 
           if (
             tags["addr:suburb"]
           ) {
 
             addressParts.push(
-              tags[
-                "addr:suburb"
-              ]
+              tags["addr:suburb"]
             );
 
           }
+
 
           if (
             tags["addr:district"]
           ) {
 
             addressParts.push(
-              tags[
-                "addr:district"
-              ]
+              tags["addr:district"]
             );
 
           }
+
 
           if (
             tags["addr:city"]
           ) {
 
             addressParts.push(
-              tags[
-                "addr:city"
-              ]
+              tags["addr:city"]
             );
 
           }
 
+
           const address =
-            addressParts.length >
-            0
+            addressParts.length
               ? addressParts.join(
                   ", "
                 )
               : destination;
+
 
           // -------------------------------------------------
           // CUISINE
@@ -2110,6 +1556,7 @@ out center tags;
           const cuisine =
             tags.cuisine ||
             "Local cuisine";
+
 
           // -------------------------------------------------
           // PRICE
@@ -2120,16 +1567,16 @@ out center tags;
             tags["price_range"] ||
             "$$";
 
+
           // -------------------------------------------------
           // WEBSITE
           // -------------------------------------------------
 
           const website =
             tags.website ||
-            tags[
-              "contact:website"
-            ] ||
+            tags["contact:website"] ||
             "";
+
 
           // -------------------------------------------------
           // PHONE
@@ -2137,10 +1584,9 @@ out center tags;
 
           const phone =
             tags.phone ||
-            tags[
-              "contact:phone"
-            ] ||
+            tags["contact:phone"] ||
             "";
+
 
           // -------------------------------------------------
           // OPENING HOURS
@@ -2150,6 +1596,7 @@ out center tags;
             tags.opening_hours ||
             "";
 
+
           // -------------------------------------------------
           // OSM RATING
           // -------------------------------------------------
@@ -2157,15 +1604,16 @@ out center tags;
           let rating =
             null;
 
+
           if (
-            tags.rating !==
-            undefined
+            tags.rating !== undefined
           ) {
 
             const numericRating =
               Number(
                 tags.rating
               );
+
 
             if (
               Number.isFinite(
@@ -2180,6 +1628,7 @@ out center tags;
 
           }
 
+
           // -------------------------------------------------
           // REVIEW COUNT
           // -------------------------------------------------
@@ -2187,14 +1636,16 @@ out center tags;
           let reviewCount =
             null;
 
+
           const reviewValue =
-            tags[
-              "review:count"
-            ] ||
+            tags["review:count"] ||
             tags.reviews ||
             "";
 
-          if (reviewValue) {
+
+          if (
+            reviewValue
+          ) {
 
             const numericReviews =
               Number(
@@ -2205,6 +1656,7 @@ out center tags;
                   ""
                 )
               );
+
 
             if (
               Number.isFinite(
@@ -2220,12 +1672,13 @@ out center tags;
 
           }
 
+
           // -------------------------------------------------
-          // GOOGLE MAPS
+          // GOOGLE MAPS URL
           // -------------------------------------------------
 
-          let mapsURL =
-            "";
+          let mapsUrl = "";
+
 
           if (
             Number.isFinite(
@@ -2240,7 +1693,7 @@ out center tags;
             )
           ) {
 
-            mapsURL =
+            mapsUrl =
               "https://www.google.com/maps/search/?api=1&query=" +
               encodeURIComponent(
                 restaurantLat +
@@ -2250,7 +1703,7 @@ out center tags;
 
           } else {
 
-            mapsURL =
+            mapsUrl =
               "https://www.google.com/maps/search/?api=1&query=" +
               encodeURIComponent(
                 name +
@@ -2260,42 +1713,28 @@ out center tags;
 
           }
 
+
           // -------------------------------------------------
           // OSM URL
           // -------------------------------------------------
 
-          let osmURL =
-            "";
+          let osmUrl = "";
+
 
           if (
             item.type &&
             item.id
           ) {
 
-            osmURL =
-              "https://www.openstreetmap.org/" +
-              encodeURIComponent(
+            osmUrl =
+              `https://www.openstreetmap.org/${encodeURIComponent(
                 item.type
-              ) +
-              "/" +
-              encodeURIComponent(
+              )}/${encodeURIComponent(
                 item.id
-              );
+              )}`;
 
           }
 
-          // -------------------------------------------------
-          // VERIFIED IMAGE
-          // -------------------------------------------------
-
-          const imageData =
-            await getVerifiedRestaurantImage(
-              tags,
-              name,
-              destination,
-              restaurantLat,
-              restaurantLon
-            );
 
           // -------------------------------------------------
           // DESCRIPTION
@@ -2304,31 +1743,16 @@ out center tags;
           let description =
             `${name} is a real local restaurant in ${destination}, listed in OpenStreetMap.`;
 
-          if (cuisine) {
+
+          if (
+            cuisine
+          ) {
 
             description +=
               ` Cuisine: ${cuisine}.`;
 
           }
 
-          // -------------------------------------------------
-          // FOURSQUARE DATA
-          // -------------------------------------------------
-
-          let foursquareUrl =
-            "";
-
-          if (
-            imageData?.fsqPlaceId
-          ) {
-
-            foursquareUrl =
-              "https://foursquare.com/placemakers/review-place/" +
-              encodeURIComponent(
-                imageData.fsqPlaceId
-              );
-
-          }
 
           // -------------------------------------------------
           // RESTAURANT OBJECT
@@ -2337,14 +1761,10 @@ out center tags;
           restaurants.push({
 
             name:
-              String(
-                name
-              ),
+              String(name),
 
             cuisine:
-              String(
-                cuisine
-              ),
+              String(cuisine),
 
             priceLevel:
               String(
@@ -2363,31 +1783,13 @@ out center tags;
             description,
 
             imageUrl:
-              imageData?.imageUrl ||
               "",
 
             imageSource:
-              imageData?.imageSource ||
               "",
 
             imageAttribution:
-              imageData?.imageAttribution ||
               "",
-
-            photoVerified:
-              Boolean(
-                imageData?.photoVerified
-              ),
-
-            matchedPlace:
-              imageData?.matchedPlace ||
-              "",
-
-            fsqPlaceId:
-              imageData?.fsqPlaceId ||
-              "",
-
-            foursquareUrl,
 
             mapsUrl,
 
@@ -2431,9 +1833,8 @@ out center tags;
 
           });
 
-          // Collect extra results so we can
-          // prefer restaurants that have verified photos.
 
+          // Collect extra options.
           if (
             restaurants.length >= 20
           ) {
@@ -2444,9 +1845,10 @@ out center tags;
 
         }
 
-        // ---------------------------------------------------
+
+        // -------------------------------------------------
         // REMOVE DUPLICATES
-        // ---------------------------------------------------
+        // -------------------------------------------------
 
         const uniqueRestaurants =
           [];
@@ -2454,15 +1856,17 @@ out center tags;
         const restaurantNames =
           new Set();
 
+
         for (
           const restaurant
           of restaurants
         ) {
 
           const key =
-            normalizePlaceName(
-              restaurant.name
-            );
+            restaurant.name
+              .toLowerCase()
+              .trim();
+
 
           if (
             !restaurantNames.has(
@@ -2482,84 +1886,80 @@ out center tags;
 
         }
 
-        // ---------------------------------------------------
-        // PRIORITY
+
+        console.log(
+          "Unique OSM restaurants:",
+          uniqueRestaurants.length
+        );
+
+
+        // -------------------------------------------------
+        // FOURSQUARE ENRICHMENT
         //
-        // 1. Verified photo
-        // 2. Rating
-        // 3. Otherwise keep normal OSM restaurant
-        // ---------------------------------------------------
+        // Process one at a time to avoid excessive
+        // API requests.
+        // -------------------------------------------------
 
-        uniqueRestaurants.sort(
-          (
-            a,
-            b
-          ) => {
+        const enrichedRestaurants =
+          [];
 
-            const aPhoto =
-              a.photoVerified
+
+        for (
+          const restaurant
+          of uniqueRestaurants.slice(
+            0,
+            15
+          )
+        ) {
+
+          const enriched =
+            await enrichRestaurantWithFoursquare(
+              restaurant
+            );
+
+
+          enrichedRestaurants.push(
+            enriched
+          );
+
+        }
+
+
+        // -------------------------------------------------
+        // PREFER VERIFIED PHOTOS
+        // -------------------------------------------------
+
+        enrichedRestaurants.sort(
+          (a, b) => {
+
+            const aImage =
+              a.imageUrl
                 ? 1
                 : 0;
 
-            const bPhoto =
-              b.photoVerified
+            const bImage =
+              b.imageUrl
                 ? 1
                 : 0;
 
-            if (
-              bPhoto !==
-              aPhoto
-            ) {
-
-              return (
-                bPhoto -
-                aPhoto
-              );
-
-            }
-
-            const aRating =
-              Number(
-                a.rating
-              ) || 0;
-
-            const bRating =
-              Number(
-                b.rating
-              ) || 0;
 
             return (
-              bRating -
-              aRating
+              bImage -
+              aImage
             );
 
           }
         );
 
-        // ---------------------------------------------------
-        // LIMIT 10
-        // ---------------------------------------------------
 
-        const finalRestaurants =
-          uniqueRestaurants.slice(
-            0,
-            10
-          );
+        // -------------------------------------------------
+        // RETURN 10
+        // -------------------------------------------------
 
-        console.log(
-          "Final restaurants:",
-          finalRestaurants.length
+        return enrichedRestaurants.slice(
+          0,
+          10
         );
-
-        console.log(
-          "Restaurants with verified photos:",
-          finalRestaurants.filter(
-            r =>
-              r.photoVerified
-          ).length
-        );
-
-        return finalRestaurants;
 
       } catch (error) {
 
@@ -2574,62 +1974,55 @@ out center tags;
 
     }
 
-    // =======================================================
+
+    // =====================================================
     // GET RESTAURANTS
-    // =======================================================
+    // =====================================================
 
     console.log(
       "Starting restaurant search..."
     );
+
 
     travelData.restaurants =
       await getRestaurantsFromOSM(
         destination
       );
 
+
     console.log(
       "Restaurants returned:",
       travelData.restaurants.length
     );
 
-    // =======================================================
+
+    // =====================================================
     // FALLBACK CONTENT
-    // =======================================================
+    // =====================================================
 
     travelData.transport =
       travelData.transport ||
       "<p>Transportation information unavailable.</p>";
 
+
     travelData.experiences =
       travelData.experiences ||
       "<p>Experience information unavailable.</p>";
+
 
     travelData.money =
       travelData.money ||
       "<p>Budget information unavailable.</p>";
 
+
     travelData.daysPlan =
       travelData.daysPlan ||
       "<p>Itinerary information unavailable.</p>";
 
-    // =======================================================
-    // RESTAURANT FALLBACK
-    // =======================================================
 
-    if (
-      !Array.isArray(
-        travelData.restaurants
-      )
-    ) {
-
-      travelData.restaurants =
-        [];
-
-    }
-
-    // =======================================================
-    // SUCCESS
-    // =======================================================
+    // =====================================================
+    // FINAL LOG
+    // =====================================================
 
     console.log(
       "======================================"
@@ -2650,10 +2043,10 @@ out center tags;
     );
 
     console.log(
-      "Restaurants with photos:",
+      "Restaurant photos:",
       travelData.restaurants.filter(
         restaurant =>
-          restaurant.photoVerified
+          !!restaurant.imageUrl
       ).length
     );
 
@@ -2661,16 +2054,27 @@ out center tags;
       "======================================"
     );
 
+
+    // =====================================================
+    // SUCCESS
+    // =====================================================
+
     return res.status(200).json(
       travelData
     );
 
+
   } catch (error) {
+
+    // =====================================================
+    // CRITICAL ERROR
+    // =====================================================
 
     console.error(
       "PLAN API CRITICAL ERROR:",
       error
     );
+
 
     return res.status(500).json({
 
