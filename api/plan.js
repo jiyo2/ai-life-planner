@@ -63,6 +63,10 @@ module.exports = async (req, res) => {
 
     }
 
+    console.log(
+      "GROQ_API_KEY detected."
+    );
+
 
     // =======================================================
     // VALIDATION
@@ -102,36 +106,33 @@ module.exports = async (req, res) => {
       );
 
     const safeBudget =
-      Math.max(
-        1,
-        Number(budget) || 0
-      );
+      Number(budget) || 0;
 
     const safeTravelers =
       String(travelers)
         .trim()
-        .slice(0, 50);
+        .slice(0, 80);
 
     const safeInterests =
       String(
         interests || "General sightseeing"
       )
-        .trim()
-        .slice(0, 300);
+      .trim()
+      .slice(0, 500);
 
     const safeNotes =
       String(
         notes || ""
       )
-        .trim()
-        .slice(0, 300);
+      .trim()
+      .slice(0, 500);
 
     const safeStartDate =
       String(
         startDate || "Flexible"
       )
-        .trim()
-        .slice(0, 50);
+      .trim()
+      .slice(0, 100);
 
 
     // =======================================================
@@ -146,89 +147,199 @@ module.exports = async (req, res) => {
 
 
     // =======================================================
-    // AI PROMPT
+    // TRAVEL PLAN PROMPT
     //
-    // Kept compact to avoid Groq TPM problems.
-    // Output itself is more useful and detailed.
+    // IMPORTANT:
+    // This prompt is designed to provide a useful,
+    // detailed travel plan without making the request
+    // unnecessarily large.
     // =======================================================
 
     const prompt = `
-Create a practical personalized travel plan.
+Create a useful, realistic and detailed travel plan.
 
+TRIP INFORMATION
 Destination: ${safeDestination}
 Start date: ${safeStartDate}
-Days: ${safeDays}
+Number of days: ${safeDays}
 Budget: ${safeBudget} USD
 Travelers: ${safeTravelers}
 Interests: ${safeInterests}
-Notes: ${safeNotes || "None"}
+Additional notes: ${safeNotes || "None"}
+
+IMPORTANT DATA RULES
+
+1. Hotels and restaurants are supplied separately by OpenStreetMap.
+2. Do NOT create hotels.
+3. Do NOT create restaurants.
+4. Do NOT create hotel names.
+5. Do NOT create restaurant names.
+6. Do NOT create image URLs.
+7. Do NOT pretend that an invented place is real.
+8. For attractions and neighborhoods, only mention well-known places when you are reasonably confident they exist.
+9. For transportation prices, use approximate wording such as "around", "typically", or "varies".
+10. Never present uncertain prices as guaranteed current prices.
+11. For taxi applications, only mention established services you are reasonably confident operate in the destination. If availability varies, clearly say so.
+12. Include practical safety advice for taxis and transportation.
+13. Do not mention Foursquare.
+14. Do not mention Gemini.
+15. OpenStreetMap is the only external places data source.
+16. Groq is the only AI provider.
+
+CONTENT REQUIREMENTS
+
+The response must be substantially more useful than a short summary.
+
+TRANSPORT:
+Create a detailed transportation guide.
+
+Include:
+- Airport arrival options when relevant.
+- Metro/subway.
+- Tram.
+- Bus.
+- Ferry when relevant.
+- Walking.
+- Taxi.
+- Approximate cost guidance.
+- Which option is best for tourists.
+- Which option is best for saving money.
+- Practical transportation tips.
+- Taxi safety advice.
+- Recommend established taxi applications when reasonably known for the destination.
+- Tell travelers to verify the vehicle, driver and destination before entering.
+- Warn against unofficial drivers approaching travelers at airports, stations or tourist attractions.
+- Do not invent a taxi application.
+
+Return this as HTML using:
+<h3>
+<p>
+<ul>
+<li>
+
+EXPERIENCES:
+Create a detailed experiences and sightseeing guide.
+
+Include several categories:
+
+1. Major attractions
+2. Historic and cultural places
+3. Scenic places
+4. Walking and promenade areas
+5. Parks and outdoor places
+6. Local neighborhoods worth exploring
+7. Evening and nightlife ideas
+8. Local food experiences
+9. Shopping areas
+10. Relaxing activities
+
+For shopping specifically include:
+- Major traditional markets when relevant.
+- Popular shopping streets.
+- Modern shopping areas or malls when relevant.
+- Souvenir shopping.
+- Local products worth looking for.
+- Basic bargaining advice where appropriate.
+- How to avoid tourist traps.
+
+For walking and outdoor activities specifically include:
+- Waterfront walks when available.
+- Parks.
+- Viewpoints.
+- Scenic streets.
+- Relaxing areas.
+- Good times of day to visit.
+
+Do not make the section just a list of names.
+Explain briefly what makes each type of place worth visiting.
+
+Return useful HTML using:
+<h3>
+<h4>
+<p>
+<ul>
+<li>
+
+MONEY:
+Create a detailed budget strategy.
+
+Break the budget into:
+- Accommodation
+- Food
+- Local transportation
+- Attractions
+- Shopping
+- Activities
+- Emergency/miscellaneous
+
+Explain what percentage or approximate amount could be allocated to each category.
+
+If the user's budget is unlikely to cover flights, explicitly say that flights may need to be treated separately.
+
+Do not claim exact prices unless they are given by the user.
+
+Return HTML.
+
+DAYS PLAN:
+Create exactly ${safeDays} days.
+
+Every day must contain:
+- morning
+- afternoon
+- evening
+
+Each period should contain useful activities and logical geographic grouping.
+
+Avoid sending the traveler back and forth across the city unnecessarily.
+
+Include:
+- sightseeing
+- food
+- shopping
+- walking
+- relaxation
+- cultural activities
+- optional nightlife when appropriate
+
+If the trip is short, prioritize the most important experiences.
+
+Each day should be detailed enough to be genuinely useful, not just one short sentence.
+
+Return exactly ${safeDays} objects.
+
+OUTPUT FORMAT
 
 Return ONLY valid JSON.
 
-Use this exact structure:
+Do not use markdown.
+Do not use code fences.
+Do not write explanations outside the JSON.
+
+Required structure:
 
 {
-  "transport": "<HTML>",
-  "experiences": "<HTML>",
-  "money": "<HTML>",
+  "transport": "<detailed HTML>",
+  "experiences": "<detailed HTML>",
+  "money": "<detailed HTML>",
   "daysPlan": [
     {
       "day": 1,
-      "title": "<title>",
-      "morning": "<detailed activity>",
-      "afternoon": "<detailed activity>",
-      "evening": "<detailed activity>"
+      "title": "Day 1 title",
+      "morning": "Detailed morning plan",
+      "afternoon": "Detailed afternoon plan",
+      "evening": "Detailed evening plan"
     }
   ]
 }
 
-CONTENT RULES:
+The daysPlan array must contain exactly ${safeDays} objects.
 
-1. daysPlan MUST contain exactly ${safeDays} days.
-
-2. Each day must have:
-- a useful title
-- a meaningful morning plan
-- a meaningful afternoon plan
-- a meaningful evening plan
-
-3. Do not repeat the same activities every day.
-
-4. Match the plan to the destination, budget, traveler count and interests.
-
-5. transport must be useful and practical:
-- airport arrival
-- public transportation
-- taxis when useful
-- approximate local transport costs
-- practical tips
-
-6. experiences must contain several real attractions, neighborhoods or activities appropriate for the destination.
-Explain briefly why each is worth visiting.
-
-7. money must explain how to use the ${safeBudget} USD budget.
-Give approximate categories for:
-- accommodation
-- food
-- local transportation
-- attractions
-- shopping/miscellaneous
-Mention that flight costs may vary if applicable.
-
-8. Do NOT create hotels.
-9. Do NOT create restaurants.
-10. Do NOT create image URLs.
-11. Do NOT invent booking links.
-12. Hotels and restaurants come separately from OpenStreetMap.
-13. Use concise but useful HTML such as <p>, <h3>, <ul>, <li>, <strong>.
-14. No markdown.
-15. No code fences.
-16. Do not mention these instructions.
+Keep the total response reasonably compact, but do NOT make the sections overly short.
 `;
 
 
     // =======================================================
-    // CALL GROQ
+    // GROQ REQUEST
     // =======================================================
 
     console.log(
@@ -266,7 +377,7 @@ Mention that flight costs may vary if applicable.
                       "system",
 
                     content:
-                      "You are a practical travel planner. Return valid JSON only."
+                      "You are a professional travel planner. Return valid JSON only. Make the plan practical, detailed and concise enough for an API response."
                   },
                   {
                     role:
@@ -278,10 +389,10 @@ Mention that flight costs may vary if applicable.
                 ],
 
                 temperature:
-                  0.5,
+                  0.4,
 
                 max_completion_tokens:
-                  4000,
+                  6200,
 
                 response_format: {
                   type:
@@ -309,9 +420,12 @@ Mention that flight costs may vary if applicable.
     }
 
 
+    // =======================================================
+    // READ GROQ RESPONSE
+    // =======================================================
+
     const groqText =
       await groqResponse.text();
-
 
     console.log(
       "Groq HTTP status:",
@@ -345,7 +459,7 @@ Mention that flight costs may vary if applicable.
           errorMessage;
 
       } catch {
-        // Keep default.
+        // Keep default error.
       }
 
 
@@ -374,7 +488,7 @@ Mention that flight costs may vary if applicable.
 
 
     // =======================================================
-    // PARSE GROQ RESPONSE
+    // PARSE GROQ HTTP JSON
     // =======================================================
 
     let groqData;
@@ -416,7 +530,10 @@ Mention that flight costs may vary if applicable.
     if (!aiText) {
 
       console.error(
-        "Groq returned no content."
+        "Groq returned no content:",
+        JSON.stringify(
+          groqData
+        )
       );
 
       return res.status(500).json({
@@ -437,7 +554,9 @@ Mention that flight costs may vary if applicable.
 
       aiPlan =
         typeof aiText === "string"
-          ? JSON.parse(aiText)
+          ? JSON.parse(
+              aiText
+            )
           : aiText;
 
     } catch (error) {
@@ -458,41 +577,29 @@ Mention that flight costs may vary if applicable.
 
 
     // =======================================================
-    // NORMALIZE AI SECTIONS
+    // NORMALIZE AI CONTENT
     // =======================================================
 
     const transport =
-      typeof aiPlan.transport === "string" &&
-      aiPlan.transport.trim()
+      typeof aiPlan.transport === "string"
         ? aiPlan.transport
-        : `
-          <h3>Getting Around</h3>
-          <p>Transportation information is currently unavailable.</p>
-        `;
+        : "<p>Transportation information unavailable.</p>";
 
 
     const experiences =
-      typeof aiPlan.experiences === "string" &&
-      aiPlan.experiences.trim()
+      typeof aiPlan.experiences === "string"
         ? aiPlan.experiences
-        : `
-          <h3>Experiences</h3>
-          <p>Experience information is currently unavailable.</p>
-        `;
+        : "<p>Experience information unavailable.</p>";
 
 
     const money =
-      typeof aiPlan.money === "string" &&
-      aiPlan.money.trim()
+      typeof aiPlan.money === "string"
         ? aiPlan.money
-        : `
-          <h3>Budget Strategy</h3>
-          <p>Budget information is currently unavailable.</p>
-        `;
+        : "<p>Budget information unavailable.</p>";
 
 
     // =======================================================
-    // NORMALIZE DAY PLAN
+    // NORMALIZE DAYS
     // =======================================================
 
     let daysPlan =
@@ -505,52 +612,45 @@ Mention that flight costs may vary if applicable.
 
     daysPlan =
       daysPlan
-        .slice(
-          0,
-          safeDays
-        )
+        .slice(0, safeDays)
         .map(
-          (day, index) => {
+          (day, index) => ({
 
-            return {
+            day:
+              Number(
+                day?.day
+              ) || index + 1,
 
-              day:
-                Number(
-                  day?.day
-                ) || index + 1,
+            title:
+              String(
+                day?.title ||
+                `Day ${index + 1}`
+              ),
 
-              title:
-                String(
-                  day?.title ||
-                  `Day ${index + 1}`
-                ),
+            morning:
+              String(
+                day?.morning ||
+                "Morning activities unavailable."
+              ),
 
-              morning:
-                String(
-                  day?.morning ||
-                  "Explore the destination and begin the day with a local activity."
-                ),
+            afternoon:
+              String(
+                day?.afternoon ||
+                "Afternoon activities unavailable."
+              ),
 
-              afternoon:
-                String(
-                  day?.afternoon ||
-                  "Continue exploring nearby attractions and local areas."
-                ),
+            evening:
+              String(
+                day?.evening ||
+                "Evening activities unavailable."
+              )
 
-              evening:
-                String(
-                  day?.evening ||
-                  "Enjoy a local dinner and an evening activity."
-                )
-
-            };
-
-          }
+          })
         );
 
 
     // =======================================================
-    // ENSURE EXACT NUMBER OF DAYS
+    // SAFETY: MAKE SURE DAYS EXIST
     // =======================================================
 
     while (
@@ -570,14 +670,13 @@ Mention that flight costs may vary if applicable.
           `Day ${index + 1}`,
 
         morning:
-          "Explore an interesting local area and begin the day with a nearby attraction.",
+          "Explore the destination's main attractions and local area.",
 
         afternoon:
-          "Visit another important attraction and experience local culture.",
+          "Enjoy local food, shopping and a walking experience.",
 
         evening:
-          "Enjoy a local meal and a relaxed evening activity."
-
+          "Relax and explore a safe, popular evening area."
       });
 
     }
@@ -586,8 +685,9 @@ Mention that flight costs may vary if applicable.
     // =======================================================
     // OPENSTREETMAP
     //
-    // NO FOURSQUARE
-    // NO GEMINI
+    // ONLY external places source.
+    // NO FOURSQUARE.
+    // NO GEMINI.
     // =======================================================
 
     const OSM_USER_AGENT =
@@ -618,15 +718,16 @@ Mention that flight costs may vary if applicable.
           await fetch(
             url,
             {
-              method:
-                "GET",
+              method: "GET",
 
               headers: {
+
                 "User-Agent":
                   OSM_USER_AGENT,
 
                 "Accept":
                   "application/json"
+
               }
             }
           );
@@ -725,7 +826,7 @@ Mention that flight costs may vary if applicable.
 
 
     // =======================================================
-    // NORMALIZE IMAGE URL
+    // SAFE IMAGE URL
     // =======================================================
 
     function normalizeImageUrl(
@@ -736,9 +837,9 @@ Mention that flight costs may vary if applicable.
         return "";
       }
 
+
       const url =
-        String(value)
-          .trim();
+        String(value).trim();
 
 
       if (
@@ -771,8 +872,7 @@ Mention that flight costs may vary if applicable.
 
 
       const raw =
-        String(value)
-          .trim();
+        String(value).trim();
 
 
       if (
@@ -818,28 +918,21 @@ Mention that flight costs may vary if applicable.
       tags
     ) {
 
-      if (!tags) {
-        return "";
-      }
-
-
-      const directImage =
+      const image =
         normalizeImageUrl(
-          tags.image
+          tags?.image
         );
 
 
-      if (directImage) {
-
-        return directImage;
-
+      if (image) {
+        return image;
       }
 
 
       const wikimedia =
-        tags.wikimedia_commons ||
-        tags["wikimedia_commons"] ||
-        tags["wikimedia_commons:image"];
+        tags?.wikimedia_commons ||
+        tags?.["wikimedia_commons:image"] ||
+        tags?.["wikimedia_commons"];
 
 
       if (wikimedia) {
@@ -857,7 +950,7 @@ Mention that flight costs may vary if applicable.
 
 
     // =======================================================
-    // GET OSM COORDINATES
+    // OSM COORDINATES
     // =======================================================
 
     function getElementCoordinates(
@@ -922,8 +1015,7 @@ Mention that flight costs may vary if applicable.
       fallback
     ) {
 
-      const parts =
-        [];
+      const parts = [];
 
 
       const fields = [
@@ -936,7 +1028,8 @@ Mention that flight costs may vary if applicable.
 
 
       for (
-        const field of fields
+        const field
+        of fields
       ) {
 
         if (
@@ -1032,7 +1125,7 @@ Mention that flight costs may vary if applicable.
     // =======================================================
     // ONE OSM SEARCH
     //
-    // Hotels + restaurants in ONE Overpass request.
+    // Hotels + restaurants together.
     // =======================================================
 
     async function getOSMPlaces(
@@ -1045,10 +1138,6 @@ Mention that flight costs may vary if applicable.
           "Starting OpenStreetMap search..."
         );
 
-
-        // ---------------------------------------------------
-        // GEOCODE
-        // ---------------------------------------------------
 
         const coordinates =
           await geocodeDestination(
@@ -1084,9 +1173,9 @@ Mention that flight costs may vary if applicable.
         );
 
 
-        // ---------------------------------------------------
-        // ONE OVERPASS QUERY
-        // ---------------------------------------------------
+        // ===================================================
+        // ONE OVERPASS REQUEST
+        // ===================================================
 
         const overpassQuery = `
 [out:json][timeout:30];
@@ -1115,8 +1204,7 @@ out center tags;
           await fetch(
             overpassURL,
             {
-              method:
-                "POST",
+              method: "POST",
 
               headers: {
 
@@ -1181,11 +1269,8 @@ out center tags;
         );
 
 
-        const hotels =
-          [];
-
-        const restaurants =
-          [];
+        const hotels = [];
+        const restaurants = [];
 
 
         const hotelNames =
@@ -1211,8 +1296,7 @@ out center tags;
           const name =
             tags.name ||
             tags["name:en"] ||
-            tags["name:tr"] ||
-            tags["name:fr"];
+            tags["name:tr"];
 
 
           if (!name) {
@@ -1281,7 +1365,7 @@ out center tags;
               !hotelNames.has(
                 normalized
               )
-            ) {
+            {
 
               hotelNames.add(
                 normalized
@@ -1295,9 +1379,7 @@ out center tags;
 
 
               if (
-                !Number.isFinite(
-                  stars
-                )
+                !Number.isFinite(stars)
               ) {
 
                 stars =
@@ -1309,12 +1391,11 @@ out center tags;
 
 
               if (
-                !Number.isFinite(
-                  stars
-                )
+                !Number.isFinite(stars)
               ) {
 
-                stars = 0;
+                stars =
+                  0;
 
               }
 
@@ -1396,15 +1477,15 @@ out center tags;
 
               const hotelType =
                 tourism === "hostel"
-                  ? "hostel"
+                  ? "Hostel"
                   : tourism === "guest_house"
-                    ? "guest house"
-                    : "hotel";
+                    ? "Guest house"
+                    : "Hotel";
 
 
               const description =
                 tags.description ||
-                `${name} is a real ${hotelType} listed in OpenStreetMap.`;
+                `${name} is a real ${hotelType.toLowerCase()} listed in OpenStreetMap.`;
 
 
               hotels.push({
@@ -1499,7 +1580,7 @@ out center tags;
               !restaurantNames.has(
                 normalized
               )
-            ) {
+            {
 
               restaurantNames.add(
                 normalized
@@ -1517,31 +1598,27 @@ out center tags;
                 "$$";
 
 
-              const ratingValue =
-                Number(
-                  tags.rating
-                );
-
-
               const rating =
                 Number.isFinite(
-                  ratingValue
+                  Number(
+                    tags.rating
+                  )
                 )
-                  ? ratingValue
+                  ? Number(
+                      tags.rating
+                    )
                   : null;
-
-
-              const reviewValue =
-                Number(
-                  tags["review:count"]
-                );
 
 
               const reviewCount =
                 Number.isFinite(
-                  reviewValue
+                  Number(
+                    tags["review:count"]
+                  )
                 )
-                  ? reviewValue
+                  ? Number(
+                      tags["review:count"]
+                    )
                   : null;
 
 
@@ -1643,7 +1720,8 @@ out center tags;
 
         // ===================================================
         // SORT HOTELS
-        // Photos first, then stars.
+        //
+        // Hotels with real OSM images first.
         // ===================================================
 
         hotels.sort(
@@ -1695,7 +1773,8 @@ out center tags;
 
         // ===================================================
         // SORT RESTAURANTS
-        // Photos first, then ratings.
+        //
+        // Restaurants with real OSM images first.
         // ===================================================
 
         restaurants.sort(
@@ -1806,7 +1885,7 @@ out center tags;
 
 
     // =======================================================
-    // GET OSM DATA
+    // GET OSM PLACES
     // =======================================================
 
     console.log(
@@ -1895,6 +1974,18 @@ out center tags;
 
       restaurants,
 
+      restaurantSearch: {
+
+        status:
+          restaurants.length
+            ? "success"
+            : "no_results",
+
+        source:
+          "OpenStreetMap"
+
+      },
+
       stay:
         hotels,
 
@@ -1910,7 +2001,7 @@ out center tags;
 
 
     // =======================================================
-    // FINAL LOGS
+    // FINAL LOG
     // =======================================================
 
     console.log(
