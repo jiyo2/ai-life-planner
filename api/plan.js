@@ -34,10 +34,10 @@ module.exports = async (req, res) => {
       notes
     } = req.body || {};
 
-    console.log("======================================");
+    console.log("========================================");
     console.log("PLAN API START");
     console.log("Destination:", destination);
-    console.log("======================================");
+    console.log("========================================");
 
     // =======================================================
     // API KEYS
@@ -71,7 +71,7 @@ module.exports = async (req, res) => {
     }
 
     // =======================================================
-    // VALIDATE
+    // VALIDATION
     // =======================================================
 
     if (
@@ -132,11 +132,11 @@ Prices are estimates only.
 
 Never claim live availability.
 
-If you do not know the exact Booking.com page,
-create a Booking.com search URL for the hotel and destination.
+If you do not know the exact hotel Booking.com URL,
+create a Booking.com search URL for that hotel and destination.
 
 Do NOT return image URLs.
-Images will be obtained separately.
+Hotel images will be obtained separately.
 
 IMPORTANT RESTAURANT REQUIREMENT:
 
@@ -176,7 +176,7 @@ Use exactly:
         "Breakfast Available"
       ],
       "description": "Short description.",
-      "bookingUrl": "https://www.booking.com/..."
+      "bookingUrl": ""
     }
   ],
   "restaurants": [],
@@ -214,7 +214,8 @@ Use exactly:
             ],
 
             generationConfig: {
-              responseMimeType: "application/json"
+              responseMimeType:
+                "application/json"
             }
 
           })
@@ -394,7 +395,7 @@ Use exactly:
               Array.isArray(
                 hotel.amenities
               )
-                ? hotel.amenities.slice(0, 6)
+                ? hotel.amenities.slice(0, 8)
                 : [],
 
             description:
@@ -504,7 +505,7 @@ Use exactly:
         }
 
         // ---------------------------------------------------
-        // FALLBACK
+        // HOTEL IMAGE FALLBACK
         // ---------------------------------------------------
 
         if (
@@ -568,13 +569,15 @@ Use exactly:
         const photo =
           data.photos[0];
 
+        const imageUrl =
+          photo?.src?.large2x ||
+          photo?.src?.large ||
+          photo?.src?.original ||
+          "";
+
         return {
 
-          imageUrl:
-            photo?.src?.large2x ||
-            photo?.src?.large ||
-            photo?.src?.original ||
-            "",
+          imageUrl,
 
           photoAttribution:
             photo?.photographer ||
@@ -589,7 +592,7 @@ Use exactly:
       } catch (error) {
 
         console.error(
-          "Pexels error:",
+          "Pexels hotel error:",
           error.message
         );
 
@@ -640,122 +643,6 @@ Use exactly:
       );
 
     // =======================================================
-    // OPENSTREETMAP / NOMINATIM
-    // =======================================================
-
-    async function geocodeDestination(
-      destination
-    ) {
-
-      const queries = [
-
-        destination,
-
-        `${destination}, Turkey`,
-
-        `${destination}, Türkiye`
-
-      ];
-
-      for (
-        const query
-        of queries
-      ) {
-
-        try {
-
-          console.log(
-            "Nominatim search:",
-            query
-          );
-
-          const url =
-            "https://nominatim.openstreetmap.org/search" +
-            "?format=json" +
-            "&limit=5" +
-            "&addressdetails=1" +
-            "&q=" +
-            encodeURIComponent(query);
-
-          const response =
-            await fetch(
-              url,
-              {
-                method: "GET",
-
-                headers: {
-                  "User-Agent":
-                    "AI-Life-Planner/1.0 (travel planner)",
-                  "Accept":
-                    "application/json"
-                }
-              }
-            );
-
-          if (!response.ok) {
-
-            console.error(
-              "Nominatim status:",
-              response.status
-            );
-
-            continue;
-
-          }
-
-          const data =
-            await response.json();
-
-          if (
-            Array.isArray(data) &&
-            data.length > 0
-          ) {
-
-            const location =
-              data[0];
-
-            const lat =
-              Number(location.lat);
-
-            const lon =
-              Number(location.lon);
-
-            if (
-              Number.isFinite(lat) &&
-              Number.isFinite(lon)
-            ) {
-
-              console.log(
-                "Nominatim coordinates:",
-                lat,
-                lon
-              );
-
-              return {
-                lat,
-                lon
-              };
-
-            }
-
-          }
-
-        } catch (error) {
-
-          console.error(
-            "Nominatim request error:",
-            error.message
-          );
-
-        }
-
-      }
-
-      return null;
-
-    }
-
-    // =======================================================
     // OPENSTREETMAP RESTAURANTS
     // =======================================================
 
@@ -766,35 +653,64 @@ Use exactly:
       try {
 
         console.log(
-          "======================================"
+          "========================================"
         );
 
         console.log(
-          "OPENSTREETMAP RESTAURANT SEARCH"
-        );
-
-        console.log(
-          "Destination:",
+          "OpenStreetMap restaurant search:",
           destination
         );
 
         console.log(
-          "======================================"
+          "========================================"
         );
 
-        // ---------------------------------------------------
-        // STEP 1: GEOCODE
-        // ---------------------------------------------------
+        // ===================================================
+        // STEP 1 — NOMINATIM GEOCODING
+        // ===================================================
 
-        const coordinates =
-          await geocodeDestination(
-            destination
+        const geocodeURL =
+          "https://nominatim.openstreetmap.org/search" +
+          "?format=json" +
+          "&limit=1" +
+          "&addressdetails=1" +
+          "&q=" +
+          encodeURIComponent(destination);
+
+        const geocodeResponse =
+          await fetch(
+            geocodeURL,
+            {
+              method: "GET",
+
+              headers: {
+                "User-Agent":
+                  "AI-Life-Planner/1.0 (travel planner application)"
+              }
+            }
           );
 
-        if (!coordinates) {
+        if (!geocodeResponse.ok) {
 
           console.error(
-            "Could not geocode destination:",
+            "Nominatim error:",
+            geocodeResponse.status
+          );
+
+          return [];
+
+        }
+
+        const locations =
+          await geocodeResponse.json();
+
+        if (
+          !Array.isArray(locations) ||
+          locations.length === 0
+        ) {
+
+          console.log(
+            "Destination not found:",
             destination
           );
 
@@ -803,140 +719,88 @@ Use exactly:
         }
 
         const lat =
-          coordinates.lat;
+          Number(
+            locations[0].lat
+          );
 
         const lon =
-          coordinates.lon;
+          Number(
+            locations[0].lon
+          );
 
-        // ---------------------------------------------------
-        // STEP 2: OVERPASS QUERY
-        // ---------------------------------------------------
+        if (
+          !Number.isFinite(lat) ||
+          !Number.isFinite(lon)
+        ) {
+
+          console.error(
+            "Invalid coordinates from Nominatim"
+          );
+
+          return [];
+
+        }
+
+        console.log(
+          "Destination coordinates:",
+          lat,
+          lon
+        );
+
+        // ===================================================
+        // STEP 2 — OVERPASS
+        // ===================================================
 
         const overpassQuery = `
-[out:json][timeout:60];
+[out:json][timeout:40];
 
 (
-  node["amenity"="restaurant"](around:25000,${lat},${lon});
-  way["amenity"="restaurant"](around:25000,${lat},${lon});
-  relation["amenity"="restaurant"](around:25000,${lat},${lon});
-
-  node["amenity"="fast_food"](around:25000,${lat},${lon});
-  way["amenity"="fast_food"](around:25000,${lat},${lon});
-
-  node["amenity"="cafe"](around:25000,${lat},${lon});
-  way["amenity"="cafe"](around:25000,${lat},${lon});
+  node["amenity"="restaurant"](around:15000,${lat},${lon});
+  way["amenity"="restaurant"](around:15000,${lat},${lon});
+  relation["amenity"="restaurant"](around:15000,${lat},${lon});
 );
 
 out center tags;
 `;
 
-        // ---------------------------------------------------
-        // MULTIPLE OVERPASS SERVERS
-        // ---------------------------------------------------
+        const overpassURL =
+          "https://overpass-api.de/api/interpreter";
 
-        const overpassServers = [
+        const osmResponse =
+          await fetch(
+            overpassURL,
+            {
+              method: "POST",
 
-          "https://overpass-api.de/api/interpreter",
+              headers: {
+                "Content-Type":
+                  "application/x-www-form-urlencoded",
 
-          "https://overpass.kumi.systems/api/interpreter",
+                "User-Agent":
+                  "AI-Life-Planner/1.0"
+              },
 
-          "https://overpass.private.coffee/api/interpreter"
-
-        ];
-
-        let osmData = null;
-
-        for (
-          const server
-          of overpassServers
-        ) {
-
-          try {
-
-            console.log(
-              "Trying Overpass server:",
-              server
-            );
-
-            const response =
-              await fetch(
-                server,
-                {
-                  method: "POST",
-
-                  headers: {
-                    "Content-Type":
-                      "application/x-www-form-urlencoded",
-                    "User-Agent":
-                      "AI-Life-Planner/1.0 (travel planner)",
-                    "Accept":
-                      "application/json"
-                  },
-
-                  body:
-                    "data=" +
-                    encodeURIComponent(
-                      overpassQuery
-                    )
-                }
-              );
-
-            console.log(
-              "Overpass HTTP status:",
-              response.status
-            );
-
-            if (!response.ok) {
-
-              const errorText =
-                await response.text();
-
-              console.error(
-                "Overpass failed:",
-                errorText.slice(0, 500)
-              );
-
-              continue;
-
+              body:
+                "data=" +
+                encodeURIComponent(
+                  overpassQuery
+                )
             }
+          );
 
-            const data =
-              await response.json();
+        if (!osmResponse.ok) {
 
-            if (
-              data &&
-              Array.isArray(
-                data.elements
-              )
-            ) {
+          console.error(
+            "Overpass error:",
+            osmResponse.status
+          );
 
-              osmData =
-                data;
-
-              console.log(
-                "Overpass success:",
-                data.elements.length,
-                "elements"
-              );
-
-              break;
-
-            }
-
-          } catch (error) {
-
-            console.error(
-              "Overpass server error:",
-              error.message
-            );
-
-          }
+          return [];
 
         }
 
-        // ---------------------------------------------------
-        // NO DATA
-        // ---------------------------------------------------
+        const osmData =
+          await osmResponse.json();
 
         if (
           !osmData ||
@@ -946,16 +810,21 @@ out center tags;
         ) {
 
           console.error(
-            "All Overpass servers failed."
+            "Invalid Overpass response"
           );
 
           return [];
 
         }
 
-        // ---------------------------------------------------
-        // STEP 3: NORMALIZE
-        // ---------------------------------------------------
+        console.log(
+          "OSM restaurant elements found:",
+          osmData.elements.length
+        );
+
+        // ===================================================
+        // STEP 3 — NORMALIZE RESTAURANTS
+        // ===================================================
 
         const restaurants = [];
 
@@ -967,20 +836,17 @@ out center tags;
           const tags =
             item.tags || {};
 
+          // -------------------------------------------------
+          // REAL NAME ONLY
+          // -------------------------------------------------
+
           const name =
             tags.name ||
             tags["name:en"] ||
             tags["name:tr"];
 
-          // Ignore unnamed places
-
-          if (
-            !name ||
-            !String(name).trim()
-          ) {
-
+          if (!name) {
             continue;
-
           }
 
           // -------------------------------------------------
@@ -994,10 +860,7 @@ out center tags;
             item.lon;
 
           if (
-            (
-              restaurantLat === undefined ||
-              restaurantLon === undefined
-            ) &&
+            restaurantLat === undefined &&
             item.center
           ) {
 
@@ -1014,19 +877,6 @@ out center tags;
 
           restaurantLon =
             Number(restaurantLon);
-
-          if (
-            !Number.isFinite(
-              restaurantLat
-            ) ||
-            !Number.isFinite(
-              restaurantLon
-            )
-          ) {
-
-            continue;
-
-          }
 
           // -------------------------------------------------
           // ADDRESS
@@ -1055,11 +905,11 @@ out center tags;
           }
 
           if (
-            tags["addr:suburb"]
+            tags["addr:district"]
           ) {
 
             addressParts.push(
-              tags["addr:suburb"]
+              tags["addr:district"]
             );
 
           }
@@ -1083,13 +933,9 @@ out center tags;
           // CUISINE
           // -------------------------------------------------
 
-          let cuisine =
+          const cuisine =
             tags.cuisine ||
             "Local cuisine";
-
-          cuisine =
-            String(cuisine)
-              .replace(/;/g, ", ");
 
           // -------------------------------------------------
           // PRICE
@@ -1118,70 +964,344 @@ out center tags;
             tags["contact:phone"] ||
             "";
 
+          // =================================================
+          // IMAGE FROM OPENSTREETMAP
+          // =================================================
+
+          let imageUrl =
+            tags.image ||
+            tags["contact:image"] ||
+            "";
+
           // -------------------------------------------------
-          // OPENSTREETMAP URL
+          // WIKIMEDIA COMMONS
           // -------------------------------------------------
 
-          const osmURL =
-            `https://www.openstreetmap.org/?mlat=${restaurantLat}&mlon=${restaurantLon}#map=19/${restaurantLat}/${restaurantLon}`;
+          const wikimediaCommons =
+            tags.wikimedia_commons ||
+            tags["wikimedia_commons"] ||
+            "";
 
           // -------------------------------------------------
-          // GOOGLE MAPS NOT REQUIRED
+          // IF OSM IMAGE IS NOT A DIRECT IMAGE URL,
+          // TRY TO CONVERT COMMON WIKIMEDIA TAG
           // -------------------------------------------------
+
+          if (
+            !imageUrl &&
+            wikimediaCommons
+          ) {
+
+            const commonsValue =
+              String(
+                wikimediaCommons
+              ).trim();
+
+            if (
+              commonsValue
+                .toLowerCase()
+                .startsWith("file:")
+            ) {
+
+              const fileName =
+                commonsValue
+                  .replace(
+                    /^File:/i,
+                    ""
+                  )
+                  .trim();
+
+              imageUrl =
+                "https://commons.wikimedia.org/wiki/Special:Redirect/file/" +
+                encodeURIComponent(
+                  fileName
+                );
+
+            }
+
+          }
+
+          // =================================================
+          // STARS
+          // =================================================
+
+          let starValue =
+            null;
+
+          if (
+            tags.stars !== undefined &&
+            tags.stars !== null &&
+            tags.stars !== ""
+          ) {
+
+            const parsedStars =
+              Number(
+                String(
+                  tags.stars
+                ).replace(
+                  ",",
+                  "."
+                )
+              );
+
+            if (
+              Number.isFinite(
+                parsedStars
+              )
+            ) {
+
+              starValue =
+                parsedStars;
+
+            }
+
+          }
+
+          // -------------------------------------------------
+          // OTHER POSSIBLE RATING TAGS
+          // -------------------------------------------------
+
+          let ratingValue =
+            null;
+
+          const possibleRatings = [
+
+            tags.rating,
+
+            tags["rating:overall"],
+
+            tags["check_date:rating"]
+
+          ];
+
+          for (
+            const possible
+            of possibleRatings
+          ) {
+
+            if (
+              possible !== undefined &&
+              possible !== null &&
+              possible !== ""
+            ) {
+
+              const parsed =
+                Number(
+                  String(possible)
+                    .replace(
+                      ",",
+                      "."
+                    )
+                );
+
+              if (
+                Number.isFinite(parsed)
+              ) {
+
+                ratingValue =
+                  parsed;
+
+                break;
+
+              }
+
+            }
+
+          }
+
+          // =================================================
+          // OSM MAP URL
+          // =================================================
+
+          let osmUrl = "";
+
+          if (
+            Number.isFinite(
+              restaurantLat
+            ) &&
+            Number.isFinite(
+              restaurantLon
+            )
+          ) {
+
+            osmUrl =
+              "https://www.openstreetmap.org/" +
+              "?" +
+              "mlat=" +
+              encodeURIComponent(
+                restaurantLat
+              ) +
+              "&mlon=" +
+              encodeURIComponent(
+                restaurantLon
+              ) +
+              "#map=19/" +
+              encodeURIComponent(
+                restaurantLat
+              ) +
+              "/" +
+              encodeURIComponent(
+                restaurantLon
+              );
+
+          } else {
+
+            osmUrl =
+              "https://www.openstreetmap.org/search?query=" +
+              encodeURIComponent(
+                name + " " + destination
+              );
+
+          }
+
+          // =================================================
+          // GOOGLE MAPS LINK
+          // NO API KEY REQUIRED
+          //
+          // This is ONLY a normal website link.
+          // =================================================
+
+          let mapsUrl = "";
+
+          if (
+            Number.isFinite(
+              restaurantLat
+            ) &&
+            Number.isFinite(
+              restaurantLon
+            )
+          ) {
+
+            mapsUrl =
+              "https://www.google.com/maps/search/?api=1&query=" +
+              encodeURIComponent(
+                restaurantLat +
+                "," +
+                restaurantLon
+              );
+
+          } else {
+
+            mapsUrl =
+              "https://www.google.com/maps/search/?api=1&query=" +
+              encodeURIComponent(
+                name +
+                " " +
+                destination
+              );
+
+          }
+
+          // =================================================
+          // DESCRIPTION
+          // =================================================
+
+          let description =
+            `${name} is a real local place listed in OpenStreetMap in ${destination}.`;
+
+          if (
+            cuisine &&
+            cuisine !== "Local cuisine"
+          ) {
+
+            description =
+              `${name} is a real local restaurant in ${destination}, listed in OpenStreetMap. Cuisine: ${cuisine}.`;
+
+          }
+
+          // =================================================
+          // RESTAURANT OBJECT
+          // =================================================
 
           restaurants.push({
 
             name:
-              String(name).trim(),
+              String(name),
 
             cuisine:
-              cuisine,
+              String(cuisine),
 
             priceLevel:
               String(priceLevel),
 
             rating:
-              null,
+              ratingValue !== null
+                ? ratingValue
+                : starValue,
+
+            ratingType:
+              ratingValue !== null
+                ? "rating"
+                : (
+                    starValue !== null
+                      ? "stars"
+                      : ""
+                  ),
+
+            stars:
+              starValue,
 
             address:
               String(address),
 
             description:
-              `${String(name).trim()} is a real local place listed in OpenStreetMap in ${destination}.`,
+              description,
 
             imageUrl:
-              "",
+              imageUrl
+                ? String(imageUrl)
+                : "",
 
-            mapsUrl:
-              osmURL,
+            image:
+              imageUrl
+                ? String(imageUrl)
+                : "",
 
-            osmUrl:
-              osmURL,
+            wikimediaCommons:
+              wikimediaCommons
+                ? String(
+                    wikimediaCommons
+                  )
+                : "",
+
+            mapsUrl,
+
+            osmUrl,
 
             website:
-              website,
+              website
+                ? String(website)
+                : "",
 
             phone:
-              phone,
+              phone
+                ? String(phone)
+                : "",
 
             latitude:
-              restaurantLat,
+              Number.isFinite(
+                restaurantLat
+              )
+                ? restaurantLat
+                : null,
 
             longitude:
-              restaurantLon
+              Number.isFinite(
+                restaurantLon
+              )
+                ? restaurantLon
+                : null
 
           });
 
         }
 
-        // ---------------------------------------------------
+        // ===================================================
         // REMOVE DUPLICATES
-        // ---------------------------------------------------
+        // ===================================================
 
         const uniqueRestaurants = [];
-
-        const restaurantNames =
-          new Set();
+        const restaurantKeys = new Set();
 
         for (
           const restaurant
@@ -1194,10 +1314,10 @@ out center tags;
               .trim();
 
           if (
-            !restaurantNames.has(key)
+            !restaurantKeys.has(key)
           ) {
 
-            restaurantNames.add(key);
+            restaurantKeys.add(key);
 
             uniqueRestaurants.push(
               restaurant
@@ -1207,68 +1327,63 @@ out center tags;
 
         }
 
-        // ---------------------------------------------------
-        // SORT
-        // ---------------------------------------------------
+        // ===================================================
+        // PRIORITIZE RESTAURANTS WITH IMAGES
+        // ===================================================
 
         uniqueRestaurants.sort(
           (a, b) => {
 
-            const aHasAddress =
-              a.address &&
-              a.address !== destination
-                ? 1
-                : 0;
+            const aScore =
+              (a.imageUrl ? 10 : 0) +
+              (a.stars !== null ? 3 : 0) +
+              (a.rating !== null ? 2 : 0) +
+              (a.website ? 1 : 0);
 
-            const bHasAddress =
-              b.address &&
-              b.address !== destination
-                ? 1
-                : 0;
+            const bScore =
+              (b.imageUrl ? 10 : 0) +
+              (b.stars !== null ? 3 : 0) +
+              (b.rating !== null ? 2 : 0) +
+              (b.website ? 1 : 0);
 
-            return (
-              bHasAddress -
-              aHasAddress
-            );
+            return bScore - aScore;
 
           }
         );
 
-        // ---------------------------------------------------
-        // LIMIT 10
-        // ---------------------------------------------------
+        // ===================================================
+        // LIMIT TO 10
+        // ===================================================
 
-        const result =
+        const finalRestaurants =
           uniqueRestaurants.slice(
             0,
             10
           );
 
         console.log(
-          "======================================"
+          "Final OSM restaurants:",
+          finalRestaurants.length
         );
 
-        console.log(
-          "OSM RESTAURANTS RETURNED:",
-          result.length
-        );
-
-        result.forEach(
+        finalRestaurants.forEach(
           (restaurant, index) => {
 
             console.log(
-              `${index + 1}.`,
-              restaurant.name
+              `Restaurant ${index + 1}:`,
+              restaurant.name,
+              "| image:",
+              !!restaurant.imageUrl,
+              "| stars:",
+              restaurant.stars,
+              "| rating:",
+              restaurant.rating
             );
 
           }
         );
 
-        console.log(
-          "======================================"
-        );
-
-        return result;
+        return finalRestaurants;
 
       } catch (error) {
 
@@ -1284,7 +1399,7 @@ out center tags;
     }
 
     // =======================================================
-    // GET RESTAURANTS
+    // GET REAL RESTAURANTS
     // =======================================================
 
     console.log(
@@ -1322,11 +1437,25 @@ out center tags;
       "<p>Itinerary information unavailable.</p>";
 
     // =======================================================
+    // FINAL NORMALIZATION
+    // =======================================================
+
+    if (
+      !Array.isArray(
+        travelData.restaurants
+      )
+    ) {
+
+      travelData.restaurants = [];
+
+    }
+
+    // =======================================================
     // SUCCESS
     // =======================================================
 
     console.log(
-      "======================================"
+      "========================================"
     );
 
     console.log(
@@ -1344,7 +1473,7 @@ out center tags;
     );
 
     console.log(
-      "======================================"
+      "========================================"
     );
 
     return res.status(200).json(
