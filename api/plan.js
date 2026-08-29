@@ -37,18 +37,20 @@ module.exports = async (req, res) => {
       notes
     } = req.body || {};
 
+    console.log("======================================");
     console.log("PLAN API START");
     console.log("Destination:", destination);
+    console.log("Days:", days);
+    console.log("Budget:", budget);
+    console.log("Travelers:", travelers);
+    console.log("======================================");
 
     // =======================================================
-    // API KEYS
+    // GEMINI KEY
     // =======================================================
 
     const GEMINI_API_KEY =
       process.env.GEMINI_API_KEY;
-
-    const PEXELS_API_KEY =
-      process.env.PEXELS_API_KEY;
 
     if (!GEMINI_API_KEY) {
 
@@ -57,8 +59,14 @@ module.exports = async (req, res) => {
       return res.status(500).json({
         error: "Gemini API key is missing."
       });
-
     }
+
+    // =======================================================
+    // PEXELS KEY
+    // =======================================================
+
+    const PEXELS_API_KEY =
+      process.env.PEXELS_API_KEY;
 
     if (!PEXELS_API_KEY) {
 
@@ -68,11 +76,10 @@ module.exports = async (req, res) => {
         error:
           "Pexels API key is missing. Add PEXELS_API_KEY to Vercel Environment Variables."
       });
-
     }
 
     // =======================================================
-    // VALIDATION
+    // VALIDATE TRIP
     // =======================================================
 
     if (
@@ -86,7 +93,6 @@ module.exports = async (req, res) => {
         error:
           "Missing required trip information."
       });
-
     }
 
     // =======================================================
@@ -95,9 +101,7 @@ module.exports = async (req, res) => {
 
     const GEMINI_URL =
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" +
-      encodeURIComponent(
-        GEMINI_API_KEY
-      );
+      encodeURIComponent(GEMINI_API_KEY);
 
     // =======================================================
     // GEMINI PROMPT
@@ -116,13 +120,15 @@ Travelers: ${travelers}
 Interests: ${interests || "General sightseeing"}
 Notes: ${notes || "None"}
 
-IMPORTANT HOTEL REQUIREMENT:
+=========================================================
+IMPORTANT HOTEL REQUIREMENT
+=========================================================
 
-Return EXACTLY 10 different real accommodation options in ${destination}.
+Return up to EXACTLY 10 different REAL existing accommodation options in ${destination}.
 
 Do NOT invent hotels.
 
-The hotels must be real existing accommodations.
+Only use accommodation names that are known real properties.
 
 For every hotel return:
 
@@ -133,26 +139,58 @@ For every hotel return:
 - priceType
 - amenities
 - description
-- bookingUrl
 
 Prices are estimates only.
 
 Never claim live availability.
 
-For bookingUrl:
-If you do not know the exact hotel Booking.com page,
-create a Booking.com search URL for that hotel and destination.
-
 Do NOT return image URLs.
+
 Images will be obtained separately.
 
-IMPORTANT RESTAURANT REQUIREMENT:
+=========================================================
+IMPORTANT RESTAURANT REQUIREMENT
+=========================================================
 
-Do NOT create fake restaurants.
+Return up to EXACTLY 10 different REAL EXISTING restaurants
+in ${destination}.
 
-Restaurants will be obtained separately from OpenStreetMap.
+Do NOT invent restaurants.
 
-You should still create:
+Only return restaurants that are known real restaurants
+or established real restaurant businesses in the destination.
+
+Prefer restaurants that are well-known and identifiable.
+
+Restaurants should be suitable for the traveler's interests:
+${interests || "General sightseeing"}
+
+For every restaurant return:
+
+- name
+- cuisine
+- priceLevel
+- rating
+- address
+- description
+
+IMPORTANT:
+
+Do NOT return image URLs.
+
+Images will be obtained separately.
+
+Do NOT claim live opening hours or live availability.
+
+If you are uncertain about a restaurant being real,
+DO NOT include it.
+
+=========================================================
+OTHER TRAVEL CONTENT
+=========================================================
+
+Also create:
+
 transport
 experiences
 money
@@ -160,17 +198,20 @@ daysPlan
 
 transport, experiences, money and daysPlan must contain HTML.
 
-The experiences section may mention food and dining generally,
-but do not create fake restaurant listings.
+=========================================================
+OUTPUT
+=========================================================
 
-RETURN ONLY JSON.
+RETURN ONLY VALID JSON.
 
-Use exactly:
+Do not use Markdown.
+
+Use exactly this structure:
 
 {
   "stay": [
     {
-      "name": "Hotel name",
+      "name": "Real Hotel Name",
       "stars": 4,
       "price": 80,
       "currency": "USD",
@@ -181,30 +222,50 @@ Use exactly:
         "Private Bathroom",
         "Breakfast Available"
       ],
-      "description": "Short description.",
-      "bookingUrl": "https://www.booking.com/..."
+      "description": "Short description."
     }
   ],
+
+  "restaurants": [
+    {
+      "name": "Real Restaurant Name",
+      "cuisine": "Turkish",
+      "priceLevel": "$$",
+      "rating": 4.5,
+      "address": "Real address if known",
+      "description": "Short description of the restaurant."
+    }
+  ],
+
   "transport": "<div>...</div>",
   "experiences": "<div>...</div>",
   "money": "<div>...</div>",
   "daysPlan": "<div>...</div>"
 }
+
+IMPORTANT:
+
+The JSON must be valid.
+
+Do not put comments inside the JSON.
+
+Do not use trailing commas.
 `;
 
     // =======================================================
-    // START GEMINI + RESTAURANT LOOKUP IN PARALLEL
+    // GEMINI REQUEST
     // =======================================================
 
-    const geminiPromise =
-      fetch(
+    console.log("Sending request to Gemini...");
+
+    const geminiResponse =
+      await fetch(
         GEMINI_URL,
         {
           method: "POST",
 
           headers: {
-            "Content-Type":
-              "application/json"
+            "Content-Type": "application/json"
           },
 
           body: JSON.stringify({
@@ -227,23 +288,6 @@ Use exactly:
           })
         }
       );
-
-    const restaurantsPromise =
-      getRestaurants(
-        destination
-      );
-
-    // =======================================================
-    // GEMINI RESPONSE
-    // =======================================================
-
-    const [
-      geminiResponse,
-      restaurants
-    ] = await Promise.all([
-      geminiPromise,
-      restaurantsPromise
-    ]);
 
     const geminiText =
       await geminiResponse.text();
@@ -272,7 +316,6 @@ Use exactly:
         details:
           geminiText
       });
-
     }
 
     // =======================================================
@@ -284,9 +327,7 @@ Use exactly:
     try {
 
       geminiData =
-        JSON.parse(
-          geminiText
-        );
+        JSON.parse(geminiText);
 
     } catch (error) {
 
@@ -301,7 +342,6 @@ Use exactly:
         details:
           geminiText
       });
-
     }
 
     // =======================================================
@@ -318,20 +358,15 @@ Use exactly:
 
       console.error(
         "Gemini returned no text:",
-        JSON.stringify(
-          geminiData
-        )
+        JSON.stringify(geminiData)
       );
 
       return res.status(500).json({
         error:
           "Gemini returned an empty response.",
         details:
-          JSON.stringify(
-            geminiData
-          )
+          JSON.stringify(geminiData)
       });
-
     }
 
     console.log(
@@ -370,9 +405,7 @@ Use exactly:
     try {
 
       travelData =
-        JSON.parse(
-          cleanText
-        );
+        JSON.parse(cleanText);
 
     } catch (error) {
 
@@ -387,7 +420,6 @@ Use exactly:
         details:
           error.message
       });
-
     }
 
     // =======================================================
@@ -401,7 +433,6 @@ Use exactly:
     ) {
 
       travelData.stay = [];
-
     }
 
     travelData.stay =
@@ -449,14 +480,20 @@ Use exactly:
               )
                 ? hotel.amenities
                     .slice(0, 6)
+                    .map(
+                      item =>
+                        String(item)
+                    )
                 : [],
 
             description:
-              hotel.description ||
-              "",
+              hotel.description
+                ? String(
+                    hotel.description
+                  )
+                : "",
 
             bookingUrl:
-              hotel.bookingUrl ||
               "",
 
             imageUrl:
@@ -472,7 +509,7 @@ Use exactly:
         );
 
     // =======================================================
-    // REMOVE HOTEL DUPLICATES
+    // REMOVE DUPLICATE HOTELS
     // =======================================================
 
     const uniqueHotels = [];
@@ -499,9 +536,7 @@ Use exactly:
         uniqueHotels.push(
           hotel
         );
-
       }
-
     }
 
     travelData.stay =
@@ -516,31 +551,231 @@ Use exactly:
     );
 
     // =======================================================
-    // PEXELS HOTEL IMAGE SEARCH
+    // NORMALIZE RESTAURANTS
     // =======================================================
 
-    async function getHotelImage(
+    if (
+      !Array.isArray(
+        travelData.restaurants
+      )
+    ) {
+
+      travelData.restaurants = [];
+    }
+
+    travelData.restaurants =
+      travelData.restaurants
+        .filter(
+          restaurant =>
+            restaurant &&
+            restaurant.name
+        )
+        .map(
+          restaurant => ({
+
+            name:
+              String(
+                restaurant.name
+              ),
+
+            cuisine:
+              restaurant.cuisine
+                ? String(
+                    restaurant.cuisine
+                  )
+                : "Local cuisine",
+
+            priceLevel:
+              restaurant.priceLevel
+                ? String(
+                    restaurant.priceLevel
+                  )
+                : "$$",
+
+            rating:
+              Number.isFinite(
+                Number(
+                  restaurant.rating
+                )
+              )
+                ? Number(
+                    restaurant.rating
+                  )
+                : null,
+
+            address:
+              restaurant.address
+                ? String(
+                    restaurant.address
+                  )
+                : "",
+
+            description:
+              restaurant.description
+                ? String(
+                    restaurant.description
+                  )
+                : "",
+
+            mapsUrl:
+              "",
+
+            imageUrl:
+              "",
+
+            photoAttribution:
+              "",
+
+            photoSource:
+              ""
+
+          })
+        );
+
+    // =======================================================
+    // REMOVE DUPLICATE RESTAURANTS
+    // =======================================================
+
+    const uniqueRestaurants = [];
+
+    const restaurantNames =
+      new Set();
+
+    for (
+      const restaurant
+      of travelData.restaurants
+    ) {
+
+      const key =
+        restaurant.name
+          .toLowerCase()
+          .trim();
+
+      if (
+        !restaurantNames.has(key)
+      ) {
+
+        restaurantNames.add(key);
+
+        uniqueRestaurants.push(
+          restaurant
+        );
+      }
+    }
+
+    travelData.restaurants =
+      uniqueRestaurants.slice(
+        0,
+        10
+      );
+
+    console.log(
+      "Restaurants returned:",
+      travelData.restaurants.length
+    );
+
+    // =======================================================
+    // CREATE BOOKING URL
+    // =======================================================
+
+    function createBookingSearchURL(
       hotelName,
       destination
     ) {
 
-      try {
-
-        const query1 =
-          `${hotelName} ${destination}`;
-
-        console.log(
-          "Pexels search 1:",
-          query1
+      const query =
+        encodeURIComponent(
+          `${hotelName} ${destination}`
         );
 
-        let response =
+      return (
+        "https://www.booking.com/searchresults.html?ss=" +
+        query
+      );
+    }
+
+    // =======================================================
+    // CREATE GOOGLE MAPS URL
+    // =======================================================
+
+    function createGoogleMapsSearchURL(
+      restaurantName,
+      destination
+    ) {
+
+      const query =
+        encodeURIComponent(
+          `${restaurantName} ${destination}`
+        );
+
+      return (
+        "https://www.google.com/maps/search/?api=1&query=" +
+        query
+      );
+    }
+
+    // =======================================================
+    // ADD BOOKING URLS
+    // =======================================================
+
+    travelData.stay =
+      travelData.stay.map(
+        hotel => ({
+
+          ...hotel,
+
+          bookingUrl:
+            createBookingSearchURL(
+              hotel.name,
+              destination
+            )
+
+        })
+      );
+
+    // =======================================================
+    // ADD GOOGLE MAPS URLS
+    // =======================================================
+
+    travelData.restaurants =
+      travelData.restaurants.map(
+        restaurant => ({
+
+          ...restaurant,
+
+          mapsUrl:
+            createGoogleMapsSearchURL(
+              restaurant.name,
+              destination
+            )
+
+        })
+      );
+
+    // =======================================================
+    // PEXELS IMAGE SEARCH
+    // =======================================================
+
+    async function searchPexels(
+      query,
+      type
+    ) {
+
+      try {
+
+        console.log(
+          `Pexels ${type} search:`,
+          query
+        );
+
+        const url =
+          "https://api.pexels.com/v1/search?query=" +
+          encodeURIComponent(query) +
+          "&per_page=5";
+
+        const response =
           await fetch(
-            "https://api.pexels.com/v1/search?query=" +
-            encodeURIComponent(
-              query1
-            ) +
-            "&per_page=5",
+            url,
             {
               method: "GET",
 
@@ -551,7 +786,7 @@ Use exactly:
             }
           );
 
-        let data;
+        let data = null;
 
         try {
 
@@ -561,58 +796,6 @@ Use exactly:
         } catch (error) {
 
           data = null;
-
-        }
-
-        // ---------------------------------------------------
-        // FALLBACK
-        // ---------------------------------------------------
-
-        if (
-          !response.ok ||
-          !data ||
-          !Array.isArray(
-            data.photos
-          ) ||
-          data.photos.length === 0
-        ) {
-
-          const query2 =
-            `hotel ${destination}`;
-
-          console.log(
-            "Pexels fallback search:",
-            query2
-          );
-
-          response =
-            await fetch(
-              "https://api.pexels.com/v1/search?query=" +
-              encodeURIComponent(
-                query2
-              ) +
-              "&per_page=10",
-              {
-                method: "GET",
-
-                headers: {
-                  Authorization:
-                    PEXELS_API_KEY
-                }
-              }
-            );
-
-          try {
-
-            data =
-              await response.json();
-
-          } catch (error) {
-
-            data = null;
-
-          }
-
         }
 
         if (
@@ -620,7 +803,7 @@ Use exactly:
         ) {
 
           console.error(
-            "Pexels API error:",
+            `Pexels ${type} error:`,
             response.status,
             data
           );
@@ -630,7 +813,6 @@ Use exactly:
             photoAttribution: "",
             photoSource: ""
           };
-
         }
 
         if (
@@ -642,8 +824,8 @@ Use exactly:
         ) {
 
           console.log(
-            "No Pexels image found:",
-            hotelName
+            `No Pexels image found for ${type}:`,
+            query
           );
 
           return {
@@ -651,7 +833,6 @@ Use exactly:
             photoAttribution: "",
             photoSource: ""
           };
-
         }
 
         const photo =
@@ -663,31 +844,25 @@ Use exactly:
           photo?.src?.original ||
           "";
 
-        const photographer =
-          photo?.photographer ||
-          "";
+        if (!imageUrl) {
 
-        const photographerUrl =
-          photo?.photographer_url ||
-          "";
-
-        console.log(
-          "Pexels image found:",
-          hotelName,
-          imageUrl
-            ? "YES"
-            : "NO"
-        );
+          return {
+            imageUrl: "",
+            photoAttribution: "",
+            photoSource: ""
+          };
+        }
 
         return {
 
           imageUrl,
 
           photoAttribution:
-            photographer,
+            photo?.photographer ||
+            "",
 
           photoSource:
-            photographerUrl ||
+            photo?.photographer_url ||
             "https://www.pexels.com/"
 
         };
@@ -695,8 +870,7 @@ Use exactly:
       } catch (error) {
 
         console.error(
-          "Pexels image lookup failed:",
-          hotelName,
+          `Pexels ${type} lookup failed:`,
           error.message
         );
 
@@ -705,40 +879,34 @@ Use exactly:
           photoAttribution: "",
           photoSource: ""
         };
-
       }
-
     }
 
     // =======================================================
-    // FETCH HOTEL IMAGES
+    // HOTEL IMAGES
     // =======================================================
 
     console.log(
-      "Starting Pexels hotel image search..."
+      "Starting hotel image search..."
     );
 
-    const imageResults =
+    const hotelImageResults =
       await Promise.all(
         travelData.stay.map(
           hotel =>
-            getHotelImage(
-              hotel.name,
-              destination
+            searchPexels(
+              `${hotel.name} ${destination}`,
+              "hotel"
             )
         )
       );
-
-    // =======================================================
-    // ATTACH HOTEL IMAGES
-    // =======================================================
 
     travelData.stay =
       travelData.stay.map(
         (hotel, index) => {
 
           const image =
-            imageResults[
+            hotelImageResults[
               index
             ] || {};
 
@@ -759,12 +927,59 @@ Use exactly:
               ""
 
           };
-
         }
       );
 
     // =======================================================
-    // HOTEL DEBUG
+    // RESTAURANT IMAGES
+    // =======================================================
+
+    console.log(
+      "Starting restaurant image search..."
+    );
+
+    const restaurantImageResults =
+      await Promise.all(
+        travelData.restaurants.map(
+          restaurant =>
+            searchPexels(
+              `${restaurant.name} ${destination} restaurant`,
+              "restaurant"
+            )
+        )
+      );
+
+    travelData.restaurants =
+      travelData.restaurants.map(
+        (restaurant, index) => {
+
+          const image =
+            restaurantImageResults[
+              index
+            ] || {};
+
+          return {
+
+            ...restaurant,
+
+            imageUrl:
+              image.imageUrl ||
+              "",
+
+            photoAttribution:
+              image.photoAttribution ||
+              "",
+
+            photoSource:
+              image.photoSource ||
+              ""
+
+          };
+        }
+      );
+
+    // =======================================================
+    // DEBUG HOTELS
     // =======================================================
 
     travelData.stay.forEach(
@@ -785,20 +1000,10 @@ Use exactly:
     );
 
     // =======================================================
-    // NORMALIZE RESTAURANTS
+    // DEBUG RESTAURANTS
     // =======================================================
 
-    const normalizedRestaurants =
-      Array.isArray(restaurants)
-        ? restaurants.slice(0, 12)
-        : [];
-
-    console.log(
-      "Restaurants returned:",
-      normalizedRestaurants.length
-    );
-
-    normalizedRestaurants.forEach(
+    travelData.restaurants.forEach(
       (restaurant, index) => {
 
         console.log(
@@ -806,54 +1011,84 @@ Use exactly:
           restaurant.name
         );
 
+        console.log(
+          `RESTAURANT ${index + 1} ADDRESS:`,
+          restaurant.address ||
+          "(NO ADDRESS)"
+        );
+
+        console.log(
+          `RESTAURANT ${index + 1} IMAGE:`,
+          restaurant.imageUrl ||
+          "(NO IMAGE)"
+        );
+
+        console.log(
+          `RESTAURANT ${index + 1} MAPS:`,
+          restaurant.mapsUrl ||
+          "(NO MAPS URL)"
+        );
+
       }
     );
-
-    // =======================================================
-    // RESTAURANT HTML
-    // =======================================================
-
-    travelData.restaurants =
-      normalizedRestaurants;
-
-    travelData.restaurantSearch =
-      createRestaurantSearchURL(
-        destination
-      );
-
-    travelData.restaurantsHTML =
-      createRestaurantsHTML(
-        normalizedRestaurants,
-        destination
-      );
 
     // =======================================================
     // FALLBACK CONTENT
     // =======================================================
 
     travelData.transport =
-      travelData.transport ||
-      "<p>Transportation information unavailable.</p>";
+      typeof travelData.transport === "string" &&
+      travelData.transport.trim()
+        ? travelData.transport
+        : "<p>Transportation information unavailable.</p>";
 
     travelData.experiences =
-      travelData.experiences ||
-      "<p>Experience information unavailable.</p>";
+      typeof travelData.experiences === "string" &&
+      travelData.experiences.trim()
+        ? travelData.experiences
+        : "<p>Experience information unavailable.</p>";
 
     travelData.money =
-      travelData.money ||
-      "<p>Budget information unavailable.</p>";
+      typeof travelData.money === "string" &&
+      travelData.money.trim()
+        ? travelData.money
+        : "<p>Budget information unavailable.</p>";
 
     travelData.daysPlan =
-      travelData.daysPlan ||
-      "<p>Itinerary information unavailable.</p>";
+      typeof travelData.daysPlan === "string" &&
+      travelData.daysPlan.trim()
+        ? travelData.daysPlan
+        : "<p>Itinerary information unavailable.</p>";
 
     // =======================================================
-    // SUCCESS
+    // FINAL DEBUG
     // =======================================================
+
+    console.log(
+      "======================================"
+    );
+
+    console.log(
+      "FINAL HOTELS:",
+      travelData.stay.length
+    );
+
+    console.log(
+      "FINAL RESTAURANTS:",
+      travelData.restaurants.length
+    );
 
     console.log(
       "PLAN API SUCCESS"
     );
+
+    console.log(
+      "======================================"
+    );
+
+    // =======================================================
+    // SUCCESS
+    // =======================================================
 
     return res.status(200).json(
       travelData
@@ -875,799 +1110,5 @@ Use exactly:
         error.message
 
     });
-
   }
 };
-
-
-// =========================================================
-// GET RESTAURANTS FROM OPENSTREETMAP
-// =========================================================
-
-async function getRestaurants(
-  destination
-) {
-
-  try {
-
-    console.log(
-      "Starting OpenStreetMap restaurant search:",
-      destination
-    );
-
-    // -------------------------------------------------------
-    // STEP 1: GEOCODE DESTINATION
-    // -------------------------------------------------------
-
-    const geocodeURL =
-      "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" +
-      encodeURIComponent(
-        destination
-      );
-
-    const geocodeResponse =
-      await fetch(
-        geocodeURL,
-        {
-          method: "GET",
-
-          headers: {
-            "User-Agent":
-              "AI-Life-Planner/1.0"
-          }
-        }
-      );
-
-    if (
-      !geocodeResponse.ok
-    ) {
-
-      console.error(
-        "Nominatim error:",
-        geocodeResponse.status
-      );
-
-      return [];
-
-    }
-
-    const locations =
-      await geocodeResponse.json();
-
-    if (
-      !Array.isArray(
-        locations
-      ) ||
-      locations.length === 0
-    ) {
-
-      console.log(
-        "Destination not found:",
-        destination
-      );
-
-      return [];
-
-    }
-
-    const latitude =
-      Number(
-        locations[0].lat
-      );
-
-    const longitude =
-      Number(
-        locations[0].lon
-      );
-
-    console.log(
-      "Destination coordinates:",
-      latitude,
-      longitude
-    );
-
-    // -------------------------------------------------------
-    // STEP 2: OVERPASS QUERY
-    // -------------------------------------------------------
-
-    const overpassQuery = `
-[out:json][timeout:12];
-
-(
-  node["amenity"="restaurant"]
-    (around:12000,${latitude},${longitude});
-
-  way["amenity"="restaurant"]
-    (around:12000,${latitude},${longitude});
-
-  relation["amenity"="restaurant"]
-    (around:12000,${latitude},${longitude});
-);
-
-out center tags;
-`;
-
-    const overpassURL =
-      "https://overpass-api.de/api/interpreter";
-
-    const restaurantResponse =
-      await fetch(
-        overpassURL,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/x-www-form-urlencoded",
-
-            "User-Agent":
-              "AI-Life-Planner/1.0"
-          },
-
-          body:
-            "data=" +
-            encodeURIComponent(
-              overpassQuery
-            )
-        }
-      );
-
-    if (
-      !restaurantResponse.ok
-    ) {
-
-      console.error(
-        "Overpass error:",
-        restaurantResponse.status
-      );
-
-      return [];
-
-    }
-
-    const restaurantData =
-      await restaurantResponse.json();
-
-    const elements =
-      Array.isArray(
-        restaurantData?.elements
-      )
-        ? restaurantData.elements
-        : [];
-
-    console.log(
-      "OpenStreetMap raw restaurants:",
-      elements.length
-    );
-
-    // -------------------------------------------------------
-    // STEP 3: NORMALIZE RESTAURANTS
-    // -------------------------------------------------------
-
-    const results = [];
-
-    const names =
-      new Set();
-
-    for (
-      const item
-      of elements
-    ) {
-
-      const tags =
-        item?.tags || {};
-
-      const name =
-        tags.name ||
-        tags["name:en"] ||
-        "";
-
-      if (!name) {
-        continue;
-      }
-
-      const cleanName =
-        String(name).trim();
-
-      const key =
-        cleanName.toLowerCase();
-
-      if (
-        names.has(key)
-      ) {
-        continue;
-      }
-
-      names.add(key);
-
-      // -----------------------------------------------------
-      // CATEGORY
-      // -----------------------------------------------------
-
-      let category =
-        tags.cuisine ||
-        "Restaurant";
-
-      category =
-        String(
-          category
-        )
-          .split(";")
-          .map(
-            value =>
-              value
-                .trim()
-                .replace(
-                  /_/g,
-                  " "
-                )
-          )
-          .filter(Boolean)
-          .slice(0, 3)
-          .join(", ");
-
-      if (!category) {
-        category = "Restaurant";
-      }
-
-      // -----------------------------------------------------
-      // ADDRESS
-      // -----------------------------------------------------
-
-      const addressParts = [
-        tags["addr:street"],
-        tags["addr:housenumber"],
-        tags["addr:district"],
-        tags["addr:suburb"]
-      ].filter(Boolean);
-
-      const address =
-        addressParts.join(", ");
-
-      // -----------------------------------------------------
-      // WEBSITE
-      // -----------------------------------------------------
-
-      const website =
-        tags.website ||
-        tags["contact:website"] ||
-        "";
-
-      // -----------------------------------------------------
-      // PHONE
-      // -----------------------------------------------------
-
-      const phone =
-        tags.phone ||
-        tags["contact:phone"] ||
-        "";
-
-      // -----------------------------------------------------
-      // CUISINE
-      // -----------------------------------------------------
-
-      const cuisine =
-        tags.cuisine ||
-        "";
-
-      // -----------------------------------------------------
-      // OPENING HOURS
-      // -----------------------------------------------------
-
-      const openingHours =
-        tags.opening_hours ||
-        "";
-
-      // -----------------------------------------------------
-      // MAP LINK
-      // -----------------------------------------------------
-
-      const mapURL =
-        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-          cleanName + " " + destination
-        )}`;
-
-      results.push({
-
-        name:
-          cleanName,
-
-        category:
-          category,
-
-        cuisine:
-          cuisine,
-
-        address:
-          address,
-
-        phone:
-          phone,
-
-        website:
-          website,
-
-        openingHours:
-          openingHours,
-
-        mapUrl:
-          mapURL,
-
-        source:
-          "OpenStreetMap"
-
-      });
-
-    }
-
-    // -------------------------------------------------------
-    // SORT / LIMIT
-    // -------------------------------------------------------
-
-    const finalResults =
-      results
-        .slice(
-          0,
-          12
-        );
-
-    console.log(
-      "OpenStreetMap restaurants selected:",
-      finalResults.length
-    );
-
-    return finalResults;
-
-  } catch (error) {
-
-    console.error(
-      "Restaurant lookup failed:",
-      error.message
-    );
-
-    return [];
-
-  }
-
-}
-
-
-// =========================================================
-// RESTAURANT SEARCH URL
-// =========================================================
-
-function createRestaurantSearchURL(
-  destination
-) {
-
-  return (
-    "https://www.google.com/maps/search/restaurants+" +
-    encodeURIComponent(
-      destination
-    )
-  );
-
-}
-
-
-// =========================================================
-// RESTAURANTS HTML
-// =========================================================
-
-function createRestaurantsHTML(
-  restaurants,
-  destination
-) {
-
-  // -------------------------------------------------------
-  // EMPTY STATE
-  // -------------------------------------------------------
-
-  if (
-    !Array.isArray(
-      restaurants
-    ) ||
-    restaurants.length === 0
-  ) {
-
-    return `
-
-      <div class="restaurant-empty"
-        style="
-          padding:24px;
-          border:1px solid #e8e8ee;
-          border-radius:16px;
-          background:#fafafa;
-        "
-      >
-
-        <h3
-          style="
-            margin:0 0 8px;
-          "
-        >
-          Restaurants
-        </h3>
-
-        <p
-          style="
-            margin:0 0 16px;
-            color:#666;
-            line-height:1.6;
-          "
-        >
-          We could not find restaurant listings
-          automatically for ${escapeHTMLServer(destination)}.
-        </p>
-
-        <a
-          href="${escapeAttributeServer(
-            createRestaurantSearchURL(
-              destination
-            )
-          )}"
-          target="_blank"
-          rel="noopener noreferrer"
-          style="
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            padding:11px 16px;
-            border-radius:10px;
-            background:#111827;
-            color:white;
-            text-decoration:none;
-            font-weight:700;
-          "
-        >
-          Explore restaurants
-          ↗
-        </a>
-
-      </div>
-
-    `;
-
-  }
-
-  // -------------------------------------------------------
-  // CARDS
-  // -------------------------------------------------------
-
-  const cards =
-    restaurants
-      .map(
-        (restaurant, index) => {
-
-          const cuisineText =
-            restaurant.cuisine ||
-            restaurant.category ||
-            "Local restaurant";
-
-          const addressText =
-            restaurant.address ||
-            "Address available on map";
-
-          const openingText =
-            restaurant.openingHours ||
-            "";
-
-          return `
-
-            <article
-              class="restaurant-card"
-              style="
-                background:#fff;
-                border:1px solid #e8e8ee;
-                border-radius:18px;
-                padding:20px;
-                box-shadow:0 8px 24px rgba(0,0,0,.05);
-              "
-            >
-
-              <div
-                style="
-                  display:flex;
-                  justify-content:space-between;
-                  align-items:flex-start;
-                  gap:14px;
-                  margin-bottom:10px;
-                "
-              >
-
-                <div>
-
-                  <div
-                    style="
-                      font-size:11px;
-                      font-weight:700;
-                      text-transform:uppercase;
-                      letter-spacing:.08em;
-                      color:#8b8f9a;
-                      margin-bottom:5px;
-                    "
-                  >
-                    Restaurant ${index + 1}
-                  </div>
-
-                  <h3
-                    style="
-                      margin:0;
-                      font-size:20px;
-                      line-height:1.3;
-                      color:#17181c;
-                    "
-                  >
-                    ${escapeHTMLServer(
-                      restaurant.name
-                    )}
-                  </h3>
-
-                </div>
-
-              </div>
-
-              <div
-                style="
-                  display:flex;
-                  flex-wrap:wrap;
-                  gap:7px;
-                  margin-bottom:13px;
-                "
-              >
-
-                <span
-                  style="
-                    background:#f5f6f8;
-                    border:1px solid #e9eaee;
-                    border-radius:999px;
-                    padding:6px 10px;
-                    font-size:12px;
-                    color:#50555f;
-                  "
-                >
-                  ${escapeHTMLServer(
-                    cuisineText
-                  )}
-                </span>
-
-              </div>
-
-              <p
-                style="
-                  margin:0 0 8px;
-                  color:#5b606b;
-                  font-size:14px;
-                  line-height:1.5;
-                "
-              >
-                ${escapeHTMLServer(
-                  addressText
-                )}
-              </p>
-
-              ${
-                openingText
-                  ? `
-                    <p
-                      style="
-                        margin:0 0 8px;
-                        color:#777c86;
-                        font-size:13px;
-                      "
-                    >
-                      Hours:
-                      ${escapeHTMLServer(
-                        openingText
-                      )}
-                    </p>
-                  `
-                  : ""
-              }
-
-              ${
-                restaurant.phone
-                  ? `
-                    <p
-                      style="
-                        margin:0 0 14px;
-                        color:#777c86;
-                        font-size:13px;
-                      "
-                    >
-                      ${escapeHTMLServer(
-                        restaurant.phone
-                      )}
-                    </p>
-                  `
-                  : ""
-              }
-
-              <div
-                style="
-                  display:flex;
-                  gap:10px;
-                  flex-wrap:wrap;
-                  margin-top:15px;
-                "
-              >
-
-                <a
-                  href="${escapeAttributeServer(
-                    restaurant.mapUrl
-                  )}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style="
-                    display:inline-flex;
-                    align-items:center;
-                    justify-content:center;
-                    min-height:42px;
-                    padding:0 16px;
-                    border-radius:10px;
-                    background:#111827;
-                    color:#fff;
-                    text-decoration:none;
-                    font-size:13px;
-                    font-weight:700;
-                  "
-                >
-                  View on Maps ↗
-                </a>
-
-                ${
-                  restaurant.website
-                    ? `
-                      <a
-                        href="${escapeAttributeServer(
-                          restaurant.website
-                        )}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style="
-                          display:inline-flex;
-                          align-items:center;
-                          justify-content:center;
-                          min-height:42px;
-                          padding:0 16px;
-                          border-radius:10px;
-                          background:#f5f6f8;
-                          color:#222;
-                          text-decoration:none;
-                          font-size:13px;
-                          font-weight:700;
-                        "
-                      >
-                        Website ↗
-                      </a>
-                    `
-                    : ""
-                }
-
-              </div>
-
-              <div
-                style="
-                  margin-top:12px;
-                  font-size:11px;
-                  color:#999;
-                "
-              >
-                Local listing data: OpenStreetMap
-              </div>
-
-            </article>
-
-          `;
-
-        }
-      )
-      .join("");
-
-  // -------------------------------------------------------
-  // COMPLETE SECTION
-  // -------------------------------------------------------
-
-  return `
-
-    <div class="restaurants-wrapper">
-
-      <div
-        style="
-          margin-bottom:20px;
-        "
-      >
-
-        <h3
-          style="
-            margin:0 0 6px;
-            font-size:20px;
-          "
-        >
-          Restaurants in ${escapeHTMLServer(
-            destination
-          )}
-        </h3>
-
-        <p
-          style="
-            margin:0;
-            color:#70757f;
-            line-height:1.6;
-          "
-        >
-          Real local restaurants selected from
-          OpenStreetMap data for your destination.
-        </p>
-
-      </div>
-
-      <div
-        class="restaurant-list"
-        style="
-          display:grid;
-          grid-template-columns:
-            repeat(auto-fit, minmax(280px, 1fr));
-          gap:18px;
-        "
-      >
-
-        ${cards}
-
-      </div>
-
-    </div>
-
-  `;
-
-}
-
-
-// =========================================================
-// SERVER-SIDE HTML ESCAPE
-// =========================================================
-
-function escapeHTMLServer(
-  value
-) {
-
-  return String(
-    value || ""
-  )
-    .replace(
-      /&/g,
-      "&amp;"
-    )
-    .replace(
-      /</g,
-      "&lt;"
-    )
-    .replace(
-      />/g,
-      "&gt;"
-    )
-    .replace(
-      /"/g,
-      "&quot;"
-    )
-    .replace(
-      /'/g,
-      "&#039;"
-    );
-
-}
-
-
-// =========================================================
-// SERVER-SIDE ATTRIBUTE ESCAPE
-// =========================================================
-
-function escapeAttributeServer(
-  value
-) {
-
-  return escapeHTMLServer(
-    value
-  );
-
-              }
