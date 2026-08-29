@@ -29,6 +29,7 @@ module.exports = async (req, res) => {
     });
   }
 
+
   try {
 
     // =====================================================
@@ -45,6 +46,7 @@ module.exports = async (req, res) => {
       notes
     } = req.body || {};
 
+
     console.log("======================================");
     console.log("PLAN API START");
     console.log("Destination:", destination);
@@ -55,16 +57,12 @@ module.exports = async (req, res) => {
 
 
     // =====================================================
-    // API KEY
+    // GROQ API KEY
     // =====================================================
 
     const GROQ_API_KEY =
       process.env.GROQ_API_KEY;
 
-
-    // =====================================================
-    // GROQ KEY CHECK
-    // =====================================================
 
     if (!GROQ_API_KEY) {
 
@@ -74,10 +72,11 @@ module.exports = async (req, res) => {
 
       return res.status(500).json({
         error:
-          "Groq API key is missing."
+          "Groq API key is missing. Add GROQ_API_KEY in Vercel Environment Variables."
       });
 
     }
+
 
     console.log(
       "GROQ_API_KEY detected."
@@ -104,14 +103,31 @@ module.exports = async (req, res) => {
 
 
     // =====================================================
-    // HELPERS
+    // CONSTANTS
     // =====================================================
 
-    function normalizePlaceName(name) {
+    const OSM_USER_AGENT =
+      "AI-Life-Planner/1.0";
 
-      return String(name || "")
+    const GROQ_MODEL =
+      "openai/gpt-oss-20b";
+
+
+    // =====================================================
+    // NORMALIZE PLACE NAME
+    // =====================================================
+
+    function normalizePlaceName(
+      name
+    ) {
+
+      return String(
+        name || ""
+      )
         .toLowerCase()
-        .normalize("NFD")
+        .normalize(
+          "NFD"
+        )
         .replace(
           /[\u0300-\u036f]/g,
           ""
@@ -125,125 +141,125 @@ module.exports = async (req, res) => {
     }
 
 
-    function calculateNameSimilarity(
-      firstName,
-      secondName
+    // =====================================================
+    // GEOCODE DESTINATION
+    // =====================================================
+
+    async function geocodeDestination(
+      place
     ) {
 
-      const a =
-        normalizePlaceName(
-          firstName
+      try {
+
+        const url =
+          "https://nominatim.openstreetmap.org/search" +
+          "?format=json" +
+          "&limit=1" +
+          "&q=" +
+          encodeURIComponent(
+            place
+          );
+
+
+        console.log(
+          "OSM geocoding:",
+          place
         );
 
-      const b =
-        normalizePlaceName(
-          secondName
-        );
 
-      if (!a || !b) {
-        return 0;
-      }
+        const response =
+          await fetch(
+            url,
+            {
+              method: "GET",
 
-      if (a === b) {
-        return 1;
-      }
+              headers: {
 
-      if (
-        a.includes(b) ||
-        b.includes(a)
-      ) {
-        return 0.9;
-      }
+                "User-Agent":
+                  OSM_USER_AGENT,
 
-      const aWords =
-        new Set(
-          a.split(/\s+/)
-        );
+                "Accept":
+                  "application/json"
 
-      const bWords =
-        new Set(
-          b.split(/\s+/)
-        );
+              }
+            }
+          );
 
-      let common = 0;
-
-      for (
-        const word of aWords
-      ) {
 
         if (
-          bWords.has(word)
+          !response.ok
         ) {
-          common++;
+
+          console.error(
+            "Nominatim error:",
+            response.status
+          );
+
+          return null;
+
         }
 
-      }
 
-      const total =
-        Math.max(
-          aWords.size,
-          bWords.size
+        const data =
+          await response.json();
+
+
+        if (
+          !Array.isArray(data) ||
+          !data.length
+        ) {
+
+          return null;
+
+        }
+
+
+        const lat =
+          Number(
+            data[0].lat
+          );
+
+        const lon =
+          Number(
+            data[0].lon
+          );
+
+
+        if (
+          !Number.isFinite(lat) ||
+          !Number.isFinite(lon)
+        ) {
+
+          return null;
+
+        }
+
+
+        return {
+          lat,
+          lon
+        };
+
+      } catch (error) {
+
+        console.error(
+          "Geocoding exception:",
+          error.message
         );
 
-      if (total === 0) {
-        return 0;
-      }
-
-      return (
-        common /
-        total
-      );
-
-    }
-
-
-    function buildMapsUrl(
-      name,
-      destination,
-      latitude,
-      longitude
-    ) {
-
-      if (
-        Number.isFinite(
-          Number(latitude)
-        ) &&
-        Number.isFinite(
-          Number(longitude)
-        )
-      ) {
-
-        return (
-          "https://www.google.com/maps/search/?api=1&query=" +
-          encodeURIComponent(
-            `${latitude},${longitude}`
-          )
-        );
+        return null;
 
       }
-
-      return (
-        "https://www.google.com/maps/search/?api=1&query=" +
-        encodeURIComponent(
-          `${name} ${destination}`
-        )
-      );
 
     }
 
 
     // =====================================================
-    // OPENSTREETMAP / OVERPASS
+    // GET REAL PLACES FROM OPENSTREETMAP
     //
-    // IMPORTANT:
-    // ONE REQUEST ONLY
+    // ONE OVERPASS REQUEST ONLY
     //
-    // This request gets:
-    // - Hotels
-    // - Restaurants
-    //
-    // No Foursquare.
-    // No second restaurant enrichment.
+    // Hotels + Restaurants together.
     // =====================================================
 
     async function getOSMPlaces(
@@ -252,45 +268,16 @@ module.exports = async (req, res) => {
 
       try {
 
-        console.log(
-          "Starting ONE OpenStreetMap request..."
-        );
-
-        // -------------------------------------------------
-        // GEOCODE DESTINATION
-        // -------------------------------------------------
-
-        const geocodeURL =
-          "https://nominatim.openstreetmap.org/search" +
-          "?format=json" +
-          "&limit=1" +
-          "&q=" +
-          encodeURIComponent(
+        const coordinates =
+          await geocodeDestination(
             destination
           );
 
-        const geocodeResponse =
-          await fetch(
-            geocodeURL,
-            {
-              method: "GET",
 
-              headers: {
-                "User-Agent":
-                  "AI-Life-Planner/1.0",
-                "Accept":
-                  "application/json"
-              }
-            }
-          );
-
-        if (
-          !geocodeResponse.ok
-        ) {
+        if (!coordinates) {
 
           console.error(
-            "Nominatim error:",
-            geocodeResponse.status
+            "Could not geocode destination."
           );
 
           return {
@@ -300,53 +287,18 @@ module.exports = async (req, res) => {
 
         }
 
-        const geocodeData =
-          await geocodeResponse.json();
 
-        if (
-          !Array.isArray(
-            geocodeData
-          ) ||
-          !geocodeData.length
-        ) {
+        const {
+          lat,
+          lon
+        } =
+          coordinates;
 
-          console.error(
-            "Destination could not be geocoded."
-          );
-
-          return {
-            hotels: [],
-            restaurants: []
-          };
-
-        }
-
-        const latitude =
-          Number(
-            geocodeData[0].lat
-          );
-
-        const longitude =
-          Number(
-            geocodeData[0].lon
-          );
-
-        if (
-          !Number.isFinite(latitude) ||
-          !Number.isFinite(longitude)
-        ) {
-
-          return {
-            hotels: [],
-            restaurants: []
-          };
-
-        }
 
         console.log(
           "Destination coordinates:",
-          latitude,
-          longitude
+          lat,
+          lon
         );
 
 
@@ -355,14 +307,20 @@ module.exports = async (req, res) => {
         // -------------------------------------------------
 
         const overpassQuery = `
-[out:json][timeout:30];
+[out:json][timeout:40];
 
 (
-  nwr["tourism"="hotel"](around:15000,${latitude},${longitude});
-  nwr["tourism"="hostel"](around:15000,${latitude},${longitude});
-  nwr["tourism"="guest_house"](around:15000,${latitude},${longitude});
+  node["tourism"="hotel"](around:15000,${lat},${lon});
+  way["tourism"="hotel"](around:15000,${lat},${lon});
+  relation["tourism"="hotel"](around:15000,${lat},${lon});
 
-  nwr["amenity"="restaurant"](around:15000,${latitude},${longitude});
+  node["tourism"="hostel"](around:15000,${lat},${lon});
+  way["tourism"="hostel"](around:15000,${lat},${lon});
+  relation["tourism"="hostel"](around:15000,${lat},${lon});
+
+  node["amenity"="restaurant"](around:15000,${lat},${lon});
+  way["amenity"="restaurant"](around:15000,${lat},${lon});
+  relation["amenity"="restaurant"](around:15000,${lat},${lon});
 );
 
 out center tags;
@@ -374,11 +332,11 @@ out center tags;
 
 
         console.log(
-          "Sending ONE Overpass request..."
+          "OpenStreetMap Overpass request..."
         );
 
 
-        const osmResponse =
+        const response =
           await fetch(
             overpassURL,
             {
@@ -390,7 +348,7 @@ out center tags;
                   "application/x-www-form-urlencoded",
 
                 "User-Agent":
-                  "AI-Life-Planner/1.0",
+                  OSM_USER_AGENT,
 
                 "Accept":
                   "application/json"
@@ -408,16 +366,12 @@ out center tags;
 
 
         if (
-          !osmResponse.ok
+          !response.ok
         ) {
-
-          const errorText =
-            await osmResponse.text();
 
           console.error(
             "Overpass error:",
-            osmResponse.status,
-            errorText
+            response.status
           );
 
           return {
@@ -428,14 +382,14 @@ out center tags;
         }
 
 
-        const osmData =
-          await osmResponse.json();
+        const data =
+          await response.json();
 
 
         if (
-          !osmData ||
+          !data ||
           !Array.isArray(
-            osmData.elements
+            data.elements
           )
         ) {
 
@@ -449,36 +403,35 @@ out center tags;
 
         console.log(
           "OSM total elements:",
-          osmData.elements.length
+          data.elements.length
         );
 
-
-        // =================================================
-        // BUILD RESULTS
-        // =================================================
 
         const hotels = [];
         const restaurants = [];
 
-        const hotelNames =
-          new Set();
+        const hotelNames = new Set();
+        const restaurantNames = new Set();
 
-        const restaurantNames =
-          new Set();
 
+        // =================================================
+        // PROCESS OSM ELEMENTS
+        // =================================================
 
         for (
-          const item of osmData.elements
+          const item
+          of data.elements
         ) {
 
           const tags =
             item.tags || {};
 
+
           const name =
             tags.name ||
             tags["name:en"] ||
-            tags["name:tr"] ||
-            "";
+            tags["name:tr"];
+
 
           if (!name) {
             continue;
@@ -489,43 +442,32 @@ out center tags;
           // COORDINATES
           // ------------------------------------------------
 
-          let placeLat =
+          let itemLat =
             item.lat;
 
-          let placeLon =
+          let itemLon =
             item.lon;
 
 
           if (
-            placeLat === undefined &&
+            itemLat === undefined &&
             item.center
           ) {
 
-            placeLat =
+            itemLat =
               item.center.lat;
 
-            placeLon =
+            itemLon =
               item.center.lon;
 
           }
 
 
-          placeLat =
-            Number(placeLat);
+          const latitude =
+            Number(itemLat);
 
-          placeLon =
-            Number(placeLon);
-
-
-          if (
-            !Number.isFinite(placeLat) ||
-            !Number.isFinite(placeLon)
-          ) {
-
-            placeLat = null;
-            placeLon = null;
-
-          }
+          const longitude =
+            Number(itemLon);
 
 
           // ------------------------------------------------
@@ -533,6 +475,7 @@ out center tags;
           // ------------------------------------------------
 
           const addressParts = [];
+
 
           if (
             tags["addr:housenumber"]
@@ -544,6 +487,7 @@ out center tags;
 
           }
 
+
           if (
             tags["addr:street"]
           ) {
@@ -553,6 +497,7 @@ out center tags;
             );
 
           }
+
 
           if (
             tags["addr:suburb"]
@@ -564,6 +509,7 @@ out center tags;
 
           }
 
+
           if (
             tags["addr:district"]
           ) {
@@ -573,6 +519,7 @@ out center tags;
             );
 
           }
+
 
           if (
             tags["addr:city"]
@@ -584,6 +531,7 @@ out center tags;
 
           }
 
+
           const address =
             addressParts.length
               ? addressParts.join(", ")
@@ -591,104 +539,11 @@ out center tags;
 
 
           // ------------------------------------------------
-          // IMAGE FROM OSM
-          // ------------------------------------------------
-
-          let imageUrl = "";
-
-          let imageSource = "";
-
-          let imageAttribution = "";
-
-
-          /*
-           * OSM can contain a direct image=* URL.
-           */
-
-          if (
-            tags.image &&
-            /^https?:\/\//i.test(
-              String(tags.image)
-            )
-          ) {
-
-            imageUrl =
-              String(
-                tags.image
-              ).trim();
-
-            imageSource =
-              "OpenStreetMap";
-
-            imageAttribution =
-              "Image listed in OpenStreetMap";
-
-          }
-
-
-          /*
-           * Some OSM objects contain a Wikimedia Commons
-           * file reference instead of a direct image URL.
-           *
-           * Example:
-           * wikimedia_commons=File:Example.jpg
-           *
-           * We convert the OSM-listed file reference into
-           * a browser-loadable Wikimedia URL.
-           */
-
-          if (
-            !imageUrl &&
-            tags.wikimedia_commons
-          ) {
-
-            const commons =
-              String(
-                tags.wikimedia_commons
-              )
-              .replace(
-                /^File:/i,
-                ""
-              )
-              .trim();
-
-            if (commons) {
-
-              imageUrl =
-                "https://commons.wikimedia.org/wiki/Special:FilePath/" +
-                encodeURIComponent(
-                  commons
-                );
-
-              imageSource =
-                "OpenStreetMap / Wikimedia Commons";
-
-              imageAttribution =
-                "Wikimedia Commons file listed in OpenStreetMap";
-
-            }
-
-          }
-
-
-          // ------------------------------------------------
-          // GOOGLE MAPS
-          // ------------------------------------------------
-
-          const mapsUrl =
-            buildMapsUrl(
-              name,
-              destination,
-              placeLat,
-              placeLon
-            );
-
-
-          // ------------------------------------------------
           // OSM URL
           // ------------------------------------------------
 
           let osmUrl = "";
+
 
           if (
             item.type &&
@@ -705,37 +560,76 @@ out center tags;
           }
 
 
-          // =================================================
+          // ------------------------------------------------
+          // IMAGE
+          //
+          // IMPORTANT:
+          // We ONLY use an image explicitly stored in OSM.
+          //
+          // No Foursquare.
+          // No Google.
+          // No random image.
+          // ------------------------------------------------
+
+          const imageUrl =
+            tags.image ||
+            tags["contact:image"] ||
+            "";
+
+
+          // ------------------------------------------------
+          // WEBSITE
+          // ------------------------------------------------
+
+          const website =
+            tags.website ||
+            tags["contact:website"] ||
+            "";
+
+
+          // ------------------------------------------------
+          // PHONE
+          // ------------------------------------------------
+
+          const phone =
+            tags.phone ||
+            tags["contact:phone"] ||
+            "";
+
+
+          // ------------------------------------------------
           // HOTEL
-          // =================================================
+          // ------------------------------------------------
 
-          const tourism =
-            String(
-              tags.tourism || ""
-            ).toLowerCase();
+          const tourismType =
+            tags.tourism;
 
 
-          const isHotel =
-            tourism === "hotel" ||
-            tourism === "hostel" ||
-            tourism === "guest_house";
+          if (
+            tourismType === "hotel" ||
+            tourismType === "hostel"
+          ) {
 
-
-          if (isHotel) {
-
-            const key =
+            const normalizedName =
               normalizePlaceName(
                 name
               );
 
+
             if (
-              key &&
-              !hotelNames.has(key)
+              !hotelNames.has(
+                normalizedName
+              )
             ) {
 
-              hotelNames.add(key);
+              hotelNames.add(
+                normalizedName
+              );
 
-              let stars = 0;
+
+              let stars =
+                null;
+
 
               if (
                 tags.stars !== undefined
@@ -743,13 +637,9 @@ out center tags;
 
                 const numericStars =
                   Number(
-                    String(
-                      tags.stars
-                    ).replace(
-                      /[^\d.]/g,
-                      ""
-                    )
+                    tags.stars
                   );
+
 
                 if (
                   Number.isFinite(
@@ -758,79 +648,9 @@ out center tags;
                 ) {
 
                   stars =
-                    Math.min(
-                      5,
-                      Math.max(
-                        0,
-                        numericStars
-                      )
-                    );
+                    numericStars;
 
                 }
-
-              }
-
-
-              const amenities = [];
-
-
-              if (
-                tags.internet_access
-              ) {
-
-                amenities.push(
-                  "Internet access"
-                );
-
-              }
-
-              if (
-                tags.air_conditioning === "yes"
-              ) {
-
-                amenities.push(
-                  "Air Conditioning"
-                );
-
-              }
-
-              if (
-                tags.breakfast === "yes"
-              ) {
-
-                amenities.push(
-                  "Breakfast Available"
-                );
-
-              }
-
-              if (
-                tags.parking
-              ) {
-
-                amenities.push(
-                  "Parking"
-                );
-
-              }
-
-              if (
-                tags.pool
-              ) {
-
-                amenities.push(
-                  "Swimming Pool"
-                );
-
-              }
-
-              if (
-                tags.wheelchair === "yes"
-              ) {
-
-                amenities.push(
-                  "Accessible"
-                );
 
               }
 
@@ -842,49 +662,47 @@ out center tags;
 
                 stars,
 
-                price:
-                  null,
+                tourism:
+                  tourismType,
 
-                currency:
-                  "USD",
+                address,
 
-                priceType:
-                  "estimated per night",
+                latitude:
+                  Number.isFinite(
+                    latitude
+                  )
+                    ? latitude
+                    : null,
 
-                amenities:
-                  amenities.slice(
-                    0,
-                    6
+                longitude:
+                  Number.isFinite(
+                    longitude
+                  )
+                    ? longitude
+                    : null,
+
+                imageUrl:
+                  String(
+                    imageUrl || ""
                   ),
 
-                description:
-                  `${name} is a real accommodation listed in OpenStreetMap in ${destination}.`,
-
-                bookingUrl:
-                  "https://www.booking.com/searchresults.html?ss=" +
-                  encodeURIComponent(
-                    name
+                website:
+                  String(
+                    website || ""
                   ),
 
-                imageUrl,
-
-                imageSource,
-
-                imageAttribution,
-
-                mapsUrl,
+                phone:
+                  String(
+                    phone || ""
+                  ),
 
                 osmUrl,
 
-                latitude:
-                  placeLat,
+                osmType:
+                  item.type || "",
 
-                longitude:
-                  placeLon,
-
-                tourism:
-
-                  tourism
+                osmId:
+                  item.id || null
 
               });
 
@@ -893,35 +711,41 @@ out center tags;
           }
 
 
-          // =================================================
+          // ------------------------------------------------
           // RESTAURANT
-          // =================================================
+          // ------------------------------------------------
 
-          const isRestaurant =
+          if (
             tags.amenity ===
-            "restaurant";
+            "restaurant"
+          ) {
 
-
-          if (isRestaurant) {
-
-            const key =
+            const normalizedName =
               normalizePlaceName(
                 name
               );
 
+
             if (
-              key &&
-              !restaurantNames.has(key)
+              !restaurantNames.has(
+                normalizedName
+              )
             ) {
 
               restaurantNames.add(
-                key
+                normalizedName
               );
 
 
               const cuisine =
                 tags.cuisine ||
                 "Local cuisine";
+
+
+              const priceLevel =
+                tags["price:level"] ||
+                tags["price_range"] ||
+                "$$";
 
 
               let rating =
@@ -936,6 +760,7 @@ out center tags;
                   Number(
                     tags.rating
                   );
+
 
                 if (
                   Number.isFinite(
@@ -991,6 +816,39 @@ out center tags;
               }
 
 
+              let mapsUrl = "";
+
+
+              if (
+                Number.isFinite(
+                  latitude
+                ) &&
+                Number.isFinite(
+                  longitude
+                )
+              ) {
+
+                mapsUrl =
+                  "https://www.google.com/maps/search/?api=1&query=" +
+                  encodeURIComponent(
+                    latitude +
+                    "," +
+                    longitude
+                  );
+
+              } else {
+
+                mapsUrl =
+                  "https://www.google.com/maps/search/?api=1&query=" +
+                  encodeURIComponent(
+                    name +
+                    " " +
+                    destination
+                  );
+
+              }
+
+
               restaurants.push({
 
                 name:
@@ -1000,11 +858,7 @@ out center tags;
                   String(cuisine),
 
                 priceLevel:
-                  String(
-                    tags["price:level"] ||
-                    tags.price_range ||
-                    "$$"
-                  ),
+                  String(priceLevel),
 
                 rating,
 
@@ -1014,45 +868,60 @@ out center tags;
                   String(address),
 
                 description:
-                  `${name} is a real local restaurant in ${destination}, listed in OpenStreetMap. Cuisine: ${cuisine}.`,
+                  `${name} is a real local restaurant listed in OpenStreetMap.`,
 
-                imageUrl,
+                imageUrl:
+                  String(
+                    imageUrl || ""
+                  ),
 
-                imageSource,
+                imageSource:
+                  imageUrl
+                    ? "OpenStreetMap"
+                    : "",
 
-                imageAttribution,
+                imageAttribution:
+                  imageUrl
+                    ? "OpenStreetMap"
+                    : "",
 
                 mapsUrl,
 
                 osmUrl,
 
                 website:
-                  tags.website ||
-                  tags["contact:website"] ||
-                  "",
+                  String(
+                    website || ""
+                  ),
 
                 phone:
-                  tags.phone ||
-                  tags["contact:phone"] ||
-                  "",
+                  String(
+                    phone || ""
+                  ),
 
                 openingHours:
                   tags.opening_hours ||
                   "",
 
                 latitude:
-                  placeLat,
+                  Number.isFinite(
+                    latitude
+                  )
+                    ? latitude
+                    : null,
 
                 longitude:
-                  placeLon,
+                  Number.isFinite(
+                    longitude
+                  )
+                    ? longitude
+                    : null,
 
                 osmType:
-                  item.type ||
-                  "",
+                  item.type || "",
 
                 osmId:
-                  item.id ||
-                  null
+                  item.id || null
 
               });
 
@@ -1063,14 +932,89 @@ out center tags;
         }
 
 
+        // =================================================
+        // SORT HOTELS
+        //
+        // Prefer hotels with actual OSM images.
+        // =================================================
+
+        hotels.sort(
+          (a, b) => {
+
+            const aImage =
+              a.imageUrl
+                ? 1
+                : 0;
+
+            const bImage =
+              b.imageUrl
+                ? 1
+                : 0;
+
+
+            if (
+              aImage !==
+              bImage
+            ) {
+
+              return (
+                bImage -
+                aImage
+              );
+
+            }
+
+
+            const aStars =
+              Number(
+                a.stars
+              ) || 0;
+
+            const bStars =
+              Number(
+                b.stars
+              ) || 0;
+
+
+            return (
+              bStars -
+              aStars
+            );
+
+          }
+        );
+
+
+        // =================================================
+        // SORT RESTAURANTS
+        // =================================================
+
+        restaurants.sort(
+          (a, b) => {
+
+            const aRating =
+              Number(
+                a.rating
+              ) || 0;
+
+            const bRating =
+              Number(
+                b.rating
+              ) || 0;
+
+
+            return (
+              bRating -
+              aRating
+            );
+
+          }
+        );
+
+
         console.log(
           "OSM hotels:",
           hotels.length
-        );
-
-        console.log(
-          "OSM restaurants:",
-          restaurants.length
         );
 
         console.log(
@@ -1082,51 +1026,16 @@ out center tags;
         );
 
         console.log(
+          "OSM restaurants:",
+          restaurants.length
+        );
+
+        console.log(
           "OSM restaurant images:",
           restaurants.filter(
             restaurant =>
               !!restaurant.imageUrl
           ).length
-        );
-
-
-        // ------------------------------------------------
-        // SORT RESTAURANTS
-        // ------------------------------------------------
-
-        restaurants.sort(
-          (a, b) => {
-
-            const aRating =
-              Number(a.rating) || 0;
-
-            const bRating =
-              Number(b.rating) || 0;
-
-            const aImage =
-              a.imageUrl ? 1 : 0;
-
-            const bImage =
-              b.imageUrl ? 1 : 0;
-
-
-            if (
-              bImage !== aImage
-            ) {
-
-              return (
-                bImage -
-                aImage
-              );
-
-            }
-
-            return (
-              bRating -
-              aRating
-            );
-
-          }
         );
 
 
@@ -1141,17 +1050,16 @@ out center tags;
           restaurants:
             restaurants.slice(
               0,
-              50
+              15
             )
 
         };
 
-
       } catch (error) {
 
         console.error(
-          "OSM request error:",
-          error
+          "OSM places error:",
+          error.message
         );
 
         return {
@@ -1165,15 +1073,81 @@ out center tags;
 
 
     // =====================================================
-    // GROQ AI
+    // GET REAL OSM DATA FIRST
     // =====================================================
 
-    async function generatePlanWithGroq() {
+    console.log(
+      "Loading real hotels and restaurants from OSM..."
+    );
 
-      const prompt = `
+
+    const osmData =
+      await getOSMPlaces(
+        destination
+      );
+
+
+    console.log(
+      "Real OSM hotels available:",
+      osmData.hotels.length
+    );
+
+
+    console.log(
+      "Real OSM restaurants available:",
+      osmData.restaurants.length
+    );
+
+
+    // =====================================================
+    // PREPARE HOTEL DATA FOR GROQ
+    //
+    // Groq may SELECT hotels.
+    // It must NOT invent them.
+    // =====================================================
+
+    const hotelCandidates =
+      osmData.hotels
+        .slice(
+          0,
+          30
+        )
+        .map(
+          (hotel, index) => ({
+
+            id:
+              index + 1,
+
+            name:
+              hotel.name,
+
+            stars:
+              hotel.stars,
+
+            address:
+              hotel.address,
+
+            imageUrl:
+              hotel.imageUrl,
+
+            website:
+              hotel.website,
+
+            osmUrl:
+              hotel.osmUrl
+
+          })
+        );
+
+
+    // =====================================================
+    // GROQ PROMPT
+    // =====================================================
+
+    const prompt = `
 You are an expert travel planner.
 
-Create a realistic travel plan for:
+Create a realistic travel plan.
 
 Destination: ${destination}
 Start date: ${startDate || "Flexible"}
@@ -1183,18 +1157,19 @@ Travelers: ${travelers}
 Interests: ${interests || "General sightseeing"}
 Notes: ${notes || "None"}
 
-IMPORTANT:
+IMPORTANT HOTEL RULES:
 
-Do NOT invent restaurant names.
+You are given a list of REAL hotels obtained from OpenStreetMap.
 
-Restaurants are supplied separately from OpenStreetMap.
+You MUST select hotels ONLY from this list.
 
-For accommodation:
-Return up to 10 realistic accommodation options.
-Do not claim live availability.
-Prices are estimates only.
+DO NOT invent hotel names.
 
-For each hotel return:
+DO NOT create hotels that are not in the supplied list.
+
+Select up to 10 different hotels.
+
+For every selected hotel return:
 
 - name
 - stars
@@ -1204,10 +1179,34 @@ For each hotel return:
 - amenities
 - description
 - bookingUrl
+- imageUrl
 
-Use a Booking.com search URL if an exact hotel page is unknown.
+The "name" MUST exactly match one of the supplied OSM hotel names.
 
-Also create:
+The "imageUrl" MUST exactly match the imageUrl supplied by OSM.
+
+If an OSM hotel has no imageUrl, return an empty string for imageUrl.
+
+NEVER invent an image URL.
+
+Prices are estimates only.
+
+Never claim live availability.
+
+For bookingUrl:
+Use a Booking.com search URL for the exact hotel and destination.
+
+IMPORTANT RESTAURANTS:
+
+Do NOT generate restaurants.
+
+Restaurants are already provided separately from OpenStreetMap.
+
+Return:
+
+"restaurants": []
+
+Create:
 
 transport
 experiences
@@ -1218,12 +1217,12 @@ These four fields must contain HTML.
 
 RETURN ONLY JSON.
 
-Use exactly this structure:
+Use this structure:
 
 {
   "stay": [
     {
-      "name": "Hotel name",
+      "name": "Exact OSM hotel name",
       "stars": 4,
       "price": 120,
       "currency": "USD",
@@ -1234,8 +1233,9 @@ Use exactly this structure:
         "Private Bathroom",
         "Breakfast Available"
       ],
-      "description": "Short description.",
-      "bookingUrl": "https://www.booking.com/searchresults.html?ss=Hotel+Name"
+      "description": "Short useful description.",
+      "bookingUrl": "https://www.booking.com/searchresults.html?ss=Hotel+Name",
+      "imageUrl": "EXACT OSM IMAGE URL OR EMPTY STRING"
     }
   ],
   "restaurants": [],
@@ -1244,216 +1244,231 @@ Use exactly this structure:
   "money": "<div>...</div>",
   "daysPlan": "<div>...</div>"
 }
+
+REAL OSM HOTEL LIST:
+
+${JSON.stringify(
+  hotelCandidates
+)}
 `;
 
 
-      const response =
-        await fetch(
-          "https://api.groq.com/openai/v1/chat/completions",
-          {
-            method: "POST",
+    // =====================================================
+    // GROQ REQUEST
+    // =====================================================
 
-            headers: {
-
-              "Content-Type":
-                "application/json",
-
-              "Authorization":
-                "Bearer " +
-                GROQ_API_KEY
-
-            },
-
-            body:
-              JSON.stringify({
-
-                model:
-                  "openai/gpt-oss-20b",
-
-                messages: [
-
-                  {
-                    role:
-                      "system",
-
-                    content:
-                      "Return only valid JSON. Do not use markdown."
-                  },
-
-                  {
-                    role:
-                      "user",
-
-                    content:
-                      prompt
-                  }
-
-                ],
-
-                temperature:
-                  0.2,
-
-                max_completion_tokens:
-                  5000,
-
-                response_format:
-                  {
-                    type:
-                      "json_object"
-                  }
-
-              })
-
-          }
-        );
+    console.log(
+      "Sending ONE request to Groq..."
+    );
 
 
-      const responseText =
-        await response.text();
+    const groqResponse =
+      await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
 
+          headers: {
 
-      console.log(
-        "Groq HTTP status:",
-        response.status
+            "Content-Type":
+              "application/json",
+
+            "Authorization":
+              "Bearer " +
+              GROQ_API_KEY
+
+          },
+
+          body: JSON.stringify({
+
+            model:
+              GROQ_MODEL,
+
+            messages: [
+
+              {
+                role:
+                  "system",
+
+                content:
+                  "You are a precise travel planning assistant. Return valid JSON only. Never invent real-world hotels when a supplied list exists."
+              },
+
+              {
+                role:
+                  "user",
+
+                content:
+                  prompt
+              }
+
+            ],
+
+            temperature:
+              0.2,
+
+            max_completion_tokens:
+              6000,
+
+            response_format: {
+              type:
+                "json_object"
+            }
+
+          })
+
+        }
       );
 
 
-      if (
-        !response.ok
-      ) {
-
-        console.error(
-          "GROQ ERROR:",
-          responseText
-        );
+    const groqText =
+      await groqResponse.text();
 
 
-        if (
-          response.status === 429
-        ) {
-
-          throw new Error(
-            "Groq rate limit reached. Please try again later."
-          );
-
-        }
+    console.log(
+      "Groq HTTP status:",
+      groqResponse.status
+    );
 
 
-        throw new Error(
-          "Groq API request failed."
-        );
+    // =====================================================
+    // GROQ ERROR
+    // =====================================================
 
-      }
+    if (
+      !groqResponse.ok
+    ) {
 
-
-      let data;
-
-      try {
-
-        data =
-          JSON.parse(
-            responseText
-          );
-
-      } catch {
-
-        console.error(
-          "Invalid Groq HTTP response:",
-          responseText
-        );
-
-        throw new Error(
-          "Invalid response from Groq."
-        );
-
-      }
+      console.error(
+        "GROQ ERROR:",
+        groqText
+      );
 
 
-      const text =
-        data
-          ?.choices?.[0]
-          ?.message?.content;
+      return res.status(500).json({
 
+        error:
+          "Groq API request failed.",
 
-      if (!text) {
+        status:
+          groqResponse.status,
 
-        console.error(
-          "Groq returned no content:",
-          JSON.stringify(data)
-        );
+        details:
+          groqText
 
-        throw new Error(
-          "Groq returned an empty response."
-        );
-
-      }
-
-
-      let cleanText =
-        String(text)
-          .trim();
-
-
-      cleanText =
-        cleanText
-          .replace(
-            /^```json/i,
-            ""
-          )
-          .replace(
-            /^```/i,
-            ""
-          )
-          .replace(
-            /```$/i,
-            ""
-          )
-          .trim();
-
-
-      let travelData;
-
-      try {
-
-        travelData =
-          JSON.parse(
-            cleanText
-          );
-
-      } catch (error) {
-
-        console.error(
-          "GROQ JSON PARSE ERROR:",
-          cleanText
-        );
-
-        throw new Error(
-          "Groq returned invalid JSON."
-        );
-
-      }
-
-
-      return travelData;
+      });
 
     }
 
 
     // =====================================================
-    // RUN GROQ
+    // PARSE GROQ RESPONSE
     // =====================================================
 
-    console.log(
-      "Starting Groq plan generation..."
-    );
+    let groqData;
 
 
-    const travelData =
-      await generatePlanWithGroq();
+    try {
+
+      groqData =
+        JSON.parse(
+          groqText
+        );
+
+    } catch (error) {
+
+      console.error(
+        "Could not parse Groq response:",
+        groqText
+      );
+
+
+      return res.status(500).json({
+
+        error:
+          "Invalid response from Groq.",
+
+        details:
+          groqText
+
+      });
+
+    }
 
 
     // =====================================================
-    // NORMALIZE STAY
+    // GET GROQ CONTENT
+    // =====================================================
+
+    const text =
+      groqData
+        ?.choices?.[0]
+        ?.message
+        ?.content;
+
+
+    if (!text) {
+
+      console.error(
+        "Groq returned no content:",
+        JSON.stringify(
+          groqData
+        )
+      );
+
+
+      return res.status(500).json({
+
+        error:
+          "Groq returned an empty response.",
+
+        details:
+          JSON.stringify(
+            groqData
+          )
+
+      });
+
+    }
+
+
+    // =====================================================
+    // PARSE TRAVEL JSON
+    // =====================================================
+
+    let travelData;
+
+
+    try {
+
+      travelData =
+        JSON.parse(
+          text
+        );
+
+    } catch (error) {
+
+      console.error(
+        "GROQ JSON PARSE ERROR:",
+        text
+      );
+
+
+      return res.status(500).json({
+
+        error:
+          "Groq returned invalid JSON.",
+
+        details:
+          error.message
+
+      });
+
+    }
+
+
+    // =====================================================
+    // NORMALIZE HOTELS
     // =====================================================
 
     if (
@@ -1467,106 +1482,185 @@ Use exactly this structure:
     }
 
 
-    travelData.stay =
-      travelData.stay
-        .filter(
-          hotel =>
-            hotel &&
-            hotel.name
-        )
-        .map(
-          hotel => ({
-
-            name:
-              String(
-                hotel.name
-              ),
-
-            stars:
-              Number(
-                hotel.stars
-              ) || 0,
-
-            price:
-              Number.isFinite(
-                Number(
-                  hotel.price
-                )
-              )
-                ? Number(
-                    hotel.price
-                  )
-                : null,
-
-            currency:
-              hotel.currency ||
-              "USD",
-
-            priceType:
-              hotel.priceType ||
-              "estimated per night",
-
-            amenities:
-              Array.isArray(
-                hotel.amenities
-              )
-                ? hotel.amenities.slice(
-                    0,
-                    6
-                  )
-                : [],
-
-            description:
-              hotel.description ||
-              "",
-
-            bookingUrl:
-              hotel.bookingUrl ||
-              (
-                "https://www.booking.com/searchresults.html?ss=" +
-                encodeURIComponent(
-                  hotel.name
-                )
-              ),
-
-            imageUrl:
-              "",
-
-            imageSource:
-              "",
-
-            imageAttribution:
-              "",
-
-            mapsUrl:
-              "",
-
-            osmUrl:
-              "",
-
-            latitude:
-              null,
-
-            longitude:
-              null
-
-          })
-        );
-
-
     // =====================================================
-    // REMOVE DUPLICATE AI HOTELS
+    // IMPORTANT:
+    // VALIDATE EVERY GROQ HOTEL AGAINST OSM.
+    //
+    // This prevents invented hotels.
     // =====================================================
 
-    const uniqueHotels = [];
+    const osmHotelMap =
+      new Map();
 
-    const hotelNames =
-      new Set();
+
+    for (
+      const hotel
+      of osmData.hotels
+    ) {
+
+      osmHotelMap.set(
+        normalizePlaceName(
+          hotel.name
+        ),
+        hotel
+      );
+
+    }
+
+
+    const validatedHotels =
+      [];
 
 
     for (
       const hotel
       of travelData.stay
+    ) {
+
+      if (
+        !hotel ||
+        !hotel.name
+      ) {
+
+        continue;
+
+      }
+
+
+      const normalizedName =
+        normalizePlaceName(
+          hotel.name
+        );
+
+
+      const realHotel =
+        osmHotelMap.get(
+          normalizedName
+        );
+
+
+      if (
+        !realHotel
+      ) {
+
+        console.warn(
+          "Groq hotel rejected because it was not found in OSM:",
+          hotel.name
+        );
+
+        continue;
+
+      }
+
+
+      // -------------------------------------------------
+      // ALWAYS USE OSM IMAGE
+      //
+      // Never trust an image generated by Groq.
+      // -------------------------------------------------
+
+      const finalImage =
+        realHotel.imageUrl ||
+        "";
+
+
+      validatedHotels.push({
+
+        name:
+          realHotel.name,
+
+        stars:
+          Number(
+            hotel.stars
+          ) ||
+          Number(
+            realHotel.stars
+          ) ||
+          0,
+
+        price:
+          Number.isFinite(
+            Number(
+              hotel.price
+            )
+          )
+            ? Number(
+                hotel.price
+              )
+            : null,
+
+        currency:
+          hotel.currency ||
+          "USD",
+
+        priceType:
+          hotel.priceType ||
+          "estimated per night",
+
+        amenities:
+          Array.isArray(
+            hotel.amenities
+          )
+            ? hotel.amenities.slice(
+                0,
+                6
+              )
+            : [],
+
+        description:
+          hotel.description ||
+          `${realHotel.name} is a real accommodation listed in OpenStreetMap.`,
+
+        bookingUrl:
+          hotel.bookingUrl ||
+          (
+            "https://www.booking.com/searchresults.html?ss=" +
+            encodeURIComponent(
+              realHotel.name
+            )
+          ),
+
+        imageUrl:
+          finalImage,
+
+        photoAttribution:
+          finalImage
+            ? "OpenStreetMap"
+            : "",
+
+        photoSource:
+          finalImage
+            ? "OpenStreetMap"
+            : "",
+
+        address:
+          realHotel.address,
+
+        website:
+          realHotel.website,
+
+        osmUrl:
+          realHotel.osmUrl
+
+      });
+
+    }
+
+
+    // =====================================================
+    // REMOVE DUPLICATE HOTELS
+    // =====================================================
+
+    const uniqueHotels =
+      [];
+
+    const seenHotels =
+      new Set();
+
+
+    for (
+      const hotel
+      of validatedHotels
     ) {
 
       const key =
@@ -1576,11 +1670,14 @@ Use exactly this structure:
 
 
       if (
-        key &&
-        !hotelNames.has(key)
+        !seenHotels.has(
+          key
+        )
       ) {
 
-        hotelNames.add(key);
+        seenHotels.add(
+          key
+        );
 
         uniqueHotels.push(
           hotel
@@ -1598,164 +1695,43 @@ Use exactly this structure:
       );
 
 
-    // =====================================================
-    // OSM DATA
-    //
-    // ONE REQUEST FOR HOTELS + RESTAURANTS
-    // =====================================================
-
     console.log(
-      "Getting hotels and restaurants from OSM..."
+      "Validated hotels:",
+      travelData.stay.length
     );
 
 
-    const osmPlaces =
-      await getOSMPlaces(
-        destination
-      );
-
-
-    // =====================================================
-    // MATCH OSM HOTEL DATA TO AI HOTELS
-    //
-    // Especially imageUrl.
-    // =====================================================
-
-    travelData.stay =
-      travelData.stay.map(
-        hotel => {
-
-          let bestOSMHotel =
-            null;
-
-          let bestScore =
-            0;
-
-
-          for (
-            const osmHotel
-            of osmPlaces.hotels
-          ) {
-
-            const similarity =
-              calculateNameSimilarity(
-                hotel.name,
-                osmHotel.name
-              );
-
-
-            if (
-              similarity >
-              bestScore
-            ) {
-
-              bestScore =
-                similarity;
-
-              bestOSMHotel =
-                osmHotel;
-
-            }
-
-          }
-
-
-          /*
-           * Only match reasonably similar hotel names.
-           */
-
-          if (
-            bestOSMHotel &&
-            bestScore >= 0.65
-          ) {
-
-            return {
-
-              ...hotel,
-
-              /*
-               * OSM image has priority.
-               */
-
-              imageUrl:
-                bestOSMHotel.imageUrl ||
-                "",
-
-              imageSource:
-                bestOSMHotel.imageSource ||
-                "",
-
-              imageAttribution:
-                bestOSMHotel.imageAttribution ||
-                "",
-
-              mapsUrl:
-                bestOSMHotel.mapsUrl ||
-                "",
-
-              osmUrl:
-                bestOSMHotel.osmUrl ||
-                "",
-
-              latitude:
-                bestOSMHotel.latitude,
-
-              longitude:
-                bestOSMHotel.longitude,
-
-              /*
-               * If OSM has real star data,
-               * prefer it.
-               */
-
-              stars:
-                bestOSMHotel.stars ||
-                hotel.stars,
-
-              /*
-               * If OSM has amenities,
-               * merge them with AI amenities.
-               */
-
-              amenities:
-                Array.from(
-                  new Set(
-                    [
-                      ...(hotel.amenities || []),
-                      ...(bestOSMHotel.amenities || [])
-                    ]
-                  )
-                ).slice(
-                  0,
-                  6
-                )
-
-            };
-
-          }
-
-
-          return hotel;
-
-        }
-      );
+    console.log(
+      "Hotels with OSM images:",
+      travelData.stay.filter(
+        hotel =>
+          !!hotel.imageUrl
+      ).length
+    );
 
 
     // =====================================================
     // RESTAURANTS
     //
-    // DIRECTLY FROM OSM.
+    // IMPORTANT:
+    // They came directly from ONE OSM query.
     //
-    // NO FOURSQUARE.
-    // NO ENRICHMENT.
-    // NO EXTRA REQUEST.
+    // No Foursquare.
+    // No second restaurant API.
     // =====================================================
 
     travelData.restaurants =
-      osmPlaces.restaurants.slice(
-        0,
-        15
-      );
+      osmData.restaurants
+        .slice(
+          0,
+          15
+        );
+
+
+    console.log(
+      "Restaurants returned:",
+      travelData.restaurants.length
+    );
 
 
     // =====================================================
@@ -1788,22 +1764,24 @@ Use exactly this structure:
 
     if (
       !Array.isArray(
-        travelData.stay
+        travelData.restaurants
       )
     ) {
 
-      travelData.stay = [];
+      travelData.restaurants =
+        [];
 
     }
 
 
     if (
       !Array.isArray(
-        travelData.restaurants
+        travelData.stay
       )
     ) {
 
-      travelData.restaurants = [];
+      travelData.stay =
+        [];
 
     }
 
@@ -1816,51 +1794,61 @@ Use exactly this structure:
       "======================================"
     );
 
+
     console.log(
       "PLAN API SUCCESS"
     );
+
 
     console.log(
       "AI provider: Groq"
     );
 
+
     console.log(
-      "Places provider: OpenStreetMap"
+      "Real places provider: OpenStreetMap"
     );
+
 
     console.log(
       "Hotels:",
       travelData.stay.length
     );
 
+
     console.log(
-      "Hotels with OSM images:",
+      "Hotels with images:",
       travelData.stay.filter(
         hotel =>
           !!hotel.imageUrl
       ).length
     );
 
+
     console.log(
       "Restaurants:",
       travelData.restaurants.length
     );
 
+
     console.log(
-      "Restaurants with OSM images:",
+      "Restaurant images:",
       travelData.restaurants.filter(
         restaurant =>
           !!restaurant.imageUrl
       ).length
     );
 
-    console.log(
-      "Foursquare: DISABLED"
-    );
 
     console.log(
-      "Gemini: DISABLED"
+      "Gemini calls: 0"
     );
+
+
+    console.log(
+      "Foursquare calls: 0"
+    );
+
 
     console.log(
       "======================================"
@@ -1891,8 +1879,10 @@ Use exactly this structure:
     return res.status(500).json({
 
       error:
-        error.message ||
-        "Server error while generating travel plan."
+        "Server error while generating travel plan.",
+
+      details:
+        error.message
 
     });
 
