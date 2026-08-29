@@ -46,19 +46,32 @@ module.exports = async (req, res) => {
     const FOURSQUARE_API_KEY =
       process.env.FOURSQUARE_API_KEY;
 
+    // =======================================================
+    // CHECK GEMINI
+    // =======================================================
+
     if (!GEMINI_API_KEY) {
 
-      console.error("GEMINI_API_KEY missing");
+      console.error(
+        "GEMINI_API_KEY missing"
+      );
 
       return res.status(500).json({
-        error: "Gemini API key is missing."
+        error:
+          "Gemini API key is missing."
       });
 
     }
 
+    // =======================================================
+    // CHECK PEXELS
+    // =======================================================
+
     if (!PEXELS_API_KEY) {
 
-      console.error("PEXELS_API_KEY missing");
+      console.error(
+        "PEXELS_API_KEY missing"
+      );
 
       return res.status(500).json({
         error:
@@ -67,9 +80,15 @@ module.exports = async (req, res) => {
 
     }
 
+    // =======================================================
+    // CHECK FOURSQUARE
+    // =======================================================
+
     if (!FOURSQUARE_API_KEY) {
 
-      console.error("FOURSQUARE_API_KEY missing");
+      console.error(
+        "FOURSQUARE_API_KEY missing"
+      );
 
       return res.status(500).json({
         error:
@@ -102,7 +121,9 @@ module.exports = async (req, res) => {
 
     const GEMINI_URL =
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" +
-      encodeURIComponent(GEMINI_API_KEY);
+      encodeURIComponent(
+        GEMINI_API_KEY
+      );
 
     const prompt = `
 You are an expert travel planner.
@@ -151,7 +172,7 @@ IMPORTANT RESTAURANT REQUIREMENT:
 
 Do NOT generate restaurant names.
 
-Restaurants will be obtained separately from Foursquare Places API.
+Restaurants will be obtained separately from Foursquare.
 
 Therefore return:
 
@@ -207,7 +228,8 @@ Use exactly:
           method: "POST",
 
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type":
+              "application/json"
           },
 
           body: JSON.stringify({
@@ -270,7 +292,9 @@ Use exactly:
     try {
 
       geminiData =
-        JSON.parse(geminiText);
+        JSON.parse(
+          geminiText
+        );
 
     } catch (error) {
 
@@ -302,14 +326,18 @@ Use exactly:
 
       console.error(
         "Gemini returned no text:",
-        JSON.stringify(geminiData)
+        JSON.stringify(
+          geminiData
+        )
       );
 
       return res.status(500).json({
         error:
           "Gemini returned an empty response.",
         details:
-          JSON.stringify(geminiData)
+          JSON.stringify(
+            geminiData
+          )
       });
 
     }
@@ -323,9 +351,18 @@ Use exactly:
 
     cleanText =
       cleanText
-        .replace(/^```json/i, "")
-        .replace(/^```/i, "")
-        .replace(/```$/i, "")
+        .replace(
+          /^```json/i,
+          ""
+        )
+        .replace(
+          /^```/i,
+          ""
+        )
+        .replace(
+          /```$/i,
+          ""
+        )
         .trim();
 
     // =======================================================
@@ -337,7 +374,9 @@ Use exactly:
     try {
 
       travelData =
-        JSON.parse(cleanText);
+        JSON.parse(
+          cleanText
+        );
 
     } catch (error) {
 
@@ -380,16 +419,24 @@ Use exactly:
           hotel => ({
 
             name:
-              String(hotel.name),
+              String(
+                hotel.name
+              ),
 
             stars:
-              Number(hotel.stars) || 0,
+              Number(
+                hotel.stars
+              ) || 0,
 
             price:
               Number.isFinite(
-                Number(hotel.price)
+                Number(
+                  hotel.price
+                )
               )
-                ? Number(hotel.price)
+                ? Number(
+                    hotel.price
+                  )
                 : null,
 
             currency:
@@ -404,7 +451,10 @@ Use exactly:
               Array.isArray(
                 hotel.amenities
               )
-                ? hotel.amenities.slice(0, 6)
+                ? hotel.amenities.slice(
+                    0,
+                    6
+                  )
                 : [],
 
             description:
@@ -432,7 +482,9 @@ Use exactly:
     // =======================================================
 
     const uniqueHotels = [];
-    const hotelNames = new Set();
+
+    const hotelNames =
+      new Set();
 
     for (
       const hotel
@@ -445,10 +497,14 @@ Use exactly:
           .trim();
 
       if (
-        !hotelNames.has(key)
+        !hotelNames.has(
+          key
+        )
       ) {
 
-        hotelNames.add(key);
+        hotelNames.add(
+          key
+        );
 
         uniqueHotels.push(
           hotel
@@ -459,7 +515,10 @@ Use exactly:
     }
 
     travelData.stay =
-      uniqueHotels.slice(0, 10);
+      uniqueHotels.slice(
+        0,
+        10
+      );
 
     console.log(
       "Hotels returned:",
@@ -488,7 +547,9 @@ Use exactly:
         let response =
           await fetch(
             "https://api.pexels.com/v1/search?query=" +
-            encodeURIComponent(query1) +
+            encodeURIComponent(
+              query1
+            ) +
             "&per_page=5",
             {
               method: "GET",
@@ -497,6 +558,7 @@ Use exactly:
                 Authorization:
                   PEXELS_API_KEY
               }
+
             }
           );
 
@@ -507,20 +569,24 @@ Use exactly:
           data =
             await response.json();
 
-        } catch (error) {
+        } catch (
+          error
+        ) {
 
           data = null;
 
         }
 
         // ---------------------------------------------------
-        // FALLBACK
+        // FALLBACK HOTEL IMAGE
         // ---------------------------------------------------
 
         if (
           !response.ok ||
           !data ||
-          !Array.isArray(data.photos) ||
+          !Array.isArray(
+            data.photos
+          ) ||
           data.photos.length === 0
         ) {
 
@@ -535,7 +601,9 @@ Use exactly:
           response =
             await fetch(
               "https://api.pexels.com/v1/search?query=" +
-              encodeURIComponent(query2) +
+              encodeURIComponent(
+                query2
+              ) +
               "&per_page=10",
               {
                 method: "GET",
@@ -544,6 +612,7 @@ Use exactly:
                   Authorization:
                     PEXELS_API_KEY
                 }
+
               }
             );
 
@@ -552,7 +621,9 @@ Use exactly:
             data =
               await response.json();
 
-          } catch (error) {
+          } catch (
+            error
+          ) {
 
             data = null;
 
@@ -563,14 +634,19 @@ Use exactly:
         if (
           !response.ok ||
           !data ||
-          !Array.isArray(data.photos) ||
+          !Array.isArray(
+            data.photos
+          ) ||
           data.photos.length === 0
         ) {
 
           return {
-            imageUrl: "",
-            photoAttribution: "",
-            photoSource: ""
+            imageUrl:
+              "",
+            photoAttribution:
+              "",
+            photoSource:
+              ""
           };
 
         }
@@ -598,7 +674,9 @@ Use exactly:
 
         };
 
-      } catch (error) {
+      } catch (
+        error
+      ) {
 
         console.error(
           "Pexels error:",
@@ -606,9 +684,12 @@ Use exactly:
         );
 
         return {
-          imageUrl: "",
-          photoAttribution: "",
-          photoSource: ""
+          imageUrl:
+            "",
+          photoAttribution:
+            "",
+          photoSource:
+            ""
         };
 
       }
@@ -632,30 +713,36 @@ Use exactly:
 
     travelData.stay =
       travelData.stay.map(
-        (hotel, index) => ({
+        (
+          hotel,
+          index
+        ) => ({
 
           ...hotel,
 
           imageUrl:
-            hotelImages[index]?.imageUrl ||
+            hotelImages[index]
+              ?.imageUrl ||
             "",
 
           photoAttribution:
-            hotelImages[index]?.photoAttribution ||
+            hotelImages[index]
+              ?.photoAttribution ||
             "",
 
           photoSource:
-            hotelImages[index]?.photoSource ||
+            hotelImages[index]
+              ?.photoSource ||
             ""
 
         })
       );
 
     // =======================================================
-    // FOURSQUARE CONFIG
+    // FOURSQUARE HELPERS
     // =======================================================
 
-    const FOURSQUARE_API_URL =
+    const FOURSQUARE_BASE_URL =
       "https://places-api.foursquare.com";
 
     const FOURSQUARE_VERSION =
@@ -665,7 +752,7 @@ Use exactly:
     // FOURSQUARE REQUEST HELPER
     // =======================================================
 
-    async function foursquareRequest(
+    async function foursquareFetch(
       url
     ) {
 
@@ -679,17 +766,18 @@ Use exactly:
 
               headers: {
 
+                "Accept":
+                  "application/json",
+
                 "Authorization":
                   "Bearer " +
                   FOURSQUARE_API_KEY,
 
                 "X-Places-Api-Version":
-                  FOURSQUARE_VERSION,
-
-                "Accept":
-                  "application/json"
+                  FOURSQUARE_VERSION
 
               }
+
             }
           );
 
@@ -701,15 +789,21 @@ Use exactly:
         try {
 
           data =
-            JSON.parse(text);
+            JSON.parse(
+              text
+            );
 
-        } catch (error) {
+        } catch (
+          error
+        ) {
 
           data = null;
 
         }
 
-        if (!response.ok) {
+        if (
+          !response.ok
+        ) {
 
           console.error(
             "Foursquare HTTP error:",
@@ -717,20 +811,50 @@ Use exactly:
             text
           );
 
-          return null;
+          return {
+            ok:
+              false,
+            status:
+              response.status,
+            data:
+              null
+          };
 
         }
 
-        return data;
+        return {
 
-      } catch (error) {
+          ok:
+            true,
+
+          status:
+            response.status,
+
+          data
+
+        };
+
+      } catch (
+        error
+      ) {
 
         console.error(
           "Foursquare request error:",
           error.message
         );
 
-        return null;
+        return {
+
+          ok:
+            false,
+
+          status:
+            0,
+
+          data:
+            null
+
+        };
 
       }
 
@@ -741,104 +865,181 @@ Use exactly:
     // =======================================================
 
     async function getFoursquarePhoto(
-      fsqPlaceId
+      placeId
     ) {
 
       try {
 
-        if (!fsqPlaceId) {
+        if (
+          !placeId
+        ) {
 
           return {
-            imageUrl: "",
-            imageSource: "",
-            imageAttribution: ""
+
+            imageUrl:
+              "",
+
+            imageSource:
+              "",
+
+            imageAttribution:
+              ""
+
           };
 
         }
 
-        const url =
-          FOURSQUARE_API_URL +
+        const photosURL =
+          FOURSQUARE_BASE_URL +
           "/places/" +
           encodeURIComponent(
-            fsqPlaceId
+            placeId
           ) +
           "/photos?limit=1&sort=POPULAR";
 
-        const data =
-          await foursquareRequest(
-            url
+        console.log(
+          "Foursquare photo request:",
+          placeId
+        );
+
+        const result =
+          await foursquareFetch(
+            photosURL
           );
 
         if (
-          !data ||
-          !Array.isArray(data)
+          !result.ok ||
+          !result.data
         ) {
 
           return {
-            imageUrl: "",
-            imageSource: "",
-            imageAttribution: ""
+
+            imageUrl:
+              "",
+
+            imageSource:
+              "",
+
+            imageAttribution:
+              ""
+
           };
 
         }
 
+        const photos =
+          Array.isArray(
+            result.data
+          )
+            ? result.data
+            : result.data.photos;
+
         if (
-          data.length === 0
+          !Array.isArray(
+            photos
+          ) ||
+          photos.length === 0
         ) {
 
           return {
-            imageUrl: "",
-            imageSource: "",
-            imageAttribution: ""
+
+            imageUrl:
+              "",
+
+            imageSource:
+              "",
+
+            imageAttribution:
+              ""
+
           };
 
         }
 
         const photo =
-          data[0];
+          photos[0];
 
-        const prefix =
-          photo?.prefix ||
-          "";
-
-        const suffix =
-          photo?.suffix ||
-          "";
+        // ---------------------------------------------------
+        // FOURSQUARE PHOTO URL
+        //
+        // Current API responses provide photo prefix/suffix.
+        // We assemble the actual image URL from them.
+        // ---------------------------------------------------
 
         if (
-          !prefix ||
-          !suffix
+          photo?.prefix &&
+          photo?.suffix
         ) {
 
+          const imageUrl =
+            String(
+              photo.prefix
+            ) +
+            "original" +
+            String(
+              photo.suffix
+            );
+
           return {
-            imageUrl: "",
-            imageSource: "",
-            imageAttribution: ""
+
+            imageUrl,
+
+            imageSource:
+              "Foursquare",
+
+            imageAttribution:
+              "Photo from Foursquare"
+
           };
 
         }
 
-        // Foursquare photo URLs use:
-        // prefix + size + suffix
+        // ---------------------------------------------------
+        // FALLBACK IF API RETURNS A DIRECT URL
+        // ---------------------------------------------------
 
-        const imageUrl =
-          prefix +
-          "1200x900" +
-          suffix;
+        if (
+          photo?.url &&
+          /^https?:\/\//i.test(
+            String(
+              photo.url
+            )
+          )
+        ) {
+
+          return {
+
+            imageUrl:
+              String(
+                photo.url
+              ),
+
+            imageSource:
+              "Foursquare",
+
+            imageAttribution:
+              "Photo from Foursquare"
+
+          };
+
+        }
 
         return {
 
-          imageUrl,
+          imageUrl:
+            "",
 
           imageSource:
-            "Foursquare",
+            "",
 
           imageAttribution:
-            "Photo via Foursquare"
+            ""
 
         };
 
-      } catch (error) {
+      } catch (
+        error
+      ) {
 
         console.error(
           "Foursquare photo error:",
@@ -847,11 +1048,14 @@ Use exactly:
 
         return {
 
-          imageUrl: "",
+          imageUrl:
+            "",
 
-          imageSource: "",
+          imageSource:
+            "",
 
-          imageAttribution: ""
+          imageAttribution:
+            ""
 
         };
 
@@ -860,7 +1064,7 @@ Use exactly:
     }
 
     // =======================================================
-    // FOURSQUARE RESTAURANTS
+    // FOURSQUARE RESTAURANT SEARCH
     // =======================================================
 
     async function getRestaurantsFromFoursquare(
@@ -874,83 +1078,90 @@ Use exactly:
           destination
         );
 
-        const fields = [
-          "fsq_id",
-          "name",
-          "location",
-          "categories",
-          "price",
-          "rating",
-          "stats",
-          "website",
-          "tel",
-          "description",
-          "geocodes"
-        ].join(",");
-
-        const params =
-          new URLSearchParams();
-
-        params.set(
-          "near",
-          destination
-        );
-
-        params.set(
-          "query",
-          "restaurant"
-        );
-
-        params.set(
-          "fields",
-          fields
-        );
-
-        params.set(
-          "limit",
-          "15"
-        );
-
-        params.set(
-          "sort",
-          "POPULARITY"
-        );
+        // ---------------------------------------------------
+        // SEARCH RESTAURANTS BY CITY
+        // ---------------------------------------------------
 
         const searchURL =
-          FOURSQUARE_API_URL +
+          FOURSQUARE_BASE_URL +
           "/places/search?" +
-          params.toString();
+          "near=" +
+          encodeURIComponent(
+            destination
+          ) +
+          "&query=restaurant" +
+          "&limit=20" +
+          "&sort=RATING" +
+          "&fields=" +
+          encodeURIComponent(
+            [
+              "fsq_place_id",
+              "name",
+              "categories",
+              "location",
+              "latitude",
+              "longitude",
+              "rating",
+              "price",
+              "description",
+              "website",
+              "tel",
+              "hours"
+            ].join(",")
+          );
 
-        const data =
-          await foursquareRequest(
+        console.log(
+          "Foursquare search URL created"
+        );
+
+        const searchResult =
+          await foursquareFetch(
             searchURL
           );
 
         if (
-          !data ||
-          !Array.isArray(
-            data.results
-          )
+          !searchResult.ok ||
+          !searchResult.data
         ) {
 
           console.error(
-            "Foursquare returned no results."
+            "Foursquare restaurant search failed."
           );
 
           return [];
 
         }
 
+        const places =
+          Array.isArray(
+            searchResult.data.results
+          )
+            ? searchResult.data.results
+            : [];
+
         console.log(
           "Foursquare restaurants found:",
-          data.results.length
+          places.length
         );
 
-        const restaurants = [];
+        if (
+          places.length === 0
+        ) {
+
+          return [];
+
+        }
+
+        // ---------------------------------------------------
+        // PROCESS PLACES
+        // ---------------------------------------------------
+
+        const restaurants =
+          [];
 
         for (
           const place
-          of data.results
+          of places
         ) {
 
           if (
@@ -962,83 +1173,79 @@ Use exactly:
 
           }
 
-          const location =
-            place.location ||
-            {};
+          const placeId =
+            place.fsq_place_id ||
+            place.fsq_id ||
+            "";
 
-          const categories =
+          if (
+            !placeId
+          ) {
+
+            continue;
+
+          }
+
+          // -------------------------------------------------
+          // CATEGORIES
+          // -------------------------------------------------
+
+          let cuisine =
+            "Local cuisine";
+
+          if (
             Array.isArray(
               place.categories
-            )
-              ? place.categories
-              : [];
+            ) &&
+            place.categories.length > 0
+          ) {
 
-          const primaryCategory =
-            categories.find(
-              category =>
-                category &&
-                category.name
-            );
+            const categoryNames =
+              place.categories
+                .map(
+                  category =>
+                    category?.name
+                )
+                .filter(Boolean);
 
-          const cuisine =
-            primaryCategory?.name ||
-            "Restaurant";
+            if (
+              categoryNames.length > 0
+            ) {
 
-          const latitude =
-            Number(
-              location.latitude ??
-              place?.geocodes?.main?.latitude
-            );
+              cuisine =
+                categoryNames
+                  .slice(
+                    0,
+                    2
+                  )
+                  .join(
+                    ", "
+                  );
 
-          const longitude =
-            Number(
-              location.longitude ??
-              place?.geocodes?.main?.longitude
-            );
+            }
+
+          }
 
           // -------------------------------------------------
           // ADDRESS
           // -------------------------------------------------
+
+          const location =
+            place.location ||
+            {};
 
           const address =
             location.formatted_address ||
             [
               location.address,
               location.locality,
-              location.region,
-              location.country
+              location.region
             ]
               .filter(Boolean)
-              .join(", ") ||
+              .join(
+                ", "
+              ) ||
             destination;
-
-          // -------------------------------------------------
-          // PRICE
-          // -------------------------------------------------
-
-          let priceLevel =
-            "$$";
-
-          if (
-            Number.isFinite(
-              Number(place.price)
-            )
-          ) {
-
-            const price =
-              Number(place.price);
-
-            if (price <= 1) {
-              priceLevel = "$";
-            } else if (price === 2) {
-              priceLevel = "$$";
-            } else if (price === 3) {
-              priceLevel = "$$$";
-            } else {
-              priceLevel = "$$$$";
-            }
-
-          }
 
           // -------------------------------------------------
           // RATING
@@ -1048,63 +1255,108 @@ Use exactly:
             null;
 
           if (
-            Number.isFinite(
-              Number(place.rating)
-            )
+            place.rating !== undefined &&
+            place.rating !== null
           ) {
 
-            rating =
-              Number(place.rating);
-
-          }
-
-          // -------------------------------------------------
-          // REVIEWS
-          // -------------------------------------------------
-
-          let reviewCount =
-            null;
-
-          const stats =
-            place.stats ||
-            {};
-
-          if (
-            Number.isFinite(
+            const numericRating =
               Number(
-                stats.total_ratings
-              )
-            )
-          ) {
-
-            reviewCount =
-              Number(
-                stats.total_ratings
+                place.rating
               );
 
+            if (
+              Number.isFinite(
+                numericRating
+              )
+            ) {
+
+              rating =
+                numericRating;
+
+            }
+
           }
 
           // -------------------------------------------------
-          // MAP URL
+          // PRICE
           // -------------------------------------------------
 
-          let mapsUrl = "";
+          let priceLevel =
+            "$$";
 
           if (
+            place.price !== undefined &&
+            place.price !== null
+          ) {
+
+            const numericPrice =
+              Number(
+                place.price
+              );
+
+            if (
+              Number.isFinite(
+                numericPrice
+              ) &&
+              numericPrice >= 1 &&
+              numericPrice <= 4
+            ) {
+
+              priceLevel =
+                "$".repeat(
+                  numericPrice
+                );
+
+            }
+
+          }
+
+          // -------------------------------------------------
+          // COORDINATES
+          // -------------------------------------------------
+
+          const latitude =
+            Number(
+              place.latitude
+            );
+
+          const longitude =
+            Number(
+              place.longitude
+            );
+
+          const validLatitude =
             Number.isFinite(
               latitude
-            ) &&
+            )
+              ? latitude
+              : null;
+
+          const validLongitude =
             Number.isFinite(
               longitude
             )
+              ? longitude
+              : null;
+
+          // -------------------------------------------------
+          // MAPS URL
+          // -------------------------------------------------
+
+          let mapsUrl =
+            "";
+
+          if (
+            validLatitude !== null &&
+            validLongitude !== null
           ) {
 
             mapsUrl =
               "https://www.google.com/maps/search/?api=1&query=" +
               encodeURIComponent(
-                latitude +
+                validLatitude +
                 "," +
-                longitude
+                validLongitude
               );
 
           } else {
@@ -1124,41 +1376,20 @@ Use exactly:
           // -------------------------------------------------
 
           const foursquareUrl =
-            place.fsq_id
-              ? "https://foursquare.com/v/" +
-                encodeURIComponent(
-                  place.name
-                ) +
-                "/" +
-                encodeURIComponent(
-                  place.fsq_id
-                )
-              : "";
+            "https://foursquare.com/" +
+            "v/" +
+            encodeURIComponent(
+              placeId
+            );
 
           // -------------------------------------------------
-          // REAL PHOTO
+          // PHOTO
           // -------------------------------------------------
 
-          let photoData = {
-
-            imageUrl: "",
-
-            imageSource: "",
-
-            imageAttribution: ""
-
-          };
-
-          if (
-            place.fsq_id
-          ) {
-
-            photoData =
-              await getFoursquarePhoto(
-                place.fsq_id
-              );
-
-          }
+          const photo =
+            await getFoursquarePhoto(
+              placeId
+            );
 
           // -------------------------------------------------
           // DESCRIPTION
@@ -1166,17 +1397,7 @@ Use exactly:
 
           let description =
             place.description ||
-            `${place.name} is a real restaurant listed in Foursquare in ${destination}.`;
-
-          if (
-            cuisine &&
-            cuisine !== "Restaurant"
-          ) {
-
-            description +=
-              ` Cuisine: ${cuisine}.`;
-
-          }
+            `${place.name} is a real restaurant in ${destination}.`;
 
           // -------------------------------------------------
           // RESTAURANT OBJECT
@@ -1187,939 +1408,6 @@ Use exactly:
             name:
               String(
                 place.name
-              ),
-
-            cuisine:
-              String(
-                cuisine
-              ),
-
-            priceLevel,
-
-            rating,
-
-            reviewCount,
-
-            address:
-              String(
-                address
-              ),
-
-            description:
-              String(
-                description
-              ),
-
-            imageUrl:
-              photoData.imageUrl ||
-              "",
-
-            imageSource:
-              photoData.imageSource ||
-              "",
-
-            imageAttribution:
-              photoData.imageAttribution ||
-              "",
-
-            mapsUrl,
-
-            foursquareUrl,
-
-            website:
-              place.website ||
-              "",
-
-            phone:
-              place.tel ||
-              "",
-
-            openingHours:
-              "",
-
-            latitude:
-              Number.isFinite(
-                latitude
-              )
-                ? latitude
-                : null,
-
-            longitude:
-              Number.isFinite(
-                longitude
-              )
-                ? longitude
-                : null,
-
-            fsqId:
-              place.fsq_id ||
-              ""
-
-          });
-
-        }
-
-        // ===================================================
-        // REMOVE DUPLICATES
-        // ===================================================
-
-        const uniqueRestaurants = [];
-        const restaurantNames =
-          new Set();
-
-        for (
-          const restaurant
-          of restaurants
-        ) {
-
-          const key =
-            restaurant.name
-              .toLowerCase()
-              .trim();
-
-          if (
-            !restaurantNames.has(key)
-          ) {
-
-            restaurantNames.add(
-              key
-            );
-
-            uniqueRestaurants.push(
-              restaurant
-            );
-
-          }
-
-        }
-
-        // ===================================================
-        // PREFER REAL PHOTOS
-        // ===================================================
-
-        uniqueRestaurants.sort(
-          (a, b) => {
-
-            const aImage =
-              a.imageUrl ? 1 : 0;
-
-            const bImage =
-              b.imageUrl ? 1 : 0;
-
-            if (
-              bImage !==
-              aImage
-            ) {
-
-              return (
-                bImage -
-                aImage
-              );
-
-            }
-
-            const aRating =
-              Number(a.rating) ||
-              0;
-
-            const bRating =
-              Number(b.rating) ||
-              0;
-
-            return (
-              bRating -
-              aRating
-            );
-
-          }
-        );
-
-        return uniqueRestaurants.slice(
-          0,
-          10
-        );
-
-      } catch (error) {
-
-        console.error(
-          "Foursquare restaurant error:",
-          error
-        );
-
-        return [];
-
-      }
-
-    }
-
-    // =======================================================
-    // OPENSTREETMAP HELPERS
-    // =======================================================
-
-    const OSM_USER_AGENT =
-      "AI-Life-Planner/1.0";
-
-    // =======================================================
-    // WIKIMEDIA COMMONS IMAGE
-    // =======================================================
-
-    async function getWikimediaImage(
-      commonsValue
-    ) {
-
-      try {
-
-        if (
-          !commonsValue ||
-          typeof commonsValue !== "string"
-        ) {
-
-          return "";
-
-        }
-
-        const value =
-          commonsValue.trim();
-
-        if (
-          !/^File:/i.test(value)
-        ) {
-
-          return "";
-
-        }
-
-        const apiURL =
-          "https://commons.wikimedia.org/w/api.php" +
-          "?action=query" +
-          "&format=json" +
-          "&origin=*" +
-          "&prop=imageinfo" +
-          "&iiprop=url" +
-          "&iiurlwidth=1200" +
-          "&titles=" +
-          encodeURIComponent(value);
-
-        const response =
-          await fetch(
-            apiURL,
-            {
-              method: "GET",
-
-              headers: {
-                "User-Agent":
-                  OSM_USER_AGENT
-              }
-            }
-          );
-
-        if (!response.ok) {
-
-          return "";
-
-        }
-
-        const data =
-          await response.json();
-
-        const pages =
-          data?.query?.pages;
-
-        if (!pages) {
-
-          return "";
-
-        }
-
-        const page =
-          Object.values(
-            pages
-          )[0];
-
-        const image =
-          page?.imageinfo?.[0];
-
-        return (
-          image?.thumburl ||
-          image?.url ||
-          ""
-        );
-
-      } catch (error) {
-
-        console.error(
-          "Wikimedia image error:",
-          error.message
-        );
-
-        return "";
-
-      }
-
-    }
-
-    // =======================================================
-    // WIKIDATA IMAGE
-    // =======================================================
-
-    async function getWikidataImage(
-      wikidataId
-    ) {
-
-      try {
-
-        if (
-          !wikidataId ||
-          typeof wikidataId !== "string"
-        ) {
-
-          return "";
-
-        }
-
-        const id =
-          wikidataId.trim();
-
-        if (
-          !/^Q\d+$/i.test(id)
-        ) {
-
-          return "";
-
-        }
-
-        const apiURL =
-          "https://www.wikidata.org/w/api.php" +
-          "?action=wbgetentities" +
-          "&format=json" +
-          "&origin=*" +
-          "&props=claims" +
-          "&ids=" +
-          encodeURIComponent(id);
-
-        const response =
-          await fetch(
-            apiURL,
-            {
-              method: "GET",
-
-              headers: {
-                "User-Agent":
-                  OSM_USER_AGENT
-              }
-            }
-          );
-
-        if (!response.ok) {
-
-          return "";
-
-        }
-
-        const data =
-          await response.json();
-
-        const entity =
-          data?.entities?.[id];
-
-        const imageClaims =
-          entity?.claims?.P18;
-
-        if (
-          !Array.isArray(
-            imageClaims
-          ) ||
-          imageClaims.length === 0
-        ) {
-
-          return "";
-
-        }
-
-        const imageValue =
-          imageClaims[0]
-            ?.mainsnak
-            ?.datavalue
-            ?.value;
-
-        if (
-          !imageValue ||
-          typeof imageValue !== "string"
-        ) {
-
-          return "";
-
-        }
-
-        return await getWikimediaImage(
-          "File:" +
-          imageValue
-        );
-
-      } catch (error) {
-
-        console.error(
-          "Wikidata image error:",
-          error.message
-        );
-
-        return "";
-
-      }
-
-    }
-
-    // =======================================================
-    // OSM IMAGE RESOLVER
-    // =======================================================
-
-    async function resolveRestaurantImage(
-      tags
-    ) {
-
-      try {
-
-        // ---------------------------------------------------
-        // DIRECT OSM IMAGE
-        // ---------------------------------------------------
-
-        const directImage =
-          tags.image ||
-          tags.photo ||
-          tags.picture ||
-          tags["url:photo"] ||
-          "";
-
-        if (
-          directImage &&
-          /^https?:\/\//i.test(
-            String(
-              directImage
-            )
-          )
-        ) {
-
-          return {
-
-            imageUrl:
-              String(
-                directImage
-              ),
-
-            imageSource:
-              "OpenStreetMap",
-
-            imageAttribution:
-              "OpenStreetMap data"
-
-          };
-
-        }
-
-        // ---------------------------------------------------
-        // WIKIMEDIA COMMONS
-        // ---------------------------------------------------
-
-        const commons =
-          tags.wikimedia_commons ||
-          "";
-
-        if (commons) {
-
-          const commonsImage =
-            await getWikimediaImage(
-              commons
-            );
-
-          if (commonsImage) {
-
-            return {
-
-              imageUrl:
-                commonsImage,
-
-              imageSource:
-                "Wikimedia Commons",
-
-              imageAttribution:
-                "Wikimedia Commons"
-
-            };
-
-          }
-
-        }
-
-        // ---------------------------------------------------
-        // WIKIDATA
-        // ---------------------------------------------------
-
-        const wikidata =
-          tags.wikidata ||
-          "";
-
-        if (wikidata) {
-
-          const wikidataImage =
-            await getWikidataImage(
-              wikidata
-            );
-
-          if (wikidataImage) {
-
-            return {
-
-              imageUrl:
-                wikidataImage,
-
-              imageSource:
-                "Wikimedia Commons via Wikidata",
-
-              imageAttribution:
-                "Wikimedia Commons"
-
-            };
-
-          }
-
-        }
-
-        return {
-
-          imageUrl: "",
-
-          imageSource: "",
-
-          imageAttribution: ""
-
-        };
-
-      } catch (error) {
-
-        console.error(
-          "Restaurant image resolver error:",
-          error.message
-        );
-
-        return {
-
-          imageUrl: "",
-
-          imageSource: "",
-
-          imageAttribution: ""
-
-        };
-
-      }
-
-    }
-
-    // =======================================================
-    // OPENSTREETMAP RESTAURANTS FALLBACK
-    // =======================================================
-
-    async function getRestaurantsFromOSM(
-      destination
-    ) {
-
-      try {
-
-        console.log(
-          "OpenStreetMap fallback search:",
-          destination
-        );
-
-        // ---------------------------------------------------
-        // GEOCODE
-        // ---------------------------------------------------
-
-        const geocodeURL =
-          "https://nominatim.openstreetmap.org/search" +
-          "?format=json" +
-          "&limit=1" +
-          "&q=" +
-          encodeURIComponent(
-            destination
-          );
-
-        const geocodeResponse =
-          await fetch(
-            geocodeURL,
-            {
-              method: "GET",
-
-              headers: {
-
-                "User-Agent":
-                  OSM_USER_AGENT,
-
-                "Accept":
-                  "application/json"
-
-              }
-            }
-          );
-
-        if (
-          !geocodeResponse.ok
-        ) {
-
-          console.error(
-            "Nominatim error:",
-            geocodeResponse.status
-          );
-
-          return [];
-
-        }
-
-        const locations =
-          await geocodeResponse.json();
-
-        if (
-          !Array.isArray(
-            locations
-          ) ||
-          locations.length === 0
-        ) {
-
-          return [];
-
-        }
-
-        const lat =
-          Number(
-            locations[0].lat
-          );
-
-        const lon =
-          Number(
-            locations[0].lon
-          );
-
-        if (
-          !Number.isFinite(lat) ||
-          !Number.isFinite(lon)
-        ) {
-
-          return [];
-
-        }
-
-        // ---------------------------------------------------
-        // OVERPASS
-        // ---------------------------------------------------
-
-        const overpassQuery = `
-[out:json][timeout:30];
-
-(
-  node["amenity"="restaurant"](around:15000,${lat},${lon});
-  way["amenity"="restaurant"](around:15000,${lat},${lon});
-  relation["amenity"="restaurant"](around:15000,${lat},${lon});
-);
-
-out center tags;
-`;
-
-        const overpassURL =
-          "https://overpass-api.de/api/interpreter";
-
-        const osmResponse =
-          await fetch(
-            overpassURL,
-            {
-              method: "POST",
-
-              headers: {
-
-                "Content-Type":
-                  "application/x-www-form-urlencoded",
-
-                "User-Agent":
-                  OSM_USER_AGENT,
-
-                "Accept":
-                  "application/json"
-
-              },
-
-              body:
-                "data=" +
-                encodeURIComponent(
-                  overpassQuery
-                )
-
-            }
-          );
-
-        if (
-          !osmResponse.ok
-        ) {
-
-          console.error(
-            "Overpass error:",
-            osmResponse.status
-          );
-
-          return [];
-
-        }
-
-        const osmData =
-          await osmResponse.json();
-
-        if (
-          !osmData ||
-          !Array.isArray(
-            osmData.elements
-          )
-        ) {
-
-          return [];
-
-        }
-
-        const restaurants = [];
-
-        for (
-          const item
-          of osmData.elements
-        ) {
-
-          const tags =
-            item.tags || {};
-
-          const name =
-            tags.name ||
-            tags["name:en"] ||
-            tags["name:tr"];
-
-          if (!name) {
-
-            continue;
-
-          }
-
-          let restaurantLat =
-            item.lat;
-
-          let restaurantLon =
-            item.lon;
-
-          if (
-            restaurantLat === undefined &&
-            item.center
-          ) {
-
-            restaurantLat =
-              item.center.lat;
-
-            restaurantLon =
-              item.center.lon;
-
-          }
-
-          // -------------------------------------------------
-          // ADDRESS
-          // -------------------------------------------------
-
-          const addressParts = [];
-
-          if (
-            tags["addr:housenumber"]
-          ) {
-
-            addressParts.push(
-              tags["addr:housenumber"]
-            );
-
-          }
-
-          if (
-            tags["addr:street"]
-          ) {
-
-            addressParts.push(
-              tags["addr:street"]
-            );
-
-          }
-
-          if (
-            tags["addr:suburb"]
-          ) {
-
-            addressParts.push(
-              tags["addr:suburb"]
-            );
-
-          }
-
-          if (
-            tags["addr:district"]
-          ) {
-
-            addressParts.push(
-              tags["addr:district"]
-            );
-
-          }
-
-          if (
-            tags["addr:city"]
-          ) {
-
-            addressParts.push(
-              tags["addr:city"]
-            );
-
-          }
-
-          const address =
-            addressParts.length
-              ? addressParts.join(", ")
-              : destination;
-
-          // -------------------------------------------------
-          // CUISINE
-          // -------------------------------------------------
-
-          const cuisine =
-            tags.cuisine ||
-            "Local cuisine";
-
-          // -------------------------------------------------
-          // PRICE
-          // -------------------------------------------------
-
-          const priceLevel =
-            tags["price:level"] ||
-            tags.price_range ||
-            "$$";
-
-          // -------------------------------------------------
-          // WEBSITE
-          // -------------------------------------------------
-
-          const website =
-            tags.website ||
-            tags["contact:website"] ||
-            "";
-
-          // -------------------------------------------------
-          // PHONE
-          // -------------------------------------------------
-
-          const phone =
-            tags.phone ||
-            tags["contact:phone"] ||
-            "";
-
-          // -------------------------------------------------
-          // RATING
-          // -------------------------------------------------
-
-          let rating =
-            null;
-
-          if (
-            tags.rating !== undefined
-          ) {
-
-            const numericRating =
-              Number(
-                tags.rating
-              );
-
-            if (
-              Number.isFinite(
-                numericRating
-              )
-            ) {
-
-              rating =
-                numericRating;
-
-            }
-
-          }
-
-          // -------------------------------------------------
-          // MAPS URL
-          // -------------------------------------------------
-
-          let mapsUrl = "";
-
-          if (
-            Number.isFinite(
-              Number(
-                restaurantLat
-              )
-            ) &&
-            Number.isFinite(
-              Number(
-                restaurantLon
-              )
-            )
-          ) {
-
-            mapsUrl =
-              "https://www.google.com/maps/search/?api=1&query=" +
-              encodeURIComponent(
-                restaurantLat +
-                "," +
-                restaurantLon
-              );
-
-          } else {
-
-            mapsUrl =
-              "https://www.google.com/maps/search/?api=1&query=" +
-              encodeURIComponent(
-                name +
-                " " +
-                destination
-              );
-
-          }
-
-          // -------------------------------------------------
-          // OSM URL
-          // -------------------------------------------------
-
-          const osmUrl =
-            item.type &&
-            item.id
-              ? "https://www.openstreetmap.org/" +
-                encodeURIComponent(
-                  item.type
-                ) +
-                "/" +
-                encodeURIComponent(
-                  item.id
-                )
-              : "";
-
-          // -------------------------------------------------
-          // IMAGE
-          // -------------------------------------------------
-
-          const imageData =
-            await resolveRestaurantImage(
-              tags
-            );
-
-          // -------------------------------------------------
-          // RESTAURANT OBJECT
-          // -------------------------------------------------
-
-          restaurants.push({
-
-            name:
-              String(
-                name
               ),
 
             cuisine:
@@ -2143,66 +1431,47 @@ out center tags;
               ),
 
             description:
-              `${name} is a real local restaurant in ${destination}, listed in OpenStreetMap.`,
+              String(
+                description
+              ),
 
             imageUrl:
-              imageData.imageUrl ||
+              photo.imageUrl ||
               "",
 
             imageSource:
-              imageData.imageSource ||
+              photo.imageSource ||
               "",
 
             imageAttribution:
-              imageData.imageAttribution ||
+              photo.imageAttribution ||
               "",
 
             mapsUrl,
 
-            osmUrl,
+            foursquareUrl,
 
-            website,
+            website:
+              place.website ||
+              "",
 
-            phone,
+            phone:
+              place.tel ||
+              "",
 
             openingHours:
-              tags.opening_hours ||
               "",
 
             latitude:
-              Number.isFinite(
-                Number(
-                  restaurantLat
-                )
-              )
-                ? Number(
-                    restaurantLat
-                  )
-                : null,
+              validLatitude,
 
             longitude:
-              Number.isFinite(
-                Number(
-                  restaurantLon
-                )
-              )
-                ? Number(
-                    restaurantLon
-                  )
-                : null,
+              validLongitude,
 
-            fsqId:
-              ""
+            foursquarePlaceId:
+              placeId
 
           });
-
-          if (
-            restaurants.length >= 15
-          ) {
-
-            break;
-
-          }
 
         }
 
@@ -2210,7 +1479,9 @@ out center tags;
         // REMOVE DUPLICATES
         // ---------------------------------------------------
 
-        const uniqueRestaurants = [];
+        const uniqueRestaurants =
+          [];
+
         const restaurantNames =
           new Set();
 
@@ -2243,30 +1514,72 @@ out center tags;
         }
 
         // ---------------------------------------------------
-        // VERIFIED PHOTO FIRST
+        // PRIORITIZE RESTAURANTS
+        // WITH REAL FOURSQUARE PHOTOS
         // ---------------------------------------------------
 
         uniqueRestaurants.sort(
-          (a, b) => {
+          (
+            a,
+            b
+          ) => {
+
+            const aImage =
+              a.imageUrl
+                ? 1
+                : 0;
+
+            const bImage =
+              b.imageUrl
+                ? 1
+                : 0;
+
+            if (
+              bImage !==
+              aImage
+            ) {
+
+              return (
+                bImage -
+                aImage
+              );
+
+            }
+
+            const aRating =
+              Number(
+                a.rating
+              ) || 0;
+
+            const bRating =
+              Number(
+                b.rating
+              ) || 0;
 
             return (
-              (b.imageUrl ? 1 : 0) -
-              (a.imageUrl ? 1 : 0)
+              bRating -
+              aRating
             );
 
           }
         );
+
+        // ---------------------------------------------------
+        // LIMIT 10
+        // ---------------------------------------------------
 
         return uniqueRestaurants.slice(
           0,
           10
         );
 
-      } catch (error) {
+      } catch (
+        error
+      ) {
 
         console.error(
-          "OpenStreetMap fallback error:",
-          error.message
+          "Foursquare restaurant error:",
+          error
         );
 
         return [];
@@ -2283,22 +1596,28 @@ out center tags;
       "Starting Foursquare restaurant search..."
     );
 
-    let restaurants =
+    travelData.restaurants =
       await getRestaurantsFromFoursquare(
         destination
       );
 
     console.log(
       "Foursquare restaurants returned:",
-      restaurants.length
+      travelData.restaurants.length
     );
 
     // =======================================================
     // OSM FALLBACK
     // =======================================================
 
+    // If Foursquare returns no restaurants,
+    // use OpenStreetMap as a fallback.
+    //
+    // This keeps the application functional even
+    // if Foursquare has no results for the destination.
+
     if (
-      restaurants.length === 0
+      travelData.restaurants.length === 0
     ) {
 
       console.log(
@@ -2306,23 +1625,501 @@ out center tags;
       );
 
       console.log(
-        "Starting OpenStreetMap fallback..."
+        "Using OpenStreetMap fallback..."
       );
 
-      restaurants =
+      async function getRestaurantsFromOSM(
+        destination
+      ) {
+
+        try {
+
+          const OSM_USER_AGENT =
+            "AI-Life-Planner/1.0";
+
+          // -------------------------------------------------
+          // GEOCODE
+          // -------------------------------------------------
+
+          const geocodeURL =
+            "https://nominatim.openstreetmap.org/search" +
+            "?format=json" +
+            "&limit=1" +
+            "&q=" +
+            encodeURIComponent(
+              destination
+            );
+
+          const geocodeResponse =
+            await fetch(
+              geocodeURL,
+              {
+                method:
+                  "GET",
+
+                headers: {
+                  "User-Agent":
+                    OSM_USER_AGENT,
+
+                  "Accept":
+                    "application/json"
+                }
+
+              }
+            );
+
+          if (
+            !geocodeResponse.ok
+          ) {
+
+            return [];
+
+          }
+
+          const locations =
+            await geocodeResponse.json();
+
+          if (
+            !Array.isArray(
+              locations
+            ) ||
+            locations.length === 0
+          ) {
+
+            return [];
+
+          }
+
+          const lat =
+            Number(
+              locations[0].lat
+            );
+
+          const lon =
+            Number(
+              locations[0].lon
+            );
+
+          if (
+            !Number.isFinite(
+              lat
+            ) ||
+            !Number.isFinite(
+              lon
+            )
+          ) {
+
+            return [];
+
+          }
+
+          // -------------------------------------------------
+          // OVERPASS
+          // -------------------------------------------------
+
+          const overpassQuery = `
+[out:json][timeout:30];
+
+(
+  node["amenity"="restaurant"](around:15000,${lat},${lon});
+  way["amenity"="restaurant"](around:15000,${lat},${lon});
+  relation["amenity"="restaurant"](around:15000,${lat},${lon});
+);
+
+out center tags;
+`;
+
+          const osmResponse =
+            await fetch(
+              "https://overpass-api.de/api/interpreter",
+              {
+                method:
+                  "POST",
+
+                headers: {
+                  "Content-Type":
+                    "application/x-www-form-urlencoded",
+
+                  "User-Agent":
+                    OSM_USER_AGENT,
+
+                  "Accept":
+                    "application/json"
+                },
+
+                body:
+                  "data=" +
+                  encodeURIComponent(
+                    overpassQuery
+                  )
+
+              }
+            );
+
+          if (
+            !osmResponse.ok
+          ) {
+
+            return [];
+
+          }
+
+          const osmData =
+            await osmResponse.json();
+
+          if (
+            !osmData ||
+            !Array.isArray(
+              osmData.elements
+            )
+          ) {
+
+            return [];
+
+          }
+
+          const restaurants =
+            [];
+
+          for (
+            const item
+            of osmData.elements
+          ) {
+
+            const tags =
+              item.tags ||
+              {};
+
+            const name =
+              tags.name ||
+              tags["name:en"] ||
+              tags["name:tr"];
+
+            if (
+              !name
+            ) {
+
+              continue;
+
+            }
+
+            let restaurantLat =
+              item.lat;
+
+            let restaurantLon =
+              item.lon;
+
+            if (
+              restaurantLat === undefined &&
+              item.center
+            ) {
+
+              restaurantLat =
+                item.center.lat;
+
+              restaurantLon =
+                item.center.lon;
+
+            }
+
+            const addressParts =
+              [];
+
+            if (
+              tags["addr:housenumber"]
+            ) {
+
+              addressParts.push(
+                tags[
+                  "addr:housenumber"
+                ]
+              );
+
+            }
+
+            if (
+              tags["addr:street"]
+            ) {
+
+              addressParts.push(
+                tags[
+                  "addr:street"
+                ]
+              );
+
+            }
+
+            if (
+              tags["addr:suburb"]
+            ) {
+
+              addressParts.push(
+                tags[
+                  "addr:suburb"
+                ]
+              );
+
+            }
+
+            if (
+              tags["addr:district"]
+            ) {
+
+              addressParts.push(
+                tags[
+                  "addr:district"
+                ]
+              );
+
+            }
+
+            if (
+              tags["addr:city"]
+            ) {
+
+              addressParts.push(
+                tags[
+                  "addr:city"
+                ]
+              );
+
+            }
+
+            const address =
+              addressParts.length
+                ? addressParts.join(
+                    ", "
+                  )
+                : destination;
+
+            let mapsUrl =
+              "";
+
+            if (
+              Number.isFinite(
+                Number(
+                  restaurantLat
+                )
+              ) &&
+              Number.isFinite(
+                Number(
+                  restaurantLon
+                )
+              )
+            ) {
+
+              mapsUrl =
+                "https://www.google.com/maps/search/?api=1&query=" +
+                encodeURIComponent(
+                  restaurantLat +
+                  "," +
+                  restaurantLon
+                );
+
+            } else {
+
+              mapsUrl =
+                "https://www.google.com/maps/search/?api=1&query=" +
+                encodeURIComponent(
+                  name +
+                  " " +
+                  destination
+                );
+
+            }
+
+            let osmUrl =
+              "";
+
+            if (
+              item.type &&
+              item.id
+            ) {
+
+              osmUrl =
+                "https://www.openstreetmap.org/" +
+                encodeURIComponent(
+                  item.type
+                ) +
+                "/" +
+                encodeURIComponent(
+                  item.id
+                );
+
+            }
+
+            restaurants.push({
+
+              name:
+                String(
+                  name
+                ),
+
+              cuisine:
+                String(
+                  tags.cuisine ||
+                  "Local cuisine"
+                ),
+
+              priceLevel:
+                "$$",
+
+              rating:
+                null,
+
+              reviewCount:
+                null,
+
+              address:
+                String(
+                  address
+                ),
+
+              description:
+                `${name} is a real local restaurant in ${destination}, listed in OpenStreetMap.`,
+
+              imageUrl:
+                "",
+
+              imageSource:
+                "",
+
+              imageAttribution:
+                "",
+
+              mapsUrl,
+
+              osmUrl,
+
+              website:
+                tags.website ||
+                tags[
+                  "contact:website"
+                ] ||
+                "",
+
+              phone:
+                tags.phone ||
+                tags[
+                  "contact:phone"
+                ] ||
+                "",
+
+              openingHours:
+                tags.opening_hours ||
+                "",
+
+              latitude:
+                Number.isFinite(
+                  Number(
+                    restaurantLat
+                  )
+                )
+                  ? Number(
+                      restaurantLat
+                    )
+                  : null,
+
+              longitude:
+                Number.isFinite(
+                  Number(
+                    restaurantLon
+                  )
+                )
+                  ? Number(
+                      restaurantLon
+                    )
+                  : null
+
+            });
+
+            if (
+              restaurants.length >= 15
+            ) {
+
+              break;
+
+            }
+
+          }
+
+          const unique =
+            [];
+
+          const names =
+            new Set();
+
+          for (
+            const restaurant
+            of restaurants
+          ) {
+
+            const key =
+              restaurant.name
+                .toLowerCase()
+                .trim();
+
+            if (
+              !names.has(
+                key
+              )
+            ) {
+
+              names.add(
+                key
+              );
+
+              unique.push(
+                restaurant
+              );
+
+            }
+
+          }
+
+          return unique.slice(
+            0,
+            10
+          );
+
+        } catch (
+          error
+        ) {
+
+          console.error(
+            "OSM fallback error:",
+            error.message
+          );
+
+          return [];
+
+        }
+
+      }
+
+      travelData.restaurants =
         await getRestaurantsFromOSM(
           destination
         );
 
-      console.log(
-        "OSM fallback restaurants returned:",
-        restaurants.length
-      );
-
     }
 
-    travelData.restaurants =
-      restaurants;
+    // =======================================================
+    // RESTAURANT FINAL LOG
+    // =======================================================
+
+    console.log(
+      "Final restaurant count:",
+      travelData.restaurants.length
+    );
+
+    console.log(
+      "Restaurants with images:",
+      travelData.restaurants.filter(
+        restaurant =>
+          restaurant.imageUrl
+      ).length
+    );
 
     // =======================================================
     // FALLBACK CONTENT
@@ -2353,11 +2150,6 @@ out center tags;
     );
 
     console.log(
-      "Final restaurant count:",
-      travelData.restaurants.length
-    );
-
-    console.log(
       "Final restaurants:",
       JSON.stringify(
         travelData.restaurants,
@@ -2370,7 +2162,9 @@ out center tags;
       travelData
     );
 
-  } catch (error) {
+  } catch (
+    error
+  ) {
 
     console.error(
       "PLAN API CRITICAL ERROR:",
