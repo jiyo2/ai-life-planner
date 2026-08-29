@@ -1,19 +1,12 @@
 module.exports = async (req, res) => {
+
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 
-  // =========================================================
-  // OPTIONS
-  // =========================================================
-
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
-
-  // =========================================================
-  // METHOD CHECK
-  // =========================================================
 
   if (req.method !== "POST") {
     return res.status(405).json({
@@ -37,20 +30,18 @@ module.exports = async (req, res) => {
       notes
     } = req.body || {};
 
-    console.log("======================================");
     console.log("PLAN API START");
     console.log("Destination:", destination);
-    console.log("Days:", days);
-    console.log("Budget:", budget);
-    console.log("Travelers:", travelers);
-    console.log("======================================");
 
     // =======================================================
-    // GEMINI KEY
+    // API KEYS
     // =======================================================
 
     const GEMINI_API_KEY =
       process.env.GEMINI_API_KEY;
+
+    const PEXELS_API_KEY =
+      process.env.PEXELS_API_KEY;
 
     if (!GEMINI_API_KEY) {
 
@@ -59,14 +50,8 @@ module.exports = async (req, res) => {
       return res.status(500).json({
         error: "Gemini API key is missing."
       });
+
     }
-
-    // =======================================================
-    // PEXELS KEY
-    // =======================================================
-
-    const PEXELS_API_KEY =
-      process.env.PEXELS_API_KEY;
 
     if (!PEXELS_API_KEY) {
 
@@ -76,10 +61,11 @@ module.exports = async (req, res) => {
         error:
           "Pexels API key is missing. Add PEXELS_API_KEY to Vercel Environment Variables."
       });
+
     }
 
     // =======================================================
-    // VALIDATE TRIP
+    // VALIDATE
     // =======================================================
 
     if (
@@ -93,19 +79,16 @@ module.exports = async (req, res) => {
         error:
           "Missing required trip information."
       });
+
     }
 
     // =======================================================
-    // GEMINI URL
+    // GEMINI
     // =======================================================
 
     const GEMINI_URL =
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" +
       encodeURIComponent(GEMINI_API_KEY);
-
-    // =======================================================
-    // GEMINI PROMPT
-    // =======================================================
 
     const prompt = `
 You are an expert travel planner.
@@ -120,15 +103,13 @@ Travelers: ${travelers}
 Interests: ${interests || "General sightseeing"}
 Notes: ${notes || "None"}
 
-=========================================================
-IMPORTANT HOTEL REQUIREMENT
-=========================================================
+IMPORTANT HOTEL REQUIREMENT:
 
-Return up to EXACTLY 10 different REAL existing accommodation options in ${destination}.
+Return up to 10 different real accommodation options in ${destination}.
 
 Do NOT invent hotels.
 
-Only use accommodation names that are known real properties.
+The hotels must be real existing accommodations.
 
 For every hotel return:
 
@@ -139,55 +120,28 @@ For every hotel return:
 - priceType
 - amenities
 - description
+- bookingUrl
 
 Prices are estimates only.
 
 Never claim live availability.
 
-Do NOT return image URLs.
-
-Images will be obtained separately.
-
-=========================================================
-IMPORTANT RESTAURANT REQUIREMENT
-=========================================================
-
-Return up to EXACTLY 10 different REAL EXISTING restaurants
-in ${destination}.
-
-Do NOT invent restaurants.
-
-Only return restaurants that are known real restaurants
-or established real restaurant businesses in the destination.
-
-Prefer restaurants that are well-known and identifiable.
-
-Restaurants should be suitable for the traveler's interests:
-${interests || "General sightseeing"}
-
-For every restaurant return:
-
-- name
-- cuisine
-- priceLevel
-- rating
-- address
-- description
-
-IMPORTANT:
+For bookingUrl:
+If you do not know the exact hotel Booking.com page,
+create a Booking.com search URL for that hotel and destination.
 
 Do NOT return image URLs.
-
 Images will be obtained separately.
 
-Do NOT claim live opening hours or live availability.
+IMPORTANT RESTAURANT REQUIREMENT:
 
-If you are uncertain about a restaurant being real,
-DO NOT include it.
+Do NOT generate restaurant names.
 
-=========================================================
-OTHER TRAVEL CONTENT
-=========================================================
+Restaurants will be obtained separately from OpenStreetMap.
+
+Therefore return:
+
+"restaurants": []
 
 Also create:
 
@@ -198,20 +152,14 @@ daysPlan
 
 transport, experiences, money and daysPlan must contain HTML.
 
-=========================================================
-OUTPUT
-=========================================================
+RETURN ONLY JSON.
 
-RETURN ONLY VALID JSON.
-
-Do not use Markdown.
-
-Use exactly this structure:
+Use exactly:
 
 {
   "stay": [
     {
-      "name": "Real Hotel Name",
+      "name": "Hotel name",
       "stars": 4,
       "price": 80,
       "currency": "USD",
@@ -222,41 +170,21 @@ Use exactly this structure:
         "Private Bathroom",
         "Breakfast Available"
       ],
-      "description": "Short description."
+      "description": "Short description.",
+      "bookingUrl": "https://www.booking.com/..."
     }
   ],
-
-  "restaurants": [
-    {
-      "name": "Real Restaurant Name",
-      "cuisine": "Turkish",
-      "priceLevel": "$$",
-      "rating": 4.5,
-      "address": "Real address if known",
-      "description": "Short description of the restaurant."
-    }
-  ],
-
+  "restaurants": [],
   "transport": "<div>...</div>",
   "experiences": "<div>...</div>",
   "money": "<div>...</div>",
   "daysPlan": "<div>...</div>"
 }
-
-IMPORTANT:
-
-The JSON must be valid.
-
-Do not put comments inside the JSON.
-
-Do not use trailing commas.
 `;
 
     // =======================================================
     // GEMINI REQUEST
     // =======================================================
-
-    console.log("Sending request to Gemini...");
 
     const geminiResponse =
       await fetch(
@@ -316,6 +244,7 @@ Do not use trailing commas.
         details:
           geminiText
       });
+
     }
 
     // =======================================================
@@ -342,6 +271,7 @@ Do not use trailing commas.
         details:
           geminiText
       });
+
     }
 
     // =======================================================
@@ -367,11 +297,8 @@ Do not use trailing commas.
         details:
           JSON.stringify(geminiData)
       });
-    }
 
-    console.log(
-      "Gemini text received successfully"
-    );
+    }
 
     // =======================================================
     // CLEAN JSON
@@ -382,22 +309,13 @@ Do not use trailing commas.
 
     cleanText =
       cleanText
-        .replace(
-          /^```json/i,
-          ""
-        )
-        .replace(
-          /^```/i,
-          ""
-        )
-        .replace(
-          /```$/i,
-          ""
-        )
+        .replace(/^```json/i, "")
+        .replace(/^```/i, "")
+        .replace(/```$/i, "")
         .trim();
 
     // =======================================================
-    // PARSE TRAVEL DATA
+    // TRAVEL DATA
     // =======================================================
 
     let travelData;
@@ -420,6 +338,7 @@ Do not use trailing commas.
         details:
           error.message
       });
+
     }
 
     // =======================================================
@@ -433,6 +352,7 @@ Do not use trailing commas.
     ) {
 
       travelData.stay = [];
+
     }
 
     travelData.stay =
@@ -446,24 +366,16 @@ Do not use trailing commas.
           hotel => ({
 
             name:
-              String(
-                hotel.name
-              ),
+              String(hotel.name),
 
             stars:
-              Number(
-                hotel.stars
-              ) || 0,
+              Number(hotel.stars) || 0,
 
             price:
               Number.isFinite(
-                Number(
-                  hotel.price
-                )
+                Number(hotel.price)
               )
-                ? Number(
-                    hotel.price
-                  )
+                ? Number(hotel.price)
                 : null,
 
             currency:
@@ -478,22 +390,15 @@ Do not use trailing commas.
               Array.isArray(
                 hotel.amenities
               )
-                ? hotel.amenities
-                    .slice(0, 6)
-                    .map(
-                      item =>
-                        String(item)
-                    )
+                ? hotel.amenities.slice(0, 6)
                 : [],
 
             description:
-              hotel.description
-                ? String(
-                    hotel.description
-                  )
-                : "",
+              hotel.description ||
+              "",
 
             bookingUrl:
+              hotel.bookingUrl ||
               "",
 
             imageUrl:
@@ -513,9 +418,7 @@ Do not use trailing commas.
     // =======================================================
 
     const uniqueHotels = [];
-
-    const hotelNames =
-      new Set();
+    const hotelNames = new Set();
 
     for (
       const hotel
@@ -536,14 +439,13 @@ Do not use trailing commas.
         uniqueHotels.push(
           hotel
         );
+
       }
+
     }
 
     travelData.stay =
-      uniqueHotels.slice(
-        0,
-        10
-      );
+      uniqueHotels.slice(0, 10);
 
     console.log(
       "Hotels returned:",
@@ -551,231 +453,29 @@ Do not use trailing commas.
     );
 
     // =======================================================
-    // NORMALIZE RESTAURANTS
+    // PEXELS HOTEL IMAGE
     // =======================================================
 
-    if (
-      !Array.isArray(
-        travelData.restaurants
-      )
-    ) {
-
-      travelData.restaurants = [];
-    }
-
-    travelData.restaurants =
-      travelData.restaurants
-        .filter(
-          restaurant =>
-            restaurant &&
-            restaurant.name
-        )
-        .map(
-          restaurant => ({
-
-            name:
-              String(
-                restaurant.name
-              ),
-
-            cuisine:
-              restaurant.cuisine
-                ? String(
-                    restaurant.cuisine
-                  )
-                : "Local cuisine",
-
-            priceLevel:
-              restaurant.priceLevel
-                ? String(
-                    restaurant.priceLevel
-                  )
-                : "$$",
-
-            rating:
-              Number.isFinite(
-                Number(
-                  restaurant.rating
-                )
-              )
-                ? Number(
-                    restaurant.rating
-                  )
-                : null,
-
-            address:
-              restaurant.address
-                ? String(
-                    restaurant.address
-                  )
-                : "",
-
-            description:
-              restaurant.description
-                ? String(
-                    restaurant.description
-                  )
-                : "",
-
-            mapsUrl:
-              "",
-
-            imageUrl:
-              "",
-
-            photoAttribution:
-              "",
-
-            photoSource:
-              ""
-
-          })
-        );
-
-    // =======================================================
-    // REMOVE DUPLICATE RESTAURANTS
-    // =======================================================
-
-    const uniqueRestaurants = [];
-
-    const restaurantNames =
-      new Set();
-
-    for (
-      const restaurant
-      of travelData.restaurants
-    ) {
-
-      const key =
-        restaurant.name
-          .toLowerCase()
-          .trim();
-
-      if (
-        !restaurantNames.has(key)
-      ) {
-
-        restaurantNames.add(key);
-
-        uniqueRestaurants.push(
-          restaurant
-        );
-      }
-    }
-
-    travelData.restaurants =
-      uniqueRestaurants.slice(
-        0,
-        10
-      );
-
-    console.log(
-      "Restaurants returned:",
-      travelData.restaurants.length
-    );
-
-    // =======================================================
-    // CREATE BOOKING URL
-    // =======================================================
-
-    function createBookingSearchURL(
+    async function getHotelImage(
       hotelName,
       destination
     ) {
 
-      const query =
-        encodeURIComponent(
-          `${hotelName} ${destination}`
-        );
-
-      return (
-        "https://www.booking.com/searchresults.html?ss=" +
-        query
-      );
-    }
-
-    // =======================================================
-    // CREATE GOOGLE MAPS URL
-    // =======================================================
-
-    function createGoogleMapsSearchURL(
-      restaurantName,
-      destination
-    ) {
-
-      const query =
-        encodeURIComponent(
-          `${restaurantName} ${destination}`
-        );
-
-      return (
-        "https://www.google.com/maps/search/?api=1&query=" +
-        query
-      );
-    }
-
-    // =======================================================
-    // ADD BOOKING URLS
-    // =======================================================
-
-    travelData.stay =
-      travelData.stay.map(
-        hotel => ({
-
-          ...hotel,
-
-          bookingUrl:
-            createBookingSearchURL(
-              hotel.name,
-              destination
-            )
-
-        })
-      );
-
-    // =======================================================
-    // ADD GOOGLE MAPS URLS
-    // =======================================================
-
-    travelData.restaurants =
-      travelData.restaurants.map(
-        restaurant => ({
-
-          ...restaurant,
-
-          mapsUrl:
-            createGoogleMapsSearchURL(
-              restaurant.name,
-              destination
-            )
-
-        })
-      );
-
-    // =======================================================
-    // PEXELS IMAGE SEARCH
-    // =======================================================
-
-    async function searchPexels(
-      query,
-      type
-    ) {
-
       try {
 
+        const query1 =
+          `${hotelName} ${destination}`;
+
         console.log(
-          `Pexels ${type} search:`,
-          query
+          "Pexels hotel search:",
+          query1
         );
 
-        const url =
-          "https://api.pexels.com/v1/search?query=" +
-          encodeURIComponent(query) +
-          "&per_page=5";
-
-        const response =
+        let response =
           await fetch(
-            url,
+            "https://api.pexels.com/v1/search?query=" +
+            encodeURIComponent(query1) +
+            "&per_page=5",
             {
               method: "GET",
 
@@ -796,43 +496,67 @@ Do not use trailing commas.
         } catch (error) {
 
           data = null;
+
         }
 
-        if (
-          !response.ok
-        ) {
-
-          console.error(
-            `Pexels ${type} error:`,
-            response.status,
-            data
-          );
-
-          return {
-            imageUrl: "",
-            photoAttribution: "",
-            photoSource: ""
-          };
-        }
+        // FALLBACK
 
         if (
+          !response.ok ||
           !data ||
-          !Array.isArray(
-            data.photos
-          ) ||
+          !Array.isArray(data.photos) ||
           data.photos.length === 0
         ) {
 
+          const query2 =
+            `hotel ${destination}`;
+
           console.log(
-            `No Pexels image found for ${type}:`,
-            query
+            "Pexels fallback:",
+            query2
           );
+
+          response =
+            await fetch(
+              "https://api.pexels.com/v1/search?query=" +
+              encodeURIComponent(query2) +
+              "&per_page=10",
+              {
+                method: "GET",
+
+                headers: {
+                  Authorization:
+                    PEXELS_API_KEY
+                }
+              }
+            );
+
+          try {
+
+            data =
+              await response.json();
+
+          } catch (error) {
+
+            data = null;
+
+          }
+
+        }
+
+        if (
+          !response.ok ||
+          !data ||
+          !Array.isArray(data.photos) ||
+          data.photos.length === 0
+        ) {
 
           return {
             imageUrl: "",
             photoAttribution: "",
             photoSource: ""
           };
+
         }
 
         const photo =
@@ -843,15 +567,6 @@ Do not use trailing commas.
           photo?.src?.large ||
           photo?.src?.original ||
           "";
-
-        if (!imageUrl) {
-
-          return {
-            imageUrl: "",
-            photoAttribution: "",
-            photoSource: ""
-          };
-        }
 
         return {
 
@@ -870,7 +585,7 @@ Do not use trailing commas.
       } catch (error) {
 
         console.error(
-          `Pexels ${type} lookup failed:`,
+          "Pexels error:",
           error.message
         );
 
@@ -879,157 +594,400 @@ Do not use trailing commas.
           photoAttribution: "",
           photoSource: ""
         };
+
       }
+
     }
 
     // =======================================================
-    // HOTEL IMAGES
+    // GET HOTEL IMAGES
     // =======================================================
 
-    console.log(
-      "Starting hotel image search..."
-    );
-
-    const hotelImageResults =
+    const hotelImages =
       await Promise.all(
         travelData.stay.map(
           hotel =>
-            searchPexels(
-              `${hotel.name} ${destination}`,
-              "hotel"
+            getHotelImage(
+              hotel.name,
+              destination
             )
         )
       );
 
     travelData.stay =
       travelData.stay.map(
-        (hotel, index) => {
+        (hotel, index) => ({
 
-          const image =
-            hotelImageResults[
-              index
-            ] || {};
+          ...hotel,
 
-          return {
+          imageUrl:
+            hotelImages[index]?.imageUrl ||
+            "",
 
-            ...hotel,
+          photoAttribution:
+            hotelImages[index]?.photoAttribution ||
+            "",
 
-            imageUrl:
-              image.imageUrl ||
-              "",
+          photoSource:
+            hotelImages[index]?.photoSource ||
+            ""
 
-            photoAttribution:
-              image.photoAttribution ||
-              "",
-
-            photoSource:
-              image.photoSource ||
-              ""
-
-          };
-        }
+        })
       );
 
     // =======================================================
-    // RESTAURANT IMAGES
+    // OPENSTREETMAP
+    // =======================================================
+
+    async function getRestaurantsFromOSM(
+      destination
+    ) {
+
+      try {
+
+        console.log(
+          "OpenStreetMap restaurant search:",
+          destination
+        );
+
+        // ---------------------------------------------------
+        // STEP 1
+        // GEOCODE DESTINATION
+        // ---------------------------------------------------
+
+        const geocodeURL =
+          "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" +
+          encodeURIComponent(destination);
+
+        const geocodeResponse =
+          await fetch(
+            geocodeURL,
+            {
+              headers: {
+                "User-Agent":
+                  "AI-Life-Planner/1.0"
+              }
+            }
+          );
+
+        if (!geocodeResponse.ok) {
+
+          console.error(
+            "Nominatim error:",
+            geocodeResponse.status
+          );
+
+          return [];
+
+        }
+
+        const locations =
+          await geocodeResponse.json();
+
+        if (
+          !Array.isArray(locations) ||
+          locations.length === 0
+        ) {
+
+          console.log(
+            "Destination not found in OSM:",
+            destination
+          );
+
+          return [];
+
+        }
+
+        const lat =
+          Number(
+            locations[0].lat
+          );
+
+        const lon =
+          Number(
+            locations[0].lon
+          );
+
+        console.log(
+          "Destination coordinates:",
+          lat,
+          lon
+        );
+
+        // ---------------------------------------------------
+        // STEP 2
+        // OVERPASS QUERY
+        // ---------------------------------------------------
+
+        const overpassQuery = `
+[out:json][timeout:25];
+
+(
+  node["amenity"="restaurant"](around:15000,${lat},${lon});
+  way["amenity"="restaurant"](around:15000,${lat},${lon});
+  relation["amenity"="restaurant"](around:15000,${lat},${lon});
+);
+
+out center tags;
+`;
+
+        const overpassURL =
+          "https://overpass-api.de/api/interpreter";
+
+        const osmResponse =
+          await fetch(
+            overpassURL,
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/x-www-form-urlencoded",
+                "User-Agent":
+                  "AI-Life-Planner/1.0"
+              },
+
+              body:
+                "data=" +
+                encodeURIComponent(
+                  overpassQuery
+                )
+            }
+          );
+
+        if (!osmResponse.ok) {
+
+          console.error(
+            "Overpass error:",
+            osmResponse.status
+          );
+
+          return [];
+
+        }
+
+        const osmData =
+          await osmResponse.json();
+
+        if (
+          !osmData ||
+          !Array.isArray(
+            osmData.elements
+          )
+        ) {
+
+          return [];
+
+        }
+
+        console.log(
+          "OSM restaurants found:",
+          osmData.elements.length
+        );
+
+        // ---------------------------------------------------
+        // STEP 3
+        // NORMALIZE
+        // ---------------------------------------------------
+
+        const restaurants = [];
+
+        for (
+          const item
+          of osmData.elements
+        ) {
+
+          const tags =
+            item.tags || {};
+
+          const name =
+            tags.name ||
+            tags["name:en"];
+
+          // Ignore unnamed restaurants
+
+          if (!name) {
+            continue;
+          }
+
+          let restaurantLat =
+            item.lat;
+
+          let restaurantLon =
+            item.lon;
+
+          if (
+            restaurantLat === undefined &&
+            item.center
+          ) {
+
+            restaurantLat =
+              item.center.lat;
+
+            restaurantLon =
+              item.center.lon;
+
+          }
+
+          const addressParts = [];
+
+          if (tags["addr:housenumber"]) {
+            addressParts.push(
+              tags["addr:housenumber"]
+            );
+          }
+
+          if (tags["addr:street"]) {
+            addressParts.push(
+              tags["addr:street"]
+            );
+          }
+
+          if (tags["addr:city"]) {
+            addressParts.push(
+              tags["addr:city"]
+            );
+          }
+
+          const address =
+            addressParts.length > 0
+              ? addressParts.join(", ")
+              : destination;
+
+          const cuisine =
+            tags.cuisine ||
+            "Local restaurant";
+
+          const priceLevel =
+            tags["price:level"] ||
+            "$$";
+
+          const website =
+            tags.website ||
+            tags["contact:website"] ||
+            "";
+
+          const phone =
+            tags.phone ||
+            tags["contact:phone"] ||
+            "";
+
+          const mapsURL =
+            restaurantLat &&
+            restaurantLon
+              ? `https://www.google.com/maps/search/?api=1&query=${restaurantLat},${restaurantLon}`
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  name + " " + destination
+                )}`;
+
+          restaurants.push({
+
+            name:
+              String(name),
+
+            cuisine:
+              String(cuisine),
+
+            priceLevel:
+              String(priceLevel),
+
+            rating:
+              null,
+
+            address:
+              String(address),
+
+            description:
+              `${name} is a real restaurant listed in OpenStreetMap in ${destination}.`,
+
+            imageUrl:
+              "",
+
+            mapsUrl,
+
+            website,
+
+            phone,
+
+            latitude:
+              restaurantLat || null,
+
+            longitude:
+              restaurantLon || null
+
+          });
+
+        }
+
+        // ---------------------------------------------------
+        // REMOVE DUPLICATES
+        // ---------------------------------------------------
+
+        const uniqueRestaurants = [];
+        const restaurantNames = new Set();
+
+        for (
+          const restaurant
+          of restaurants
+        ) {
+
+          const key =
+            restaurant.name
+              .toLowerCase()
+              .trim();
+
+          if (
+            !restaurantNames.has(key)
+          ) {
+
+            restaurantNames.add(key);
+
+            uniqueRestaurants.push(
+              restaurant
+            );
+
+          }
+
+        }
+
+        // ---------------------------------------------------
+        // LIMIT 10
+        // ---------------------------------------------------
+
+        return uniqueRestaurants.slice(
+          0,
+          10
+        );
+
+      } catch (error) {
+
+        console.error(
+          "OpenStreetMap restaurant error:",
+          error
+        );
+
+        return [];
+
+      }
+
+    }
+
+    // =======================================================
+    // RESTAURANTS
     // =======================================================
 
     console.log(
-      "Starting restaurant image search..."
+      "Starting OpenStreetMap restaurant search..."
     );
-
-    const restaurantImageResults =
-      await Promise.all(
-        travelData.restaurants.map(
-          restaurant =>
-            searchPexels(
-              `${restaurant.name} ${destination} restaurant`,
-              "restaurant"
-            )
-        )
-      );
 
     travelData.restaurants =
-      travelData.restaurants.map(
-        (restaurant, index) => {
-
-          const image =
-            restaurantImageResults[
-              index
-            ] || {};
-
-          return {
-
-            ...restaurant,
-
-            imageUrl:
-              image.imageUrl ||
-              "",
-
-            photoAttribution:
-              image.photoAttribution ||
-              "",
-
-            photoSource:
-              image.photoSource ||
-              ""
-
-          };
-        }
+      await getRestaurantsFromOSM(
+        destination
       );
 
-    // =======================================================
-    // DEBUG HOTELS
-    // =======================================================
-
-    travelData.stay.forEach(
-      (hotel, index) => {
-
-        console.log(
-          `HOTEL ${index + 1}:`,
-          hotel.name
-        );
-
-        console.log(
-          `HOTEL ${index + 1} IMAGE:`,
-          hotel.imageUrl ||
-          "(NO IMAGE)"
-        );
-
-      }
-    );
-
-    // =======================================================
-    // DEBUG RESTAURANTS
-    // =======================================================
-
-    travelData.restaurants.forEach(
-      (restaurant, index) => {
-
-        console.log(
-          `RESTAURANT ${index + 1}:`,
-          restaurant.name
-        );
-
-        console.log(
-          `RESTAURANT ${index + 1} ADDRESS:`,
-          restaurant.address ||
-          "(NO ADDRESS)"
-        );
-
-        console.log(
-          `RESTAURANT ${index + 1} IMAGE:`,
-          restaurant.imageUrl ||
-          "(NO IMAGE)"
-        );
-
-        console.log(
-          `RESTAURANT ${index + 1} MAPS:`,
-          restaurant.mapsUrl ||
-          "(NO MAPS URL)"
-        );
-
-      }
+    console.log(
+      "Restaurants returned:",
+      travelData.restaurants.length
     );
 
     // =======================================================
@@ -1037,58 +995,28 @@ Do not use trailing commas.
     // =======================================================
 
     travelData.transport =
-      typeof travelData.transport === "string" &&
-      travelData.transport.trim()
-        ? travelData.transport
-        : "<p>Transportation information unavailable.</p>";
+      travelData.transport ||
+      "<p>Transportation information unavailable.</p>";
 
     travelData.experiences =
-      typeof travelData.experiences === "string" &&
-      travelData.experiences.trim()
-        ? travelData.experiences
-        : "<p>Experience information unavailable.</p>";
+      travelData.experiences ||
+      "<p>Experience information unavailable.</p>";
 
     travelData.money =
-      typeof travelData.money === "string" &&
-      travelData.money.trim()
-        ? travelData.money
-        : "<p>Budget information unavailable.</p>";
+      travelData.money ||
+      "<p>Budget information unavailable.</p>";
 
     travelData.daysPlan =
-      typeof travelData.daysPlan === "string" &&
-      travelData.daysPlan.trim()
-        ? travelData.daysPlan
-        : "<p>Itinerary information unavailable.</p>";
-
-    // =======================================================
-    // FINAL DEBUG
-    // =======================================================
-
-    console.log(
-      "======================================"
-    );
-
-    console.log(
-      "FINAL HOTELS:",
-      travelData.stay.length
-    );
-
-    console.log(
-      "FINAL RESTAURANTS:",
-      travelData.restaurants.length
-    );
-
-    console.log(
-      "PLAN API SUCCESS"
-    );
-
-    console.log(
-      "======================================"
-    );
+      travelData.daysPlan ||
+      "<p>Itinerary information unavailable.</p>";
 
     // =======================================================
     // SUCCESS
     // =======================================================
+
+    console.log(
+      "PLAN API SUCCESS"
+    );
 
     return res.status(200).json(
       travelData
@@ -1110,5 +1038,7 @@ Do not use trailing commas.
         error.message
 
     });
+
   }
+
 };
