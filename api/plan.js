@@ -3,17 +3,9 @@ module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 
-  // =========================================================
-  // OPTIONS
-  // =========================================================
-
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
-
-  // =========================================================
-  // METHOD CHECK
-  // =========================================================
 
   if (req.method !== "POST") {
     return res.status(405).json({
@@ -22,11 +14,6 @@ module.exports = async (req, res) => {
   }
 
   try {
-
-    // =======================================================
-    // TRIP DATA
-    // =======================================================
-
     const {
       destination,
       startDate,
@@ -40,74 +27,34 @@ module.exports = async (req, res) => {
     console.log("PLAN API START");
     console.log("Destination:", destination);
 
-    // =======================================================
-    // GEMINI KEY
-    // =======================================================
-
-    const GEMINI_API_KEY =
-      process.env.GEMINI_API_KEY;
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
 
     if (!GEMINI_API_KEY) {
-
-      console.error(
-        "GEMINI_API_KEY missing"
-      );
-
       return res.status(500).json({
         error: "Gemini API key is missing."
       });
     }
 
-    // =======================================================
-    // PEXELS KEY
-    // =======================================================
-
-    const PEXELS_API_KEY =
-      process.env.PEXELS_API_KEY;
-
     if (!PEXELS_API_KEY) {
-
-      console.error(
-        "PEXELS_API_KEY missing"
-      );
-
       return res.status(500).json({
-        error:
-          "Pexels API key is missing. Add PEXELS_API_KEY to Vercel Environment Variables."
+        error: "Pexels API key is missing."
       });
     }
 
-    // =======================================================
-    // VALIDATE TRIP
-    // =======================================================
-
-    if (
-      !destination ||
-      !days ||
-      !budget ||
-      !travelers
-    ) {
-
+    if (!destination || !days || !budget || !travelers) {
       return res.status(400).json({
-        error:
-          "Missing required trip information."
+        error: "Missing required trip information."
       });
-
     }
 
-    // =======================================================
-    // GEMINI URL
-    // =======================================================
+    // =====================================================
+    // GEMINI
+    // =====================================================
 
     const GEMINI_URL =
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" +
-      encodeURIComponent(
-        GEMINI_API_KEY
-      );
-
-    // =======================================================
-    // GEMINI PROMPT
-    // =======================================================
+      encodeURIComponent(GEMINI_API_KEY);
 
     const prompt = `
 You are an expert travel planner.
@@ -122,35 +69,66 @@ Travelers: ${travelers}
 Interests: ${interests || "General sightseeing"}
 Notes: ${notes || "None"}
 
-IMPORTANT HOTEL REQUIREMENT:
+=========================================================
+HOTELS
+=========================================================
 
 Return EXACTLY 10 different real accommodation options in ${destination}.
 
 Do NOT invent hotels.
 
-The hotels must be real existing accommodations.
-
 For every hotel return:
 
-- name
-- stars
-- price
-- currency
-- priceType
-- amenities
-- description
-- bookingUrl
+name
+stars
+price
+currency
+priceType
+amenities
+description
+bookingUrl
 
 Prices are estimates only.
-
 Never claim live availability.
 
 For bookingUrl:
 If you do not know the exact hotel Booking.com page,
-create a Booking.com search URL for that hotel and destination.
+create a Booking.com search URL.
 
 Do NOT return image URLs.
-Images will be obtained separately.
+
+=========================================================
+RESTAURANTS
+=========================================================
+
+Return EXACTLY 10 different real restaurants in ${destination}.
+
+IMPORTANT:
+- Restaurants must actually exist.
+- Do not invent restaurant names.
+- Prefer well-known restaurants or restaurants that are likely to have a public presence.
+- Include different cuisines and price levels when possible.
+
+For every restaurant return:
+
+name
+cuisine
+priceLevel
+rating
+address
+description
+mapsUrl
+
+rating should be a number such as 4.5.
+
+For mapsUrl:
+Create a Google Maps search URL using the restaurant name and destination.
+
+Do NOT return image URLs.
+
+=========================================================
+OTHER CONTENT
+=========================================================
 
 Also create:
 
@@ -161,9 +139,9 @@ daysPlan
 
 transport, experiences, money and daysPlan must contain HTML.
 
-RETURN ONLY JSON.
+RETURN ONLY VALID JSON.
 
-Use exactly:
+Use exactly this structure:
 
 {
   "stay": [
@@ -175,14 +153,25 @@ Use exactly:
       "priceType": "estimated per night",
       "amenities": [
         "Free Wi-Fi",
-        "Air Conditioning",
-        "Private Bathroom",
-        "Breakfast Available"
+        "Air Conditioning"
       ],
       "description": "Short description.",
       "bookingUrl": "https://www.booking.com/..."
     }
   ],
+
+  "restaurants": [
+    {
+      "name": "Restaurant name",
+      "cuisine": "Turkish",
+      "priceLevel": "$$",
+      "rating": 4.5,
+      "address": "Restaurant address",
+      "description": "Short description.",
+      "mapsUrl": "https://www.google.com/maps/search/?api=1&query=..."
+    }
+  ],
+
   "transport": "<div>...</div>",
   "experiences": "<div>...</div>",
   "money": "<div>...</div>",
@@ -190,512 +179,301 @@ Use exactly:
 }
 `;
 
-    // =======================================================
-    // GEMINI REQUEST
-    // =======================================================
-
-    const geminiResponse =
-      await fetch(
-        GEMINI_URL,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-
-          body: JSON.stringify({
-
-            contents: [
+    const geminiResponse = await fetch(GEMINI_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
               {
-                parts: [
-                  {
-                    text: prompt
-                  }
-                ]
+                text: prompt
               }
-            ],
-
-            generationConfig: {
-              responseMimeType:
-                "application/json"
-            }
-
-          })
+            ]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: "application/json"
         }
-      );
+      })
+    });
 
-    const geminiText =
-      await geminiResponse.text();
+    const geminiText = await geminiResponse.text();
 
     console.log(
       "Gemini HTTP status:",
       geminiResponse.status
     );
 
-    // =======================================================
-    // GEMINI ERROR
-    // =======================================================
-
     if (!geminiResponse.ok) {
-
-      console.error(
-        "GEMINI ERROR:",
-        geminiText
-      );
+      console.error("GEMINI ERROR:", geminiText);
 
       return res.status(500).json({
-        error:
-          "Gemini API request failed.",
-        status:
-          geminiResponse.status,
-        details:
-          geminiText
+        error: "Gemini API request failed.",
+        status: geminiResponse.status,
+        details: geminiText
       });
-
     }
-
-    // =======================================================
-    // PARSE GEMINI RESPONSE
-    // =======================================================
 
     let geminiData;
 
     try {
-
-      geminiData =
-        JSON.parse(
-          geminiText
-        );
-
+      geminiData = JSON.parse(geminiText);
     } catch (error) {
-
-      console.error(
-        "Could not parse Gemini response:",
-        geminiText
-      );
-
       return res.status(500).json({
-        error:
-          "Invalid response from Gemini.",
-        details:
-          geminiText
+        error: "Invalid response from Gemini.",
+        details: geminiText
       });
-
     }
-
-    // =======================================================
-    // GET GEMINI TEXT
-    // =======================================================
 
     const text =
-      geminiData
-        ?.candidates?.[0]
-        ?.content?.parts?.[0]
-        ?.text;
+      geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!text) {
-
-      console.error(
-        "Gemini returned no text:",
-        JSON.stringify(
-          geminiData
-        )
-      );
-
       return res.status(500).json({
-        error:
-          "Gemini returned an empty response.",
-        details:
-          JSON.stringify(
-            geminiData
-          )
+        error: "Gemini returned an empty response.",
+        details: JSON.stringify(geminiData)
       });
-
     }
 
-    console.log(
-      "Gemini text received successfully"
-    );
+    let cleanText = text.trim();
 
-    // =======================================================
-    // CLEAN JSON
-    // =======================================================
-
-    let cleanText =
-      text.trim();
-
-    cleanText =
-      cleanText
-        .replace(
-          /^```json/i,
-          ""
-        )
-        .replace(
-          /^```/i,
-          ""
-        )
-        .replace(
-          /```$/i,
-          ""
-        )
-        .trim();
-
-    // =======================================================
-    // PARSE TRAVEL DATA
-    // =======================================================
+    cleanText = cleanText
+      .replace(/^```json/i, "")
+      .replace(/^```/i, "")
+      .replace(/```$/i, "")
+      .trim();
 
     let travelData;
 
     try {
-
-      travelData =
-        JSON.parse(
-          cleanText
-        );
-
+      travelData = JSON.parse(cleanText);
     } catch (error) {
-
-      console.error(
-        "GEMINI JSON PARSE ERROR:",
-        cleanText
-      );
+      console.error("JSON PARSE ERROR:", cleanText);
 
       return res.status(500).json({
-        error:
-          "Gemini returned invalid JSON.",
-        details:
-          error.message
+        error: "Gemini returned invalid JSON.",
+        details: error.message
       });
-
     }
 
-    // =======================================================
+    // =====================================================
     // NORMALIZE HOTELS
-    // =======================================================
+    // =====================================================
 
-    if (
-      !Array.isArray(
-        travelData.stay
-      )
-    ) {
-
+    if (!Array.isArray(travelData.stay)) {
       travelData.stay = [];
-
     }
 
-    travelData.stay =
-      travelData.stay
-        .filter(
-          hotel =>
-            hotel &&
-            hotel.name
-        )
-        .map(
-          hotel => ({
+    travelData.stay = travelData.stay
+      .filter(hotel => hotel && hotel.name)
+      .map(hotel => ({
+        name: String(hotel.name),
 
-            name:
-              String(
-                hotel.name
-              ),
+        stars: Number(hotel.stars) || 0,
 
-            stars:
-              Number(
-                hotel.stars
-              ) || 0,
+        price:
+          Number.isFinite(Number(hotel.price))
+            ? Number(hotel.price)
+            : null,
 
-            price:
-              Number.isFinite(
-                Number(
-                  hotel.price
-                )
-              )
-                ? Number(
-                    hotel.price
-                  )
-                : null,
+        currency: hotel.currency || "USD",
 
-            currency:
-              hotel.currency ||
-              "USD",
+        priceType:
+          hotel.priceType ||
+          "estimated per night",
 
-            priceType:
-              hotel.priceType ||
-              "estimated per night",
+        amenities:
+          Array.isArray(hotel.amenities)
+            ? hotel.amenities.slice(0, 6)
+            : [],
 
-            amenities:
-              Array.isArray(
-                hotel.amenities
-              )
-                ? hotel.amenities
-                    .slice(0, 6)
-                : [],
+        description:
+          hotel.description || "",
 
-            description:
-              hotel.description ||
-              "",
+        bookingUrl:
+          hotel.bookingUrl || "",
 
-            bookingUrl:
-              hotel.bookingUrl ||
-              "",
+        imageUrl: "",
+        photoAttribution: "",
+        photoSource: ""
+      }));
 
-            imageUrl:
-              "",
-
-            photoAttribution:
-              "",
-
-            photoSource:
-              ""
-
-          })
-        );
-
-    // =======================================================
-    // REMOVE DUPLICATES
-    // =======================================================
-
+    // Remove duplicate hotels
     const uniqueHotels = [];
+    const hotelNames = new Set();
 
-    const names =
-      new Set();
+    for (const hotel of travelData.stay) {
+      const key = hotel.name.toLowerCase().trim();
 
-    for (
-      const hotel
-      of travelData.stay
-    ) {
-
-      const key =
-        hotel.name
-          .toLowerCase()
-          .trim();
-
-      if (
-        !names.has(key)
-      ) {
-
-        names.add(key);
-
-        uniqueHotels.push(
-          hotel
-        );
-
+      if (!hotelNames.has(key)) {
+        hotelNames.add(key);
+        uniqueHotels.push(hotel);
       }
-
     }
 
-    travelData.stay =
-      uniqueHotels.slice(
-        0,
-        10
-      );
+    travelData.stay = uniqueHotels.slice(0, 10);
 
     console.log(
       "Hotels returned:",
       travelData.stay.length
     );
 
-    // =======================================================
-    // PEXELS IMAGE SEARCH
-    // =======================================================
+    // =====================================================
+    // NORMALIZE RESTAURANTS
+    // =====================================================
 
-    async function getHotelImage(
-      hotelName,
-      destination
-    ) {
+    if (!Array.isArray(travelData.restaurants)) {
+      travelData.restaurants = [];
+    }
 
-      try {
+    travelData.restaurants =
+      travelData.restaurants
+        .filter(
+          restaurant =>
+            restaurant &&
+            restaurant.name
+        )
+        .map(restaurant => ({
+          name:
+            String(restaurant.name),
 
-        // ---------------------------------------------------
-        // SEARCH 1
-        // ---------------------------------------------------
+          cuisine:
+            restaurant.cuisine ||
+            "Local cuisine",
 
-        const query1 =
-          `${hotelName} ${destination}`;
+          priceLevel:
+            restaurant.priceLevel ||
+            "$$",
 
-        console.log(
-          "Pexels search 1:",
-          query1
-        );
+          rating:
+            Number.isFinite(
+              Number(restaurant.rating)
+            )
+              ? Number(restaurant.rating)
+              : null,
 
-        let response =
-          await fetch(
-            "https://api.pexels.com/v1/search?query=" +
-            encodeURIComponent(
-              query1
-            ) +
-            "&per_page=5"
-          ,
-            {
-              method: "GET",
+          address:
+            restaurant.address ||
+            "",
 
-              headers: {
-                Authorization:
-                  PEXELS_API_KEY
-              }
-            }
-          );
+          description:
+            restaurant.description ||
+            "",
 
-        let data;
+          mapsUrl:
+            restaurant.mapsUrl ||
+            "",
 
-        try {
-
-          data =
-            await response.json();
-
-        } catch (error) {
-
-          data = null;
-
-        }
-
-        // ---------------------------------------------------
-        // SEARCH 2 FALLBACK
-        // ---------------------------------------------------
-
-        if (
-          !response.ok ||
-          !data ||
-          !Array.isArray(
-            data.photos
-          ) ||
-          data.photos.length === 0
-        ) {
-
-          const query2 =
-            `hotel ${destination}`;
-
-          console.log(
-            "Pexels fallback search:",
-            query2
-          );
-
-          response =
-            await fetch(
-              "https://api.pexels.com/v1/search?query=" +
-              encodeURIComponent(
-                query2
-              ) +
-              "&per_page=10"
-            ,
-              {
-                method: "GET",
-
-                headers: {
-                  Authorization:
-                    PEXELS_API_KEY
-                }
-              }
-            );
-
-          try {
-
-            data =
-              await response.json();
-
-          } catch (error) {
-
-            data = null;
-
-          }
-
-        }
-
-        if (
-          !response.ok
-        ) {
-
-          console.error(
-            "Pexels API error:",
-            response.status,
-            data
-          );
-
-          return {
-            imageUrl: "",
-            photoAttribution: "",
-            photoSource: ""
-          };
-
-        }
-
-        if (
-          !data ||
-          !Array.isArray(
-            data.photos
-          ) ||
-          data.photos.length === 0
-        ) {
-
-          console.log(
-            "No Pexels image found:",
-            hotelName
-          );
-
-          return {
-            imageUrl: "",
-            photoAttribution: "",
-            photoSource: ""
-          };
-
-        }
-
-        // ---------------------------------------------------
-        // SELECT PHOTO
-        // ---------------------------------------------------
-
-        const photo =
-          data.photos[0];
-
-        const imageUrl =
-          photo?.src?.large2x ||
-          photo?.src?.large ||
-          photo?.src?.original ||
-          "";
-
-        if (!imageUrl) {
-
-          return {
-            imageUrl: "",
-            photoAttribution: "",
-            photoSource: ""
-          };
-
-        }
-
-        const photographer =
-          photo?.photographer ||
-          "";
-
-        const photographerUrl =
-          photo?.photographer_url ||
-          "";
-
-        console.log(
-          "Pexels image found:",
-          hotelName,
-          "YES"
-        );
-
-        return {
-
-          imageUrl,
+          imageUrl:
+            "",
 
           photoAttribution:
-            photographer,
+            "",
 
           photoSource:
-            photographerUrl ||
-            "https://www.pexels.com/"
+            ""
+        }));
 
+    // Remove duplicate restaurants
+    const uniqueRestaurants = [];
+    const restaurantNames = new Set();
+
+    for (
+      const restaurant
+      of travelData.restaurants
+    ) {
+      const key =
+        restaurant.name
+          .toLowerCase()
+          .trim();
+
+      if (!restaurantNames.has(key)) {
+        restaurantNames.add(key);
+        uniqueRestaurants.push(
+          restaurant
+        );
+      }
+    }
+
+    travelData.restaurants =
+      uniqueRestaurants.slice(0, 10);
+
+    console.log(
+      "Restaurants returned:",
+      travelData.restaurants.length
+    );
+
+    // =====================================================
+    // PEXELS SEARCH
+    // =====================================================
+
+    async function getPexelsImage(query) {
+      try {
+        const url =
+          "https://api.pexels.com/v1/search?query=" +
+          encodeURIComponent(query) +
+          "&per_page=5";
+
+        const response =
+          await fetch(url, {
+            method: "GET",
+            headers: {
+              Authorization:
+                PEXELS_API_KEY
+            }
+          });
+
+        if (!response.ok) {
+          console.error(
+            "Pexels error:",
+            response.status
+          );
+
+          return {
+            imageUrl: "",
+            photoAttribution: "",
+            photoSource: ""
+          };
+        }
+
+        const data =
+          await response.json();
+
+        if (
+          !data ||
+          !Array.isArray(data.photos) ||
+          data.photos.length === 0
+        ) {
+          return {
+            imageUrl: "",
+            photoAttribution: "",
+            photoSource: ""
+          };
+        }
+
+        const photo = data.photos[0];
+
+        return {
+          imageUrl:
+            photo?.src?.large2x ||
+            photo?.src?.large ||
+            photo?.src?.original ||
+            "",
+
+          photoAttribution:
+            photo?.photographer || "",
+
+          photoSource:
+            photo?.photographer_url ||
+            "https://www.pexels.com/"
         };
 
       } catch (error) {
-
         console.error(
-          "Pexels image lookup failed:",
-          hotelName,
+          "Pexels search failed:",
           error.message
         );
 
@@ -704,71 +482,83 @@ Use exactly:
           photoAttribution: "",
           photoSource: ""
         };
-
       }
-
     }
 
-    // =======================================================
-    // FETCH ALL HOTEL IMAGES
-    // =======================================================
+    // =====================================================
+    // HOTEL IMAGES
+    // =====================================================
 
     console.log(
-      "Starting Pexels hotel image search..."
+      "Starting hotel image search..."
     );
 
-    const imageResults =
+    const hotelImages =
       await Promise.all(
         travelData.stay.map(
           hotel =>
-            getHotelImage(
-              hotel.name,
-              destination
+            getPexelsImage(
+              `${hotel.name} ${destination}`
             )
         )
       );
 
-    // =======================================================
-    // ATTACH IMAGES
-    // =======================================================
-
     travelData.stay =
       travelData.stay.map(
-        (hotel, index) => {
-
-          const image =
-            imageResults[
-              index
-            ] || {};
-
-          return {
-
-            ...hotel,
-
-            imageUrl:
-              image.imageUrl ||
-              "",
-
-            photoAttribution:
-              image.photoAttribution ||
-              "",
-
-            photoSource:
-              image.photoSource ||
-              ""
-
-          };
-
-        }
+        (hotel, index) => ({
+          ...hotel,
+          imageUrl:
+            hotelImages[index]?.imageUrl ||
+            "",
+          photoAttribution:
+            hotelImages[index]?.photoAttribution ||
+            "",
+          photoSource:
+            hotelImages[index]?.photoSource ||
+            ""
+        })
       );
 
-    // =======================================================
-    // IMAGE DEBUG
-    // =======================================================
+    // =====================================================
+    // RESTAURANT IMAGES
+    // =====================================================
+
+    console.log(
+      "Starting restaurant image search..."
+    );
+
+    const restaurantImages =
+      await Promise.all(
+        travelData.restaurants.map(
+          restaurant =>
+            getPexelsImage(
+              `${restaurant.cuisine} restaurant ${destination}`
+            )
+        )
+      );
+
+    travelData.restaurants =
+      travelData.restaurants.map(
+        (restaurant, index) => ({
+          ...restaurant,
+          imageUrl:
+            restaurantImages[index]?.imageUrl ||
+            "",
+          photoAttribution:
+            restaurantImages[index]?.photoAttribution ||
+            "",
+          photoSource:
+            restaurantImages[index]?.photoSource ||
+            ""
+        })
+      );
+
+    // =====================================================
+    // DEBUG
+    // =====================================================
 
     travelData.stay.forEach(
       (hotel, index) => {
-
         console.log(
           `HOTEL ${index + 1}:`,
           hotel.name
@@ -776,22 +566,28 @@ Use exactly:
 
         console.log(
           `HOTEL ${index + 1} IMAGE:`,
-          hotel.imageUrl ||
-          "(NO IMAGE)"
+          hotel.imageUrl || "(NO IMAGE)"
         );
-
-        console.log(
-          `HOTEL ${index + 1} PHOTOGRAPHER:`,
-          hotel.photoAttribution ||
-          "(NONE)"
-        );
-
       }
     );
 
-    // =======================================================
+    travelData.restaurants.forEach(
+      (restaurant, index) => {
+        console.log(
+          `RESTAURANT ${index + 1}:`,
+          restaurant.name
+        );
+
+        console.log(
+          `RESTAURANT ${index + 1} IMAGE:`,
+          restaurant.imageUrl || "(NO IMAGE)"
+        );
+      }
+    );
+
+    // =====================================================
     // FALLBACK CONTENT
-    // =======================================================
+    // =====================================================
 
     travelData.transport =
       travelData.transport ||
@@ -809,10 +605,6 @@ Use exactly:
       travelData.daysPlan ||
       "<p>Itinerary information unavailable.</p>";
 
-    // =======================================================
-    // SUCCESS
-    // =======================================================
-
     console.log(
       "PLAN API SUCCESS"
     );
@@ -829,14 +621,10 @@ Use exactly:
     );
 
     return res.status(500).json({
-
       error:
         "Server error while generating travel plan.",
-
       details:
         error.message
-
     });
-
   }
 };
