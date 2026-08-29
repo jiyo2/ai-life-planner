@@ -132,7 +132,7 @@ Use exactly:
 `;
 
     // =====================================================
-    // GEMINI REQUEST USING NATIVE FETCH
+    // GEMINI REQUEST
     // =====================================================
 
     const geminiResponse = await fetch(GEMINI_URL, {
@@ -266,7 +266,9 @@ Use exactly:
             ? Number(hotel.price)
             : null,
 
-        currency: "USD",
+        currency:
+          hotel.currency ||
+          "USD",
 
         priceType:
           hotel.priceType ||
@@ -302,18 +304,57 @@ Use exactly:
           .trim();
 
       if (!names.has(key)) {
+
         names.add(key);
+
         uniqueHotels.push(hotel);
+
       }
     }
 
     travelData.stay =
       uniqueHotels.slice(0, 10);
 
+    // =====================================================
+    // HOTEL DEBUG LOG
+    // =====================================================
+
     console.log(
       "Hotels returned:",
       travelData.stay.length
     );
+
+    console.log(
+      "HOTEL DATA:",
+      JSON.stringify(
+        travelData.stay,
+        null,
+        2
+      )
+    );
+
+    // =====================================================
+    // IMAGE DEBUG
+    // =====================================================
+
+    travelData.stay.forEach((hotel, index) => {
+
+      console.log(
+        `HOTEL ${index + 1}:`,
+        hotel.name
+      );
+
+      console.log(
+        `HOTEL ${index + 1} IMAGE:`,
+        hotel.imageUrl || "(NO IMAGE)"
+      );
+
+      console.log(
+        `HOTEL ${index + 1} BOOKING:`,
+        hotel.bookingUrl || "(NO BOOKING URL)"
+      );
+
+    });
 
     // =====================================================
     // FALLBACK CONTENT
@@ -354,5 +395,6 @@ Use exactly:
       error: "Server error while generating travel plan.",
       details: error.message
     });
+
   }
 };
