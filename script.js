@@ -32,16 +32,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     style.textContent = `
 
-      .hotel-list,
-      .restaurant-list {
+      /* =====================================================
+         HOTEL LIST
+      ===================================================== */
+
+      .hotel-list {
         display: flex;
         flex-direction: column;
         gap: 24px;
         margin-top: 24px;
       }
 
-      .hotel-card,
-      .restaurant-card {
+      .hotel-card {
         display: grid;
         grid-template-columns: 250px 1fr;
         gap: 24px;
@@ -54,14 +56,12 @@ document.addEventListener("DOMContentLoaded", () => {
         overflow: hidden;
       }
 
-      .hotel-card:hover,
-      .restaurant-card:hover {
+      .hotel-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 12px 32px rgba(0,0,0,0.09);
       }
 
-      .hotel-image-wrap,
-      .restaurant-image-wrap {
+      .hotel-image-wrap {
         width: 100%;
         height: 220px;
         border-radius: 15px;
@@ -70,16 +70,14 @@ document.addEventListener("DOMContentLoaded", () => {
         position: relative;
       }
 
-      .hotel-image,
-      .restaurant-image {
+      .hotel-image {
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
       }
 
-      .hotel-image-placeholder,
-      .restaurant-image-placeholder {
+      .hotel-image-placeholder {
         width: 100%;
         height: 100%;
         display: flex;
@@ -96,15 +94,13 @@ document.addEventListener("DOMContentLoaded", () => {
         );
       }
 
-      .hotel-info,
-      .restaurant-info {
+      .hotel-info {
         display: flex;
         flex-direction: column;
         min-width: 0;
       }
 
-      .hotel-number,
-      .restaurant-number {
+      .hotel-number {
         font-size: 12px;
         font-weight: 700;
         color: #8b8f9a;
@@ -113,13 +109,12 @@ document.addEventListener("DOMContentLoaded", () => {
         margin-bottom: 6px;
       }
 
-      .hotel-name,
-      .restaurant-name {
+      .hotel-name {
         font-size: 24px;
         line-height: 1.2;
         font-weight: 750;
         color: #17181c;
-        margin: 0 0 10px;
+        margin: 0 0 8px;
       }
 
       .hotel-rating {
@@ -142,10 +137,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       .hotel-price {
-        margin-bottom: 8px;
+        margin-bottom: 12px;
         display: flex;
         align-items: baseline;
-        gap: 7px;
+        gap: 5px;
         flex-wrap: wrap;
       }
 
@@ -160,15 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
         color: #777c86;
       }
 
-      .hotel-price-note {
-        font-size: 12px;
-        line-height: 1.5;
-        color: #777c86;
-        margin-bottom: 14px;
-      }
-
-      .hotel-description,
-      .restaurant-description {
+      .hotel-description {
         font-size: 14px;
         line-height: 1.65;
         color: #555b66;
@@ -205,8 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
         gap: 12px;
       }
 
-      .booking-button,
-      .maps-button {
+      .booking-button {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -222,8 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
         transition: all .2s ease;
       }
 
-      .booking-button:hover,
-      .maps-button:hover {
+      .booking-button:hover {
         background: #252b38;
         transform: translateY(-1px);
       }
@@ -232,22 +217,111 @@ document.addEventListener("DOMContentLoaded", () => {
         font-size: 16px;
       }
 
-      .hotel-intro,
-      .restaurant-intro {
+      .hotel-intro {
         margin-bottom: 4px;
       }
 
-      .hotel-intro h3,
-      .restaurant-intro h3 {
+      .hotel-intro h3 {
         margin: 0 0 6px;
         font-size: 20px;
       }
 
-      .hotel-intro p,
-      .restaurant-intro p {
+      .hotel-intro p {
         margin: 0;
         color: #70757f;
         line-height: 1.6;
+      }
+
+      .hotel-estimated-note {
+        width: 100%;
+        font-size: 11px;
+        color: #8b8f9a;
+        margin-top: 2px;
+      }
+
+
+      /* =====================================================
+         RESTAURANT LIST
+      ===================================================== */
+
+      .restaurant-list {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        margin-top: 24px;
+      }
+
+      .restaurant-card {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        gap: 24px;
+        background: #ffffff;
+        border: 1px solid #e8e8ee;
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+        transition: transform .2s ease, box-shadow .2s ease;
+        overflow: hidden;
+      }
+
+      .restaurant-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.09);
+      }
+
+      .restaurant-image-wrap {
+        width: 100%;
+        height: 220px;
+        border-radius: 15px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #f2f3f7, #e5e7ec);
+      }
+
+      .restaurant-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .restaurant-image-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #8b8f9a;
+        font-size: 14px;
+        text-align: center;
+        padding: 20px;
+        background: linear-gradient(
+          135deg,
+          #f5f6f8 0%,
+          #e8eaf0 100%
+        );
+      }
+
+      .restaurant-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .restaurant-number {
+        font-size: 12px;
+        font-weight: 700;
+        color: #8b8f9a;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        margin-bottom: 6px;
+      }
+
+      .restaurant-name {
+        font-size: 24px;
+        line-height: 1.2;
+        font-weight: 750;
+        color: #17181c;
+        margin: 0 0 10px;
       }
 
       .restaurant-meta {
@@ -282,9 +356,57 @@ document.addEventListener("DOMContentLoaded", () => {
         margin-bottom: 10px;
       }
 
+      .restaurant-description {
+        font-size: 14px;
+        line-height: 1.65;
+        color: #555b66;
+        margin-bottom: 18px;
+      }
+
       .restaurant-actions {
         margin-top: auto;
       }
+
+      .maps-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 11px;
+        background: #111827;
+        color: #ffffff !important;
+        text-decoration: none !important;
+        font-size: 14px;
+        font-weight: 700;
+        transition: all .2s ease;
+      }
+
+      .maps-button:hover {
+        background: #252b38;
+        transform: translateY(-1px);
+      }
+
+      .restaurant-intro {
+        margin-bottom: 4px;
+      }
+
+      .restaurant-intro h3 {
+        margin: 0 0 6px;
+        font-size: 20px;
+      }
+
+      .restaurant-intro p {
+        margin: 0;
+        color: #70757f;
+        line-height: 1.6;
+      }
+
+
+      /* =====================================================
+         MOBILE
+      ===================================================== */
 
       @media (max-width: 700px) {
 
@@ -335,14 +457,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     chip.addEventListener("click", () => {
 
-      const interest = chip.textContent.trim();
+      const interest =
+        chip.textContent.trim();
 
       if (selectedInterests.has(interest)) {
+
         selectedInterests.delete(interest);
         chip.classList.remove("active");
+
       } else {
+
         selectedInterests.add(interest);
         chip.classList.add("active");
+
       }
 
     });
@@ -361,26 +488,43 @@ document.addEventListener("DOMContentLoaded", () => {
     formData = {
 
       destination:
-        document.getElementById("destination").value.trim(),
+        document
+          .getElementById("destination")
+          .value
+          .trim(),
 
       startDate:
-        document.getElementById("startDate").value || "Flexible",
+        document
+          .getElementById("startDate")
+          .value ||
+        "Flexible",
 
       days:
-        document.getElementById("days").value,
+        document
+          .getElementById("days")
+          .value,
 
       budget:
-        document.getElementById("budget").value,
+        document
+          .getElementById("budget")
+          .value,
 
       travelers:
-        document.getElementById("travelers").value,
+        document
+          .getElementById("travelers")
+          .value,
 
       interests:
-        Array.from(selectedInterests).join(", ") ||
+        Array
+          .from(selectedInterests)
+          .join(", ") ||
         "General Sightseeing",
 
       notes:
-        document.getElementById("notes").value.trim() ||
+        document
+          .getElementById("notes")
+          .value
+          .trim() ||
         "None"
 
     };
@@ -390,39 +534,53 @@ document.addEventListener("DOMContentLoaded", () => {
 
       <p>
         Destination:
-        <strong>${escapeHTML(formData.destination)}</strong>
+        <strong>
+          ${escapeHTML(formData.destination)}
+        </strong>
       </p>
 
       <p>
         Duration:
-        <strong>${escapeHTML(formData.days)} Days</strong>
-        (Starts: ${escapeHTML(formData.startDate)})
+        <strong>
+          ${escapeHTML(formData.days)} Days
+        </strong>
+        (Starts:
+        ${escapeHTML(formData.startDate)})
       </p>
 
       <p>
         Budget limit:
-        <strong>$${escapeHTML(formData.budget)}</strong>
+        <strong>
+          $${escapeHTML(formData.budget)}
+        </strong>
       </p>
 
       <p>
         Party size:
-        <strong>${escapeHTML(formData.travelers)}</strong>
+        <strong>
+          ${escapeHTML(formData.travelers)}
+        </strong>
       </p>
 
       <p>
         Interests:
-        <strong>${escapeHTML(formData.interests)}</strong>
+        <strong>
+          ${escapeHTML(formData.interests)}
+        </strong>
       </p>
 
       <p>
         Special requests:
-        <strong>${escapeHTML(formData.notes)}</strong>
+        <strong>
+          ${escapeHTML(formData.notes)}
+        </strong>
       </p>
 
     `;
 
 
     appScreen.classList.add("hidden");
+
     reviewScreen.classList.remove("hidden");
 
   });
@@ -435,6 +593,7 @@ document.addEventListener("DOMContentLoaded", () => {
   closeReviewBtn.addEventListener("click", () => {
 
     reviewScreen.classList.add("hidden");
+
     appScreen.classList.remove("hidden");
 
   });
@@ -457,7 +616,9 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     appScreen.classList.add("hidden");
+
     reviewScreen.classList.add("hidden");
+
     planScreen.classList.remove("hidden");
 
     generatePlan(formData);
@@ -477,7 +638,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const savedData =
       localStorage.getItem("pendingTripData");
 
-    if (hasPaid === "true" && savedData) {
+    if (
+      hasPaid === "true" &&
+      savedData
+    ) {
 
       try {
 
@@ -485,10 +649,15 @@ document.addEventListener("DOMContentLoaded", () => {
           JSON.parse(savedData);
 
         localStorage.removeItem("hasPaid");
-        localStorage.removeItem("pendingTripData");
+
+        localStorage.removeItem(
+          "pendingTripData"
+        );
 
         appScreen.classList.add("hidden");
+
         reviewScreen.classList.add("hidden");
+
         planScreen.classList.remove("hidden");
 
         generatePlan(parsedData);
@@ -518,6 +687,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const planIntro =
       document.getElementById("planIntro");
+
 
     planTitle.textContent =
       "Creating your personalized plan...";
@@ -596,7 +766,9 @@ document.addEventListener("DOMContentLoaded", () => {
             },
 
             body:
-              JSON.stringify(tripData)
+              JSON.stringify(
+                tripData
+              )
           }
         );
 
@@ -622,7 +794,9 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
 
         data =
-          JSON.parse(rawResponse);
+          JSON.parse(
+            rawResponse
+          );
 
       } catch (jsonError) {
 
@@ -692,7 +866,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (transportContent) {
 
         transportContent.innerHTML =
-          safeHTML(data.transport);
+          safeHTML(
+            data.transport
+          );
 
       }
 
@@ -704,7 +880,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (experiencesContent) {
 
         experiencesContent.innerHTML =
-          safeHTML(data.experiences);
+          safeHTML(
+            data.experiences
+          );
 
       }
 
@@ -716,7 +894,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (moneyContent) {
 
         moneyContent.innerHTML =
-          safeHTML(data.money);
+          safeHTML(
+            data.money
+          );
 
       }
 
@@ -727,7 +907,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (daysContent) {
 
-        renderDayByDay(
+        renderDayPlan(
           data.daysPlan,
           tripData.destination
         );
@@ -768,7 +948,9 @@ document.addEventListener("DOMContentLoaded", () => {
             margin-top:8px;
             font-size:14px;
           ">
-            ${escapeHTML(error.message)}
+            ${escapeHTML(
+              error.message
+            )}
           </div>
 
         </div>
@@ -777,11 +959,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
       if (stayContent) {
-        stayContent.innerHTML = errorHTML;
+        stayContent.innerHTML =
+          errorHTML;
       }
 
       if (restaurantsContent) {
-        restaurantsContent.innerHTML = errorHTML;
+        restaurantsContent.innerHTML =
+          errorHTML;
       }
 
     }
@@ -799,7 +983,9 @@ document.addEventListener("DOMContentLoaded", () => {
   ) {
 
     const container =
-      document.getElementById("stayContent");
+      document.getElementById(
+        "stayContent"
+      );
 
 
     if (!container) {
@@ -846,6 +1032,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const intro =
       document.createElement("div");
 
+
     intro.className =
       "hotel-intro";
 
@@ -868,6 +1055,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const hotelList =
       document.createElement("div");
 
+
     hotelList.className =
       "hotel-list";
 
@@ -882,7 +1070,9 @@ document.addEventListener("DOMContentLoaded", () => {
             destination
           );
 
-        hotelList.appendChild(card);
+        hotelList.appendChild(
+          card
+        );
 
       }
     );
@@ -890,8 +1080,114 @@ document.addEventListener("DOMContentLoaded", () => {
 
     container.innerHTML = "";
 
-    container.appendChild(intro);
-    container.appendChild(hotelList);
+    container.appendChild(
+      intro
+    );
+
+    container.appendChild(
+      hotelList
+    );
+
+  }
+
+
+  // =========================================================
+  // ESTIMATE HOTEL PRICE
+  // NO API CALL
+  // NO EXTRA CONSUMPTION
+  // =========================================================
+
+  function estimateHotelPrice(hotel) {
+
+    const name =
+      String(
+        hotel?.name || ""
+      )
+      .toLowerCase();
+
+
+    const stars =
+      Number(
+        hotel?.stars
+      ) || 0;
+
+
+    // =======================================================
+    // KNOWN LUXURY HOTELS
+    // =======================================================
+
+    if (
+      name.includes("four seasons")
+    ) {
+      return 650;
+    }
+
+
+    if (
+      name.includes("ritz") ||
+      name.includes("mandarin oriental") ||
+      name.includes("st. regis") ||
+      name.includes("peninsula")
+    ) {
+      return 500;
+    }
+
+
+    // =======================================================
+    // FIVE STAR
+    // =======================================================
+
+    if (stars >= 5) {
+      return 250;
+    }
+
+
+    // =======================================================
+    // FOUR STAR
+    // =======================================================
+
+    if (stars === 4) {
+      return 150;
+    }
+
+
+    // =======================================================
+    // THREE STAR
+    // =======================================================
+
+    if (stars === 3) {
+      return 90;
+    }
+
+
+    // =======================================================
+    // HOSTEL
+    // =======================================================
+
+    if (
+      name.includes("hostel")
+    ) {
+      return 35;
+    }
+
+
+    // =======================================================
+    // APARTMENT / APARTS
+    // =======================================================
+
+    if (
+      name.includes("apart") ||
+      name.includes("aparts")
+    ) {
+      return 75;
+    }
+
+
+    // =======================================================
+    // DEFAULT
+    // =======================================================
+
+    return 100;
 
   }
 
@@ -907,7 +1203,10 @@ document.addEventListener("DOMContentLoaded", () => {
   ) {
 
     const card =
-      document.createElement("article");
+      document.createElement(
+        "article"
+      );
+
 
     card.className =
       "hotel-card";
@@ -919,23 +1218,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     const stars =
-      Number(hotel?.stars) || 0;
+      Number(
+        hotel?.stars
+      ) || 0;
+
+
+    // =======================================================
+    // REAL PRICE IF AVAILABLE
+    // OTHERWISE LOCAL ESTIMATE
+    // =======================================================
+
+    const hasRealPrice =
+      hotel?.price !== undefined &&
+      hotel?.price !== null &&
+      hotel?.price !== "" &&
+      Number.isFinite(
+        Number(hotel.price)
+      );
 
 
     const price =
-      hotel?.price !== undefined &&
-      hotel?.price !== null &&
-      hotel?.price !== ""
+      hasRealPrice
         ? Number(hotel.price)
-        : null;
-
-
-    const priceMax =
-      hotel?.priceMax !== undefined &&
-      hotel?.priceMax !== null &&
-      hotel?.priceMax !== ""
-        ? Number(hotel.priceMax)
-        : null;
+        : estimateHotelPrice(hotel);
 
 
     const currency =
@@ -944,8 +1249,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     const priceType =
-      hotel?.priceType ||
-      "estimated per night";
+      hasRealPrice
+        ? (
+            hotel?.priceType ||
+            "per night"
+          )
+        : "estimated per night";
 
 
     const description =
@@ -954,7 +1263,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     const amenities =
-      Array.isArray(hotel?.amenities)
+      Array.isArray(
+        hotel?.amenities
+      )
         ? hotel.amenities
         : [];
 
@@ -966,10 +1277,6 @@ document.addEventListener("DOMContentLoaded", () => {
       hotel?.photoUrl ||
       "";
 
-
-    // =======================================================
-    // HOTEL IMAGE
-    // =======================================================
 
     let imageHTML = "";
 
@@ -1011,10 +1318,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    // =======================================================
-    // STARS
-    // =======================================================
-
     let starsHTML = "";
 
 
@@ -1026,12 +1329,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <span class="hotel-stars">
             ${"★".repeat(
-              Math.min(stars, 5)
+              Math.min(
+                Math.max(
+                  Math.round(stars),
+                  0
+                ),
+                5
+              )
             )}
           </span>
 
           <span class="hotel-star-text">
-            ${escapeHTML(String(stars))}-star property
+            ${escapeHTML(
+              String(stars)
+            )}-star property
           </span>
 
         </div>
@@ -1042,65 +1353,45 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // =======================================================
-    // PRICE
+    // PRICE HTML
     // =======================================================
 
-    let priceHTML = "";
+    const priceHTML = `
 
+      <div class="hotel-price">
 
-    if (
-      price !== null &&
-      Number.isFinite(price)
-    ) {
+        <span class="hotel-price-value">
 
-      let priceDisplay =
-        `$${escapeHTML(
-          String(price)
-        )}`;
+          $${escapeHTML(
+            formatPrice(price)
+          )}
 
+          ${escapeHTML(
+            String(currency)
+          )}
 
-      if (
-        priceMax !== null &&
-        Number.isFinite(priceMax) &&
-        priceMax > price
-      ) {
+        </span>
 
-        priceDisplay =
-          `$${escapeHTML(
-            String(price)
-          )}–$${escapeHTML(
-            String(priceMax)
-          )}`;
+        <span class="hotel-price-label">
+          ${escapeHTML(
+            priceType
+          )}
+        </span>
 
-      }
+        ${
+          !hasRealPrice
+            ? `
+              <div class="hotel-estimated-note">
+                Estimated rate — check Booking.com for the current price.
+              </div>
+            `
+            : ""
+        }
 
+      </div>
 
-      priceHTML = `
+    `;
 
-        <div class="hotel-price">
-
-          <span class="hotel-price-value">
-            ${priceDisplay}
-          </span>
-
-          <span class="hotel-price-label">
-            ${escapeHTML(String(currency))} / night
-          </span>
-
-        </div>
-
-        <div class="hotel-price-note">
-          Estimated price — verify current price on Booking.com
-        </div>
-
-      `;
-
-    }
-
-
-    // =======================================================
-    // AMENITIES
-    // =======================================================
 
     let amenitiesHTML = "";
 
@@ -1119,9 +1410,17 @@ document.addEventListener("DOMContentLoaded", () => {
             .slice(0, 8)
             .map(
               amenity => `
+
                 <span class="hotel-amenity">
-                  ${escapeHTML(String(amenity))}
+
+                  ${escapeHTML(
+                    String(
+                      amenity
+                    )
+                  )}
+
                 </span>
+
               `
             )
             .join("")
@@ -1134,10 +1433,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    // =======================================================
-    // BOOKING URL
-    // =======================================================
-
     const bookingURL =
       hotel?.bookingUrl ||
       createBookingSearchURL(
@@ -1145,10 +1440,6 @@ document.addEventListener("DOMContentLoaded", () => {
         destination
       );
 
-
-    // =======================================================
-    // CARD
-    // =======================================================
 
     card.innerHTML = `
 
@@ -1165,28 +1456,41 @@ document.addEventListener("DOMContentLoaded", () => {
           Option ${number}
         </div>
 
+
         <h3 class="hotel-name">
           ${escapeHTML(name)}
         </h3>
 
+
         ${starsHTML}
+
 
         ${priceHTML}
 
+
         <div class="hotel-description">
-          ${escapeHTML(description)}
+
+          ${escapeHTML(
+            description
+          )}
+
         </div>
 
+
         ${amenitiesHTML}
+
 
         <div class="hotel-actions">
 
           <a
             class="booking-button"
-            href="${escapeAttribute(bookingURL)}"
+            href="${escapeAttribute(
+              bookingURL
+            )}"
             target="_blank"
             rel="noopener noreferrer"
           >
+
             Check availability on Booking.com
 
             <span class="booking-arrow">
@@ -1203,6 +1507,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     return card;
+
+  }
+
+
+  // =========================================================
+  // FORMAT PRICE
+  // =========================================================
+
+  function formatPrice(value) {
+
+    const number =
+      Number(value);
+
+
+    if (
+      !Number.isFinite(number)
+    ) {
+
+      return "100";
+
+    }
+
+
+    return number
+      .toLocaleString(
+        "en-US",
+        {
+          maximumFractionDigits: 0
+        }
+      );
 
   }
 
@@ -1237,7 +1571,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     if (
-      !Array.isArray(restaurantData) ||
+      !Array.isArray(
+        restaurantData
+      ) ||
       restaurantData.length === 0
     ) {
 
@@ -1302,7 +1638,9 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
 
 
-    container.appendChild(introWrapper);
+    container.appendChild(
+      introWrapper
+    );
 
 
     const restaurantList =
@@ -1323,13 +1661,18 @@ document.addEventListener("DOMContentLoaded", () => {
             destination
           );
 
-        restaurantList.appendChild(card);
+
+        restaurantList.appendChild(
+          card
+        );
 
       }
     );
 
 
-    container.appendChild(restaurantList);
+    container.appendChild(
+      restaurantList
+    );
 
   }
 
@@ -1345,7 +1688,10 @@ document.addEventListener("DOMContentLoaded", () => {
   ) {
 
     const card =
-      document.createElement("article");
+      document.createElement(
+        "article"
+      );
+
 
     card.className =
       "restaurant-card";
@@ -1448,7 +1794,11 @@ document.addEventListener("DOMContentLoaded", () => {
       ratingHTML = `
 
         <span class="restaurant-rating">
-          ★ ${escapeHTML(String(rating))}
+
+          ★ ${escapeHTML(
+            String(rating)
+          )}
+
         </span>
 
       `;
@@ -1480,12 +1830,20 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="restaurant-meta">
 
           <span class="restaurant-cuisine">
-            ${escapeHTML(String(cuisine))}
+
+            ${escapeHTML(
+              String(cuisine)
+            )}
+
           </span>
 
 
           <span class="restaurant-price">
-            ${escapeHTML(String(priceLevel))}
+
+            ${escapeHTML(
+              String(priceLevel)
+            )}
+
           </span>
 
 
@@ -1495,12 +1853,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         <div class="restaurant-address">
-          ${escapeHTML(address)}
+
+          ${escapeHTML(
+            address
+          )}
+
         </div>
 
 
         <div class="restaurant-description">
-          ${escapeHTML(description)}
+
+          ${escapeHTML(
+            description
+          )}
+
         </div>
 
 
@@ -1508,7 +1874,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <a
             class="maps-button"
-            href="${escapeAttribute(mapsURL)}"
+            href="${escapeAttribute(
+              mapsURL
+            )}"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -1534,16 +1902,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // =========================================================
-  // DAY-BY-DAY RENDER
+  // RENDER DAY PLAN
   // =========================================================
 
-  function renderDayByDay(
-    daysPlan,
+  function renderDayPlan(
+    daysData,
     destination
   ) {
 
     const container =
-      document.getElementById("daysContent");
+      document.getElementById(
+        "daysContent"
+      );
 
 
     if (!container) {
@@ -1551,20 +1921,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
+    container.innerHTML = "";
+
+
     if (
-      !Array.isArray(daysPlan) ||
-      daysPlan.length === 0
+      !Array.isArray(daysData) ||
+      daysData.length === 0
     ) {
 
       container.innerHTML = `
+
         <div style="
           padding:20px;
           background:#f7f7f8;
           border-radius:14px;
           color:#666;
         ">
+
           No day-by-day itinerary was returned.
+
         </div>
+
       `;
 
       return;
@@ -1572,34 +1949,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    container.innerHTML = `
-
-      <div style="
-        margin-bottom:22px;
-      ">
-
-        <h3 style="
-          margin:0 0 6px;
-          font-size:22px;
-        ">
-          Day-by-Day Itinerary
-        </h3>
-
-        <p style="
-          margin:0;
-          color:#70757f;
-          line-height:1.6;
-        ">
-          Your optimized daily travel schedule
-          for ${escapeHTML(destination)}.
-        </p>
-
-      </div>
-
-    `;
+    const wrapper =
+      document.createElement("div");
 
 
-    daysPlan.forEach(
+    wrapper.className =
+      "day-plan-list";
+
+
+    daysData.forEach(
       (day, index) => {
 
         const dayNumber =
@@ -1627,115 +1985,79 @@ document.addEventListener("DOMContentLoaded", () => {
           "<p>Relax and explore a popular evening area.</p>";
 
 
-        const dayCard =
-          document.createElement("article");
+        const card =
+          document.createElement(
+            "article"
+          );
 
 
-        dayCard.style.cssText = `
-          background:#ffffff;
-          border:1px solid #e8e8ee;
-          border-radius:18px;
-          padding:22px;
-          margin-bottom:18px;
-          box-shadow:0 7px 22px rgba(0,0,0,0.05);
-        `;
+        card.className =
+          "day-plan-card";
 
 
-        dayCard.innerHTML = `
+        card.innerHTML = `
 
-          <div style="
-            font-size:12px;
-            font-weight:800;
-            color:#8b8f9a;
-            text-transform:uppercase;
-            letter-spacing:.08em;
-            margin-bottom:6px;
-          ">
-            DAY ${escapeHTML(String(dayNumber))}
+          <div class="day-plan-header">
+
+            <div class="day-plan-number">
+
+              DAY ${escapeHTML(
+                String(dayNumber)
+              )}
+
+            </div>
+
+            <h3>
+
+              ${escapeHTML(
+                String(title)
+              )}
+
+            </h3>
+
           </div>
 
 
-          <h3 style="
-            margin:0 0 18px;
-            font-size:22px;
-            line-height:1.3;
-            color:#17181c;
-          ">
-            ${escapeHTML(String(title))}
-          </h3>
+          <div class="day-plan-part">
 
-
-          <div style="
-            margin-bottom:17px;
-          ">
-
-            <div style="
-              font-size:12px;
-              font-weight:800;
-              color:#555b66;
-              text-transform:uppercase;
-              letter-spacing:.06em;
-              margin-bottom:6px;
-            ">
+            <div class="day-plan-label">
               MORNING
             </div>
 
-            <div style="
-              color:#444952;
-              line-height:1.7;
-              font-size:14px;
-            ">
-              ${safeHTML(morning)}
+            <div class="day-plan-text">
+              ${safeHTML(
+                morning
+              )}
             </div>
 
           </div>
 
 
-          <div style="
-            margin-bottom:17px;
-          ">
+          <div class="day-plan-part">
 
-            <div style="
-              font-size:12px;
-              font-weight:800;
-              color:#555b66;
-              text-transform:uppercase;
-              letter-spacing:.06em;
-              margin-bottom:6px;
-            ">
+            <div class="day-plan-label">
               AFTERNOON
             </div>
 
-            <div style="
-              color:#444952;
-              line-height:1.7;
-              font-size:14px;
-            ">
-              ${safeHTML(afternoon)}
+            <div class="day-plan-text">
+              ${safeHTML(
+                afternoon
+              )}
             </div>
 
           </div>
 
 
-          <div>
+          <div class="day-plan-part">
 
-            <div style="
-              font-size:12px;
-              font-weight:800;
-              color:#555b66;
-              text-transform:uppercase;
-              letter-spacing:.06em;
-              margin-bottom:6px;
-            ">
+            <div class="day-plan-label">
               EVENING
             </div>
 
-            <div style="
-              color:#444952;
-              line-height:1.7;
-              font-size:14px;
-            ">
-              ${safeHTML(evening)}
+            <div class="day-plan-text">
+              ${safeHTML(
+                evening
+              )}
             </div>
 
           </div>
@@ -1743,9 +2065,127 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
 
-        container.appendChild(dayCard);
+        wrapper.appendChild(
+          card
+        );
 
       }
+    );
+
+
+    container.appendChild(
+      wrapper
+    );
+
+
+    injectDayPlanStyles();
+
+  }
+
+
+  // =========================================================
+  // DAY PLAN STYLES
+  // =========================================================
+
+  function injectDayPlanStyles() {
+
+    if (
+      document.getElementById(
+        "aiPlannerDayStyles"
+      )
+    ) {
+      return;
+    }
+
+
+    const style =
+      document.createElement(
+        "style"
+      );
+
+
+    style.id =
+      "aiPlannerDayStyles";
+
+
+    style.textContent = `
+
+      .day-plan-list {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        margin-top: 24px;
+      }
+
+      .day-plan-card {
+        background: #ffffff;
+        border: 1px solid #e8e8ee;
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: 0 7px 22px rgba(0,0,0,0.05);
+      }
+
+      .day-plan-header {
+        padding-bottom: 18px;
+        margin-bottom: 18px;
+        border-bottom: 1px solid #ececf0;
+      }
+
+      .day-plan-number {
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .12em;
+        color: #8b8f9a;
+        margin-bottom: 6px;
+      }
+
+      .day-plan-header h3 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.3;
+        color: #17181c;
+      }
+
+      .day-plan-part {
+        margin-top: 18px;
+      }
+
+      .day-plan-label {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .1em;
+        color: #777c86;
+        margin-bottom: 7px;
+      }
+
+      .day-plan-text {
+        color: #4f5560;
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .day-plan-text p {
+        margin: 0;
+      }
+
+      @media (max-width: 700px) {
+
+        .day-plan-card {
+          padding: 18px;
+          border-radius: 16px;
+        }
+
+        .day-plan-header h3 {
+          font-size: 20px;
+        }
+
+      }
+
+    `;
+
+
+    document.head.appendChild(
+      style
     );
 
   }
@@ -1799,11 +2239,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
       return (
         "https://www.openstreetmap.org/" +
-        `?mlat=${encodeURIComponent(latitude)}` +
-        `&mlon=${encodeURIComponent(longitude)}` +
+        `?mlat=${encodeURIComponent(
+          latitude
+        )}` +
+        `&mlon=${encodeURIComponent(
+          longitude
+        )}` +
         "#map=18/" +
-        `${encodeURIComponent(latitude)}/` +
-        `${encodeURIComponent(longitude)}`
+        `${encodeURIComponent(
+          latitude
+        )}/` +
+        `${encodeURIComponent(
+          longitude
+        )}`
       );
 
     }
@@ -1852,15 +2300,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return String(value)
 
-      .replace(/&/g, "&amp;")
+      .replace(
+        /&/g,
+        "&amp;"
+      )
 
-      .replace(/</g, "&lt;")
+      .replace(
+        /</g,
+        "&lt;"
+      )
 
-      .replace(/>/g, "&gt;")
+      .replace(
+        />/g,
+        "&gt;"
+      )
 
-      .replace(/"/g, "&quot;")
+      .replace(
+        /"/g,
+        "&quot;"
+      )
 
-      .replace(/'/g, "&#039;");
+      .replace(
+        /'/g,
+        "&#039;"
+      );
 
   }
 
@@ -1871,7 +2334,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function escapeAttribute(value) {
 
-    return escapeHTML(value);
+    return escapeHTML(
+      value
+    );
 
   }
 
@@ -1881,11 +2346,15 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================================
 
   const tabs =
-    document.querySelectorAll(".plan-tab");
+    document.querySelectorAll(
+      ".plan-tab"
+    );
 
 
   const sections =
-    document.querySelectorAll(".plan-section");
+    document.querySelectorAll(
+      ".plan-section"
+    );
 
 
   tabs.forEach(
@@ -1896,13 +2365,17 @@ document.addEventListener("DOMContentLoaded", () => {
         () => {
 
           const targetSectionId =
-            tab.getAttribute("data-target");
+            tab.getAttribute(
+              "data-target"
+            );
 
 
           tabs.forEach(
             (t) => {
 
-              t.classList.remove("active");
+              t.classList.remove(
+                "active"
+              );
 
             }
           );
@@ -1911,13 +2384,17 @@ document.addEventListener("DOMContentLoaded", () => {
           sections.forEach(
             (section) => {
 
-              section.classList.add("hidden");
+              section.classList.add(
+                "hidden"
+              );
 
             }
           );
 
 
-          tab.classList.add("active");
+          tab.classList.add(
+            "active"
+          );
 
 
           const target =
@@ -1928,7 +2405,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
           if (target) {
 
-            target.classList.remove("hidden");
+            target.classList.remove(
+              "hidden"
+            );
 
           }
 
