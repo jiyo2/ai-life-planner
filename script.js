@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // =========================================================
-  // HOTEL + RESTAURANT STYLES
+  // HOTEL + RESTAURANT + DAY PLAN STYLES
   // =========================================================
 
   if (!document.getElementById("aiPlannerHotelStyles")) {
@@ -141,6 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
         display: flex;
         align-items: baseline;
         gap: 5px;
+        flex-wrap: wrap;
       }
 
       .hotel-price-value {
@@ -397,6 +398,90 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
       /* =====================================================
+         DAY BY DAY
+      ===================================================== */
+
+      .day-plan-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        margin-top: 20px;
+      }
+
+      .day-card {
+        background: #ffffff;
+        border: 1px solid #e8e8ee;
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+      }
+
+      .day-card-header {
+        margin-bottom: 15px;
+      }
+
+      .day-card-title {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 750;
+        color: #17181c;
+      }
+
+      .day-card-date {
+        margin-top: 5px;
+        color: #777c86;
+        font-size: 13px;
+      }
+
+      .day-card-description {
+        color: #555b66;
+        line-height: 1.65;
+        margin-bottom: 15px;
+      }
+
+      .day-activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .day-activity {
+        padding: 12px 14px;
+        background: #f7f7f9;
+        border: 1px solid #ededf1;
+        border-radius: 12px;
+      }
+
+      .day-activity-time {
+        font-size: 12px;
+        font-weight: 700;
+        color: #666b76;
+        margin-bottom: 4px;
+      }
+
+      .day-activity-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #202229;
+      }
+
+      .day-activity-description {
+        margin-top: 4px;
+        font-size: 13px;
+        line-height: 1.55;
+        color: #626773;
+      }
+
+      .day-plan-empty {
+        padding: 20px;
+        border-radius: 14px;
+        background: #f7f7f8;
+        color: #666;
+        line-height: 1.6;
+      }
+
+
+      /* =====================================================
          MOBILE
       ===================================================== */
 
@@ -433,6 +518,11 @@ document.addEventListener("DOMContentLoaded", () => {
         .maps-button {
           width: 100%;
         }
+
+        .day-card {
+          padding: 16px;
+        }
+
       }
 
     `;
@@ -473,149 +563,179 @@ document.addEventListener("DOMContentLoaded", () => {
   // FORM SUBMISSION
   // =========================================================
 
-  plannerForm.addEventListener("submit", (e) => {
+  if (plannerForm) {
 
-    e.preventDefault();
+    plannerForm.addEventListener("submit", (e) => {
 
-    formData = {
+      e.preventDefault();
 
-      destination:
-        document
-          .getElementById("destination")
-          .value
-          .trim(),
+      formData = {
 
-      startDate:
-        document
-          .getElementById("startDate")
-          .value ||
-        "Flexible",
+        destination:
+          document
+            .getElementById("destination")
+            .value
+            .trim(),
 
-      days:
-        document
-          .getElementById("days")
-          .value,
+        startDate:
+          document
+            .getElementById("startDate")
+            .value ||
+          "Flexible",
 
-      budget:
-        document
-          .getElementById("budget")
-          .value,
+        days:
+          document
+            .getElementById("days")
+            .value,
 
-      travelers:
-        document
-          .getElementById("travelers")
-          .value,
+        budget:
+          document
+            .getElementById("budget")
+            .value,
 
-      interests:
-        Array
-          .from(selectedInterests)
-          .join(", ") ||
-        "General Sightseeing",
+        travelers:
+          document
+            .getElementById("travelers")
+            .value,
 
-      notes:
-        document
-          .getElementById("notes")
-          .value
-          .trim() ||
-        "None"
+        interests:
+          Array
+            .from(selectedInterests)
+            .join(", ") ||
+          "General Sightseeing",
 
-    };
+        notes:
+          document
+            .getElementById("notes")
+            .value
+            .trim() ||
+          "None"
 
-
-    summaryDiv.innerHTML = `
-
-      <p>
-        Destination:
-        <strong>
-          ${escapeHTML(formData.destination)}
-        </strong>
-      </p>
-
-      <p>
-        Duration:
-        <strong>
-          ${escapeHTML(formData.days)} Days
-        </strong>
-        (Starts:
-        ${escapeHTML(formData.startDate)})
-      </p>
-
-      <p>
-        Budget limit:
-        <strong>
-          $${escapeHTML(formData.budget)}
-        </strong>
-      </p>
-
-      <p>
-        Party size:
-        <strong>
-          ${escapeHTML(formData.travelers)}
-        </strong>
-      </p>
-
-      <p>
-        Interests:
-        <strong>
-          ${escapeHTML(formData.interests)}
-        </strong>
-      </p>
-
-      <p>
-        Special requests:
-        <strong>
-          ${escapeHTML(formData.notes)}
-        </strong>
-      </p>
-
-    `;
+      };
 
 
-    appScreen.classList.add("hidden");
+      if (summaryDiv) {
 
-    reviewScreen.classList.remove("hidden");
+        summaryDiv.innerHTML = `
 
-  });
+          <p>
+            Destination:
+            <strong>
+              ${escapeHTML(formData.destination)}
+            </strong>
+          </p>
+
+          <p>
+            Duration:
+            <strong>
+              ${escapeHTML(formData.days)} Days
+            </strong>
+            (Starts:
+            ${escapeHTML(formData.startDate)})
+          </p>
+
+          <p>
+            Budget limit:
+            <strong>
+              $${escapeHTML(formData.budget)}
+            </strong>
+          </p>
+
+          <p>
+            Party size:
+            <strong>
+              ${escapeHTML(formData.travelers)}
+            </strong>
+          </p>
+
+          <p>
+            Interests:
+            <strong>
+              ${escapeHTML(formData.interests)}
+            </strong>
+          </p>
+
+          <p>
+            Special requests:
+            <strong>
+              ${escapeHTML(formData.notes)}
+            </strong>
+          </p>
+
+        `;
+
+      }
+
+
+      if (appScreen) {
+        appScreen.classList.add("hidden");
+      }
+
+      if (reviewScreen) {
+        reviewScreen.classList.remove("hidden");
+      }
+
+    });
+
+  }
 
 
   // =========================================================
   // EDIT BUTTON
   // =========================================================
 
-  closeReviewBtn.addEventListener("click", () => {
+  if (closeReviewBtn) {
 
-    reviewScreen.classList.add("hidden");
+    closeReviewBtn.addEventListener("click", () => {
 
-    appScreen.classList.remove("hidden");
+      if (reviewScreen) {
+        reviewScreen.classList.add("hidden");
+      }
 
-  });
+      if (appScreen) {
+        appScreen.classList.remove("hidden");
+      }
+
+    });
+
+  }
 
 
   // =========================================================
   // DEMO PAYMENT FLOW
   // =========================================================
 
-  payBtn.addEventListener("click", () => {
+  if (payBtn) {
 
-    localStorage.setItem(
-      "pendingTripData",
-      JSON.stringify(formData)
-    );
+    payBtn.addEventListener("click", () => {
 
-    localStorage.setItem(
-      "hasPaid",
-      "true"
-    );
+      localStorage.setItem(
+        "pendingTripData",
+        JSON.stringify(formData)
+      );
 
-    appScreen.classList.add("hidden");
+      localStorage.setItem(
+        "hasPaid",
+        "true"
+      );
 
-    reviewScreen.classList.add("hidden");
+      if (appScreen) {
+        appScreen.classList.add("hidden");
+      }
 
-    planScreen.classList.remove("hidden");
+      if (reviewScreen) {
+        reviewScreen.classList.add("hidden");
+      }
 
-    generatePlan(formData);
+      if (planScreen) {
+        planScreen.classList.remove("hidden");
+      }
 
-  });
+      generatePlan(formData);
+
+    });
+
+  }
 
 
   // =========================================================
@@ -646,11 +766,17 @@ document.addEventListener("DOMContentLoaded", () => {
           "pendingTripData"
         );
 
-        appScreen.classList.add("hidden");
+        if (appScreen) {
+          appScreen.classList.add("hidden");
+        }
 
-        reviewScreen.classList.add("hidden");
+        if (reviewScreen) {
+          reviewScreen.classList.add("hidden");
+        }
 
-        planScreen.classList.remove("hidden");
+        if (planScreen) {
+          planScreen.classList.remove("hidden");
+        }
 
         generatePlan(parsedData);
 
@@ -681,14 +807,20 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("planIntro");
 
 
-    planTitle.textContent =
-      "Creating your personalized plan...";
+    if (planTitle) {
 
-    planIntro.textContent =
-      "Our AI is building your itinerary. Please wait a moment.";
+      planTitle.textContent =
+        "Creating your personalized plan...";
 
+    }
 
-    // Reset sections to loading state
+    if (planIntro) {
+
+      planIntro.textContent =
+        "Our AI is building your itinerary. Please wait a moment.";
+
+    }
+
 
     const stayContent =
       document.getElementById("stayContent");
@@ -817,15 +949,29 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
 
+      console.log(
+        "Parsed PLAN API data:",
+        data
+      );
+
+
       // =====================================================
       // HEADER
       // =====================================================
 
-      planTitle.textContent =
-        `Your Trip to ${tripData.destination}`;
+      if (planTitle) {
 
-      planIntro.textContent =
-        `Customized strategy for ${tripData.days} days with a $${tripData.budget} budget.`;
+        planTitle.textContent =
+          `Your Trip to ${tripData.destination}`;
+
+      }
+
+      if (planIntro) {
+
+        planIntro.textContent =
+          `Customized strategy for ${tripData.days} days with a $${tripData.budget} budget.`;
+
+      }
 
 
       // =====================================================
@@ -833,7 +979,10 @@ document.addEventListener("DOMContentLoaded", () => {
       // =====================================================
 
       renderHotels(
-        data.stay,
+        data.stay ||
+        data.hotels ||
+        data.accommodation ||
+        data.hotelRecommendations,
         tripData.destination
       );
 
@@ -848,7 +997,8 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       renderRestaurants(
-        data.restaurants,
+        data.restaurants ||
+        data.restaurantRecommendations,
         tripData.destination
       );
 
@@ -860,7 +1010,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (transportContent) {
 
         transportContent.innerHTML =
-          safeHTML(
+          renderFlexibleContent(
             data.transport
           );
 
@@ -874,7 +1024,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (experiencesContent) {
 
         experiencesContent.innerHTML =
-          safeHTML(
+          renderFlexibleContent(
             data.experiences
           );
 
@@ -888,7 +1038,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (moneyContent) {
 
         moneyContent.innerHTML =
-          safeHTML(
+          renderFlexibleContent(
             data.money
           );
 
@@ -901,10 +1051,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (daysContent) {
 
-        daysContent.innerHTML =
-          safeHTML(
-            data.daysPlan
-          );
+        renderDayPlan(
+          data.daysPlan ||
+          data.dayByDay ||
+          data.itinerary ||
+          data.dailyPlan ||
+          data.days ||
+          data.dayPlan,
+          daysContent,
+          tripData
+        );
 
       }
 
@@ -917,11 +1073,19 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
 
-      planTitle.textContent =
-        "Generation Error";
+      if (planTitle) {
 
-      planIntro.textContent =
-        "The travel plan could not be generated.";
+        planTitle.textContent =
+          "Generation Error";
+
+      }
+
+      if (planIntro) {
+
+        planIntro.textContent =
+          "The travel plan could not be generated.";
+
+      }
 
 
       const errorHTML = `
@@ -953,17 +1117,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
       if (stayContent) {
-
-        stayContent.innerHTML =
-          errorHTML;
-
+        stayContent.innerHTML = errorHTML;
       }
 
       if (restaurantsContent) {
+        restaurantsContent.innerHTML = errorHTML;
+      }
 
-        restaurantsContent.innerHTML =
-          errorHTML;
-
+      if (daysContent) {
+        daysContent.innerHTML = errorHTML;
       }
 
     }
@@ -997,10 +1159,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    if (
-      !Array.isArray(stayData) ||
-      stayData.length === 0
-    ) {
+    const hotels =
+      normalizeArray(
+        stayData
+      );
+
+
+    if (hotels.length === 0) {
 
       container.innerHTML = `
 
@@ -1021,10 +1186,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
 
     }
-
-
-    const hotels =
-      stayData.slice(0, 10);
 
 
     const intro =
@@ -1058,22 +1219,24 @@ document.addEventListener("DOMContentLoaded", () => {
       "hotel-list";
 
 
-    hotels.forEach(
-      (hotel, index) => {
+    hotels
+      .slice(0, 10)
+      .forEach(
+        (hotel, index) => {
 
-        const card =
-          createHotelCard(
-            hotel,
-            index + 1,
-            destination
+          const card =
+            createHotelCard(
+              hotel,
+              index + 1,
+              destination
+            );
+
+          hotelList.appendChild(
+            card
           );
 
-        hotelList.appendChild(
-          card
-        );
-
-      }
-    );
+        }
+      );
 
 
     container.innerHTML = "";
@@ -1099,6 +1262,12 @@ document.addEventListener("DOMContentLoaded", () => {
     destination
   ) {
 
+    hotel =
+      hotel && typeof hotel === "object"
+        ? hotel
+        : {};
+
+
     const card =
       document.createElement(
         "article"
@@ -1110,51 +1279,76 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     const name =
-      hotel?.name ||
+      firstValue(
+        hotel.name,
+        hotel.hotelName,
+        hotel.title
+      ) ||
       "Recommended Accommodation";
 
 
     const stars =
-      Number(hotel?.stars) || 0;
+      parseStars(
+        firstValue(
+          hotel.stars,
+          hotel.starRating,
+          hotel.rating
+        )
+      );
 
 
-    const price =
-      hotel?.price !== undefined &&
-      hotel?.price !== null &&
-      hotel?.price !== ""
-        ? hotel.price
-        : null;
+    const priceInfo =
+      normalizePrice(
+        hotel.price ||
+        hotel.pricePerNight ||
+        hotel.nightlyPrice ||
+        hotel.rate ||
+        hotel.cost
+      );
 
 
     const currency =
-      hotel?.currency ||
+      firstValue(
+        hotel.currency,
+        hotel.priceCurrency
+      ) ||
+      priceInfo.currency ||
       "USD";
 
 
     const priceType =
-      hotel?.priceType ||
+      firstValue(
+        hotel.priceType,
+        hotel.priceLabel,
+        hotel.rateType
+      ) ||
+      priceInfo.label ||
       "estimated per night";
 
 
     const description =
-      hotel?.description ||
+      firstValue(
+        hotel.description,
+        hotel.summary,
+        hotel.details
+      ) ||
       "A recommended accommodation option selected for this trip.";
 
 
     const amenities =
-      Array.isArray(
-        hotel?.amenities
-      )
-        ? hotel.amenities
-        : [];
+      normalizeAmenities(
+        hotel.amenities ||
+        hotel.facilities ||
+        hotel.services ||
+        hotel.features ||
+        hotel.hotelServices
+      );
 
 
     const image =
-      hotel?.image ||
-      hotel?.imageUrl ||
-      hotel?.photo ||
-      hotel?.photoUrl ||
-      "";
+      extractImage(
+        hotel
+      );
 
 
     let imageHTML = "";
@@ -1229,7 +1423,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let priceHTML = "";
 
 
-    if (price !== null) {
+    if (
+      priceInfo.value !== null &&
+      priceInfo.value !== undefined &&
+      priceInfo.value !== ""
+    ) {
 
       priceHTML = `
 
@@ -1238,7 +1436,9 @@ document.addEventListener("DOMContentLoaded", () => {
           <span class="hotel-price-value">
 
             ${escapeHTML(
-              String(price)
+              formatPriceValue(
+                priceInfo.value
+              )
             )}
             ${escapeHTML(
               String(currency)
@@ -1273,7 +1473,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="hotel-amenities">
 
           ${amenities
-            .slice(0, 8)
+            .slice(0, 12)
             .map(
               amenity => `
                 <span class="hotel-amenity">
@@ -1296,7 +1496,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     const bookingURL =
-      hotel?.bookingUrl ||
+      firstValue(
+        hotel.bookingUrl,
+        hotel.bookingURL,
+        hotel.booking,
+        hotel.url
+      ) ||
       createBookingSearchURL(
         name,
         destination
@@ -1373,10 +1578,6 @@ document.addEventListener("DOMContentLoaded", () => {
     destination
   ) {
 
-    // IMPORTANT:
-    // HTML uses restaurantsContent.
-    // Do NOT use experiencesContent here.
-
     const container =
       document.getElementById(
         "restaurantsContent"
@@ -1394,21 +1595,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    // Remove loading message
-
     container.innerHTML = "";
 
 
-    // =======================================================
-    // NO RESTAURANTS
-    // =======================================================
-
-    if (
-      !Array.isArray(
+    const restaurants =
+      normalizeArray(
         restaurantData
-      ) ||
-      restaurantData.length === 0
-    ) {
+      );
+
+
+    if (restaurants.length === 0) {
 
       container.innerHTML = `
 
@@ -1430,7 +1626,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ">
 
             We could not find real restaurants
-            listed in OpenStreetMap for
+            listed for
             ${escapeHTML(destination)}.
 
           </div>
@@ -1443,18 +1639,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
-
-    // =======================================================
-    // MAXIMUM 10
-    // =======================================================
-
-    const restaurants =
-      restaurantData.slice(0, 10);
-
-
-    // =======================================================
-    // INTRO
-    // =======================================================
 
     const introWrapper =
       document.createElement("div");
@@ -1470,8 +1654,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </h3>
 
         <p>
-          Real local restaurants found through
-          OpenStreetMap.
+          Real local restaurants found for your destination.
         </p>
 
       </div>
@@ -1484,10 +1667,6 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
 
-    // =======================================================
-    // LIST
-    // =======================================================
-
     const restaurantList =
       document.createElement("div");
 
@@ -1496,32 +1675,25 @@ document.addEventListener("DOMContentLoaded", () => {
       "restaurant-list";
 
 
-    // =======================================================
-    // CARDS
-    // =======================================================
+    restaurants
+      .slice(0, 10)
+      .forEach(
+        (restaurant, index) => {
 
-    restaurants.forEach(
-      (restaurant, index) => {
+          const card =
+            createRestaurantCard(
+              restaurant,
+              index + 1,
+              destination
+            );
 
-        const card =
-          createRestaurantCard(
-            restaurant,
-            index + 1,
-            destination
+          restaurantList.appendChild(
+            card
           );
 
+        }
+      );
 
-        restaurantList.appendChild(
-          card
-        );
-
-      }
-    );
-
-
-    // =======================================================
-    // ADD TO PAGE
-    // =======================================================
 
     container.appendChild(
       restaurantList
@@ -1540,6 +1712,12 @@ document.addEventListener("DOMContentLoaded", () => {
     destination
   ) {
 
+    restaurant =
+      restaurant && typeof restaurant === "object"
+        ? restaurant
+        : {};
+
+
     const card =
       document.createElement(
         "article"
@@ -1551,48 +1729,73 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     const name =
-      restaurant?.name ||
+      firstValue(
+        restaurant.name,
+        restaurant.restaurantName,
+        restaurant.title
+      ) ||
       "Local Restaurant";
 
 
     const cuisine =
-      restaurant?.cuisine ||
+      firstValue(
+        restaurant.cuisine,
+        restaurant.cuisines,
+        restaurant.type,
+        restaurant.category
+      ) ||
       "Local cuisine";
 
 
     const priceLevel =
-      restaurant?.priceLevel ||
+      firstValue(
+        restaurant.priceLevel,
+        restaurant.price_range,
+        restaurant.priceRange,
+        restaurant.price
+      ) ||
       "$$";
 
 
     const rating =
-      restaurant?.rating !== undefined &&
-      restaurant?.rating !== null &&
-      restaurant?.rating !== ""
-        ? restaurant.rating
-        : null;
+      firstValue(
+        restaurant.rating,
+        restaurant.stars,
+        restaurant.score
+      );
 
 
     const address =
-      restaurant?.address ||
+      firstValue(
+        restaurant.address,
+        restaurant.formattedAddress,
+        restaurant.location?.address,
+        restaurant.location?.formatted_address
+      ) ||
       destination;
 
 
     const description =
-      restaurant?.description ||
-      `A real restaurant listed in OpenStreetMap in ${destination}.`;
+      firstValue(
+        restaurant.description,
+        restaurant.summary
+      ) ||
+      `A real restaurant in ${destination}.`;
 
 
     const image =
-      restaurant?.image ||
-      restaurant?.imageUrl ||
-      restaurant?.photo ||
-      restaurant?.photoUrl ||
-      "";
+      extractImage(
+        restaurant
+      );
 
 
     const mapsURL =
-      restaurant?.mapsUrl ||
+      firstValue(
+        restaurant.mapsUrl,
+        restaurant.mapUrl,
+        restaurant.googleMapsUrl,
+        restaurant.url
+      ) ||
       createOpenStreetMapURL(
         restaurant,
         destination
@@ -1642,7 +1845,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let ratingHTML = "";
 
 
-    if (rating !== null) {
+    if (
+      rating !== null &&
+      rating !== undefined &&
+      rating !== ""
+    ) {
 
       ratingHTML = `
 
@@ -1724,7 +1931,7 @@ document.addEventListener("DOMContentLoaded", () => {
             rel="noopener noreferrer"
           >
 
-            View on OpenStreetMap
+            View location
 
             <span>
               ↗
@@ -1740,6 +1947,972 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     return card;
+
+  }
+
+
+  // =========================================================
+  // RENDER DAY-BY-DAY PLAN
+  // =========================================================
+
+  function renderDayPlan(
+    dayData,
+    container,
+    tripData
+  ) {
+
+    console.log(
+      "DAY PLAN RAW DATA:",
+      dayData
+    );
+
+
+    if (!container) {
+      return;
+    }
+
+
+    const normalized =
+      normalizeDayPlan(
+        dayData
+      );
+
+
+    console.log(
+      "DAY PLAN NORMALIZED:",
+      normalized
+    );
+
+
+    if (
+      normalized.length === 0
+    ) {
+
+      container.innerHTML = `
+
+        <div class="day-plan-empty">
+
+          <strong>
+            Day-by-Day Itinerary
+          </strong>
+
+          <div style="margin-top:8px;">
+            The AI did not return a structured
+            daily itinerary. Other parts of your
+            travel plan are still available above.
+          </div>
+
+        </div>
+
+      `;
+
+      return;
+
+    }
+
+
+    const wrapper =
+      document.createElement(
+        "div"
+      );
+
+
+    wrapper.className =
+      "day-plan-wrapper";
+
+
+    normalized.forEach(
+      (day, index) => {
+
+        const dayCard =
+          createDayCard(
+            day,
+            index + 1,
+            tripData
+          );
+
+
+        wrapper.appendChild(
+          dayCard
+        );
+
+      }
+    );
+
+
+    container.innerHTML = "";
+
+    container.appendChild(
+      wrapper
+    );
+
+  }
+
+
+  // =========================================================
+  // NORMALIZE DAY PLAN
+  // =========================================================
+
+  function normalizeDayPlan(
+    value
+  ) {
+
+    if (!value) {
+      return [];
+    }
+
+
+    // Array of days
+
+    if (Array.isArray(value)) {
+
+      return value
+        .map(
+          (item, index) =>
+            normalizeSingleDay(
+              item,
+              index + 1
+            )
+        )
+        .filter(Boolean);
+
+    }
+
+
+    // Object
+
+    if (
+      typeof value === "object"
+    ) {
+
+      // Common wrapper properties
+
+      const nested =
+        value.days ||
+        value.itinerary ||
+        value.dailyPlan ||
+        value.dayByDay ||
+        value.plan;
+
+
+      if (Array.isArray(nested)) {
+
+        return normalizeDayPlan(
+          nested
+        );
+
+      }
+
+
+      // Object keyed by day
+
+      const keys =
+        Object.keys(value);
+
+
+      const dayKeys =
+        keys.filter(
+          key =>
+            /^day[\s_-]*\d+/i.test(
+              key
+            ) ||
+            /^\d+$/.test(key)
+        );
+
+
+      if (dayKeys.length > 0) {
+
+        return dayKeys
+          .sort(
+            naturalSort
+          )
+          .map(
+            (key, index) =>
+              normalizeSingleDay(
+                value[key],
+                index + 1,
+                key
+              )
+          )
+          .filter(Boolean);
+
+      }
+
+
+      // Single day object
+
+      const single =
+        normalizeSingleDay(
+          value,
+          1
+        );
+
+
+      return single
+        ? [single]
+        : [];
+
+    }
+
+
+    // String
+
+    if (
+      typeof value === "string"
+    ) {
+
+      return parseDayPlanText(
+        value
+      );
+
+    }
+
+
+    return [];
+
+  }
+
+
+  // =========================================================
+  // NORMALIZE SINGLE DAY
+  // =========================================================
+
+  function normalizeSingleDay(
+    item,
+    fallbackNumber,
+    fallbackTitle
+  ) {
+
+    if (
+      item === null ||
+      item === undefined
+    ) {
+      return null;
+    }
+
+
+    if (
+      typeof item === "string"
+    ) {
+
+      return {
+
+        day:
+          fallbackNumber,
+
+        title:
+          fallbackTitle ||
+          `Day ${fallbackNumber}`,
+
+        date:
+          "",
+
+        description:
+          item,
+
+        activities:
+          []
+
+      };
+
+    }
+
+
+    if (
+      typeof item !== "object"
+    ) {
+
+      return null;
+
+    }
+
+
+    const dayNumber =
+      extractDayNumber(
+        item.day ||
+        item.dayNumber ||
+        item.number ||
+        fallbackNumber
+      );
+
+
+    const title =
+      firstValue(
+        item.title,
+        item.name,
+        item.heading,
+        item.dayTitle
+      ) ||
+      `Day ${dayNumber}`;
+
+
+    const date =
+      firstValue(
+        item.date,
+        item.dayDate
+      ) ||
+      "";
+
+
+    const description =
+      firstValue(
+        item.description,
+        item.summary,
+        item.overview,
+        item.details
+      ) ||
+      "";
+
+
+    const activities =
+      normalizeActivities(
+        item.activities ||
+        item.activity ||
+        item.schedule ||
+        item.events ||
+        item.timeline ||
+        item.items
+      );
+
+
+    return {
+
+      day:
+        dayNumber,
+
+      title:
+        title,
+
+      date:
+        date,
+
+      description:
+        description,
+
+      activities:
+        activities
+
+    };
+
+  }
+
+
+  // =========================================================
+  // NORMALIZE ACTIVITIES
+  // =========================================================
+
+  function normalizeActivities(
+    value
+  ) {
+
+    if (!value) {
+      return [];
+    }
+
+
+    if (Array.isArray(value)) {
+
+      return value
+        .map(
+          (item) => {
+
+            if (
+              typeof item === "string"
+            ) {
+
+              return {
+
+                time: "",
+
+                title: item,
+
+                description: ""
+
+              };
+
+            }
+
+
+            if (
+              item &&
+              typeof item === "object"
+            ) {
+
+              return {
+
+                time:
+                  firstValue(
+                    item.time,
+                    item.startTime,
+                    item.hour
+                  ) ||
+                  "",
+
+                title:
+                  firstValue(
+                    item.title,
+                    item.name,
+                    item.activity,
+                    item.place,
+                    item.event
+                  ) ||
+                  "Activity",
+
+                description:
+                  firstValue(
+                    item.description,
+                    item.details,
+                    item.notes
+                  ) ||
+                  ""
+
+              };
+
+            }
+
+
+            return null;
+
+          }
+        )
+        .filter(Boolean);
+
+    }
+
+
+    if (
+      typeof value === "object"
+    ) {
+
+      return Object.keys(value)
+        .map(
+          key => {
+
+            const item =
+              value[key];
+
+
+            if (
+              typeof item === "string"
+            ) {
+
+              return {
+
+                time:
+                  key,
+
+                title:
+                  item,
+
+                description:
+                  ""
+
+              };
+
+            }
+
+
+            if (
+              item &&
+              typeof item === "object"
+            ) {
+
+              return {
+
+                time:
+                  firstValue(
+                    item.time,
+                    item.startTime
+                  ) ||
+                  key,
+
+                title:
+                  firstValue(
+                    item.title,
+                    item.name,
+                    item.activity,
+                    item.place
+                  ) ||
+                  "Activity",
+
+                description:
+                  firstValue(
+                    item.description,
+                    item.details,
+                    item.notes
+                  ) ||
+                  ""
+
+              };
+
+            }
+
+
+            return null;
+
+          }
+        )
+        .filter(Boolean);
+
+    }
+
+
+    if (
+      typeof value === "string"
+    ) {
+
+      return [
+
+        {
+
+          time: "",
+
+          title: value,
+
+          description: ""
+
+        }
+
+      ];
+
+    }
+
+
+    return [];
+
+  }
+
+
+  // =========================================================
+  // CREATE DAY CARD
+  // =========================================================
+
+  function createDayCard(
+    day,
+    number,
+    tripData
+  ) {
+
+    const card =
+      document.createElement(
+        "article"
+      );
+
+
+    card.className =
+      "day-card";
+
+
+    const title =
+      day.title ||
+      `Day ${number}`;
+
+
+    let activitiesHTML = "";
+
+
+    if (
+      Array.isArray(
+        day.activities
+      ) &&
+      day.activities.length > 0
+    ) {
+
+      activitiesHTML = `
+
+        <div class="day-activity-list">
+
+          ${day.activities
+            .map(
+              activity => `
+
+                <div class="day-activity">
+
+                  ${
+                    activity.time
+                      ? `
+                        <div class="day-activity-time">
+                          ${escapeHTML(
+                            activity.time
+                          )}
+                        </div>
+                      `
+                      : ""
+                  }
+
+                  <div class="day-activity-title">
+                    ${escapeHTML(
+                      activity.title
+                    )}
+                  </div>
+
+                  ${
+                    activity.description
+                      ? `
+                        <div class="day-activity-description">
+                          ${escapeHTML(
+                            activity.description
+                          )}
+                        </div>
+                      `
+                      : ""
+                  }
+
+                </div>
+
+              `
+            )
+            .join("")
+          }
+
+        </div>
+
+      `;
+
+    }
+
+
+    const fallbackDescription =
+      !day.description &&
+      (!day.activities ||
+        day.activities.length === 0)
+        ? `Explore ${tripData.destination} according to your personalized interests and budget.`
+        : "";
+
+
+    card.innerHTML = `
+
+      <div class="day-card-header">
+
+        <h3 class="day-card-title">
+          ${escapeHTML(title)}
+        </h3>
+
+        ${
+          day.date
+            ? `
+              <div class="day-card-date">
+                ${escapeHTML(
+                  day.date
+                )}
+              </div>
+            `
+            : ""
+        }
+
+      </div>
+
+
+      ${
+        day.description ||
+        fallbackDescription
+          ? `
+            <div class="day-card-description">
+              ${escapeHTML(
+                day.description ||
+                fallbackDescription
+              )}
+            </div>
+          `
+          : ""
+      }
+
+
+      ${activitiesHTML}
+
+    `;
+
+
+    return card;
+
+  }
+
+
+  // =========================================================
+  // PARSE DAY PLAN TEXT
+  // =========================================================
+
+  function parseDayPlanText(
+    text
+  ) {
+
+    const cleaned =
+      text
+        .replace(
+          /\r/g,
+          ""
+        )
+        .trim();
+
+
+    if (!cleaned) {
+      return [];
+    }
+
+
+    // Split when AI returns:
+    // Day 1:
+    // Day 2:
+    // Day 3:
+
+    const parts =
+      cleaned.split(
+        /(?=^\s*Day\s*\d+\s*[:\-]?\s*)/gim
+      );
+
+
+    if (
+      parts.length > 1
+    ) {
+
+      return parts
+        .map(
+          (part, index) => {
+
+            const match =
+              part.match(
+                /^\s*Day\s*(\d+)\s*[:\-]?\s*/i
+              );
+
+
+            if (!match) {
+              return null;
+            }
+
+
+            const number =
+              Number(
+                match[1]
+              );
+
+
+            const body =
+              part
+                .replace(
+                  /^\s*Day\s*\d+\s*[:\-]?\s*/i,
+                  ""
+                )
+                .trim();
+
+
+            return {
+
+              day:
+                number,
+
+              title:
+                `Day ${number}`,
+
+              date:
+                "",
+
+              description:
+                body,
+
+              activities:
+                parseActivitiesFromText(
+                  body
+                )
+
+            };
+
+          }
+        )
+        .filter(Boolean);
+
+    }
+
+
+    // If no Day headings exist,
+    // still show the returned content.
+
+    return [
+
+      {
+
+        day:
+          1,
+
+        title:
+          "Day 1",
+
+        date:
+          "",
+
+        description:
+          cleaned,
+
+        activities:
+          []
+
+      }
+
+    ];
+
+  }
+
+
+  // =========================================================
+  // PARSE ACTIVITIES FROM TEXT
+  // =========================================================
+
+  function parseActivitiesFromText(
+    text
+  ) {
+
+    if (!text) {
+      return [];
+    }
+
+
+    const lines =
+      text
+        .split("\n")
+        .map(
+          line =>
+            line
+              .replace(
+                /^\s*[-*•]\s*/,
+                ""
+              )
+              .trim()
+        )
+        .filter(Boolean);
+
+
+    if (
+      lines.length <= 1
+    ) {
+      return [];
+    }
+
+
+    return lines.map(
+      line => ({
+
+        time:
+          "",
+
+        title:
+          line,
+
+        description:
+          ""
+
+      })
+    );
+
+  }
+
+
+  // =========================================================
+  // FLEXIBLE CONTENT RENDERER
+  // =========================================================
+
+  function renderFlexibleContent(
+    value
+  ) {
+
+    if (
+      value === null ||
+      value === undefined
+    ) {
+
+      return "";
+
+    }
+
+
+    if (
+      typeof value === "string"
+    ) {
+
+      return safeHTML(
+        value
+      );
+
+    }
+
+
+    if (
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+
+      return escapeHTML(
+        String(value)
+      );
+
+    }
+
+
+    if (
+      Array.isArray(value)
+    ) {
+
+      return `
+
+        <div style="
+          display:flex;
+          flex-direction:column;
+          gap:10px;
+        ">
+
+          ${value
+            .map(
+              item =>
+                `<div>${renderFlexibleContent(item)}</div>`
+            )
+            .join("")
+          }
+
+        </div>
+
+      `;
+
+    }
+
+
+    if (
+      typeof value === "object"
+    ) {
+
+      const html =
+        Object.entries(
+          value
+        )
+        .map(
+          ([key, val]) => `
+
+            <div style="
+              margin-bottom:12px;
+            ">
+
+              <strong>
+                ${escapeHTML(
+                  prettifyKey(key)
+                )}
+              </strong>
+
+              <div style="
+                margin-top:4px;
+              ">
+                ${renderFlexibleContent(val)}
+              </div>
+
+            </div>
+
+          `
+        )
+        .join("");
+
+
+      return html;
+
+    }
+
+
+    return "";
 
   }
 
@@ -1777,17 +2950,27 @@ document.addEventListener("DOMContentLoaded", () => {
   ) {
 
     const latitude =
-      restaurant?.latitude;
+      restaurant?.latitude ||
+      restaurant?.lat ||
+      restaurant?.location?.lat ||
+      restaurant?.location?.latitude;
+
 
     const longitude =
-      restaurant?.longitude;
+      restaurant?.longitude ||
+      restaurant?.lon ||
+      restaurant?.lng ||
+      restaurant?.location?.lon ||
+      restaurant?.location?.longitude;
 
 
     if (
       latitude !== null &&
       latitude !== undefined &&
+      latitude !== "" &&
       longitude !== null &&
-      longitude !== undefined
+      longitude !== undefined &&
+      longitude !== ""
     ) {
 
       return (
@@ -1825,10 +3008,674 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // =========================================================
+  // NORMALIZE ARRAY
+  // =========================================================
+
+  function normalizeArray(
+    value
+  ) {
+
+    if (
+      Array.isArray(value)
+    ) {
+
+      return value;
+
+    }
+
+
+    if (
+      value &&
+      typeof value === "object"
+    ) {
+
+      if (
+        Array.isArray(value.items)
+      ) {
+
+        return value.items;
+
+      }
+
+      if (
+        Array.isArray(value.results)
+      ) {
+
+        return value.results;
+
+      }
+
+      if (
+        Array.isArray(value.data)
+      ) {
+
+        return value.data;
+
+      }
+
+      return Object.values(
+        value
+      );
+
+    }
+
+
+    return [];
+
+  }
+
+
+  // =========================================================
+  // FIRST VALUE
+  // =========================================================
+
+  function firstValue(
+    ...values
+  ) {
+
+    for (
+      const value of values
+    ) {
+
+      if (
+        value !== undefined &&
+        value !== null &&
+        value !== ""
+      ) {
+
+        return value;
+
+      }
+
+    }
+
+
+    return null;
+
+  }
+
+
+  // =========================================================
+  // EXTRACT IMAGE
+  // =========================================================
+
+  function extractImage(
+    item
+  ) {
+
+    if (
+      !item ||
+      typeof item !== "object"
+    ) {
+
+      return "";
+
+    }
+
+
+    const direct =
+      firstValue(
+        item.image,
+        item.imageUrl,
+        item.imageURL,
+        item.photo,
+        item.photoUrl,
+        item.photoURL,
+        item.thumbnail,
+        item.thumbnailUrl,
+        item.coverImage,
+        item.picture
+      );
+
+
+    if (
+      typeof direct === "string" &&
+      direct.trim()
+    ) {
+
+      return direct.trim();
+
+    }
+
+
+    // Image object
+
+    const imageObject =
+      item.image ||
+      item.photo ||
+      item.picture;
+
+
+    if (
+      imageObject &&
+      typeof imageObject === "object"
+    ) {
+
+      const nested =
+        firstValue(
+          imageObject.url,
+          imageObject.src,
+          imageObject.href
+        );
+
+
+      if (
+        nested
+      ) {
+
+        return String(
+          nested
+        );
+
+      }
+
+    }
+
+
+    // Photo arrays
+
+    const photos =
+      item.photos ||
+      item.images;
+
+
+    if (
+      Array.isArray(photos) &&
+      photos.length > 0
+    ) {
+
+      for (
+        const photo of photos
+      ) {
+
+        if (
+          typeof photo === "string" &&
+          photo.trim()
+        ) {
+
+          return photo.trim();
+
+        }
+
+
+        if (
+          photo &&
+          typeof photo === "object"
+        ) {
+
+          const url =
+            firstValue(
+              photo.url,
+              photo.src,
+              photo.href
+            );
+
+
+          if (
+            url
+          ) {
+
+            return String(
+              url
+            );
+
+          }
+
+        }
+
+      }
+
+    }
+
+
+    return "";
+
+  }
+
+
+  // =========================================================
+  // NORMALIZE AMENITIES
+  // =========================================================
+
+  function normalizeAmenities(
+    value
+  ) {
+
+    if (!value) {
+      return [];
+    }
+
+
+    if (
+      Array.isArray(value)
+    ) {
+
+      return value
+        .map(
+          item => {
+
+            if (
+              typeof item === "string"
+            ) {
+
+              return item;
+
+            }
+
+
+            if (
+              item &&
+              typeof item === "object"
+            ) {
+
+              return firstValue(
+                item.name,
+                item.title,
+                item.label,
+                item.type
+              );
+
+            }
+
+
+            return null;
+
+          }
+        )
+        .filter(Boolean);
+
+    }
+
+
+    if (
+      typeof value === "string"
+    ) {
+
+      return value
+        .split(
+          /[,|•\n]+/
+        )
+        .map(
+          item =>
+            item.trim()
+        )
+        .filter(Boolean);
+
+    }
+
+
+    if (
+      typeof value === "object"
+    ) {
+
+      return Object.entries(
+        value
+      )
+      .map(
+        ([key, val]) => {
+
+          if (
+            typeof val === "boolean"
+          ) {
+
+            return val
+              ? prettifyKey(key)
+              : null;
+
+          }
+
+
+          if (
+            typeof val === "string"
+          ) {
+
+            return val;
+
+          }
+
+
+          return prettifyKey(
+            key
+          );
+
+        }
+      )
+      .filter(Boolean);
+
+    }
+
+
+    return [];
+
+  }
+
+
+  // =========================================================
+  // NORMALIZE PRICE
+  // =========================================================
+
+  function normalizePrice(
+    value
+  ) {
+
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+
+      return {
+
+        value:
+          null,
+
+        currency:
+          "",
+
+        label:
+          ""
+
+      };
+
+    }
+
+
+    if (
+      typeof value === "number"
+    ) {
+
+      return {
+
+        value:
+          value,
+
+        currency:
+          "",
+
+        label:
+          ""
+
+      };
+
+    }
+
+
+    if (
+      typeof value === "string"
+    ) {
+
+      return {
+
+        value:
+          value,
+
+        currency:
+          "",
+
+        label:
+          ""
+
+      };
+
+    }
+
+
+    if (
+      typeof value === "object"
+    ) {
+
+      return {
+
+        value:
+          firstValue(
+            value.amount,
+            value.value,
+            value.price,
+            value.total,
+            value.min,
+            value.from
+          ),
+
+        currency:
+          firstValue(
+            value.currency,
+            value.currencyCode
+          ) ||
+          "",
+
+        label:
+          firstValue(
+            value.label,
+            value.type,
+            value.period,
+            value.priceType
+          ) ||
+          ""
+
+      };
+
+    }
+
+
+    return {
+
+      value:
+        null,
+
+      currency:
+        "",
+
+      label:
+        ""
+
+    };
+
+  }
+
+
+  // =========================================================
+  // FORMAT PRICE
+  // =========================================================
+
+  function formatPriceValue(
+    value
+  ) {
+
+    if (
+      value === null ||
+      value === undefined
+    ) {
+
+      return "";
+
+    }
+
+
+    if (
+      typeof value === "object"
+    ) {
+
+      const normalized =
+        normalizePrice(
+          value
+        );
+
+
+      if (
+        normalized.value !== null
+      ) {
+
+        return String(
+          normalized.value
+        );
+
+      }
+
+
+      return "";
+
+    }
+
+
+    return String(
+      value
+    );
+
+  }
+
+
+  // =========================================================
+  // PARSE STARS
+  // =========================================================
+
+  function parseStars(
+    value
+  ) {
+
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+
+      return 0;
+
+    }
+
+
+    const number =
+      parseFloat(
+        String(value)
+          .replace(
+            /[^0-9.]/g,
+            ""
+          )
+      );
+
+
+    if (
+      !Number.isFinite(number)
+    ) {
+
+      return 0;
+
+    }
+
+
+    return Math.max(
+      0,
+      Math.min(
+        5,
+        Math.round(
+          number
+        )
+      )
+    );
+
+  }
+
+
+  // =========================================================
+  // EXTRACT DAY NUMBER
+  // =========================================================
+
+  function extractDayNumber(
+    value
+  ) {
+
+    if (
+      typeof value === "number"
+    ) {
+
+      return value;
+
+    }
+
+
+    const match =
+      String(
+        value || ""
+      )
+      .match(
+        /\d+/
+      );
+
+
+    if (match) {
+
+      return Number(
+        match[0]
+      );
+
+    }
+
+
+    return 1;
+
+  }
+
+
+  // =========================================================
+  // NATURAL SORT
+  // =========================================================
+
+  function naturalSort(
+    a,
+    b
+  ) {
+
+    const aNum =
+      extractDayNumber(
+        a
+      );
+
+
+    const bNum =
+      extractDayNumber(
+        b
+      );
+
+
+    return aNum - bNum;
+
+  }
+
+
+  // =========================================================
+  // PRETTIFY KEY
+  // =========================================================
+
+  function prettifyKey(
+    key
+  ) {
+
+    return String(
+      key
+    )
+      .replace(
+        /([a-z])([A-Z])/g,
+        "$1 $2"
+      )
+      .replace(
+        /[_-]+/g,
+        " "
+      )
+      .replace(
+        /\b\w/g,
+        char =>
+          char.toUpperCase()
+      );
+
+  }
+
+
+  // =========================================================
   // SAFE HTML
   // =========================================================
 
-  function safeHTML(value) {
+  function safeHTML(
+    value
+  ) {
 
     if (
       typeof value !== "string" ||
@@ -1849,9 +3696,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // ESCAPE HTML
   // =========================================================
 
-  function escapeHTML(value) {
+  function escapeHTML(
+    value
+  ) {
 
-    return String(value)
+    return String(
+      value
+    )
 
       .replace(
         /&/g,
@@ -1885,7 +3736,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ESCAPE ATTRIBUTE
   // =========================================================
 
-  function escapeAttribute(value) {
+  function escapeAttribute(
+    value
+  ) {
 
     return escapeHTML(
       value
