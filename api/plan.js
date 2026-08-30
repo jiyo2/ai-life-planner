@@ -596,9 +596,6 @@ The daysPlan array MUST contain exactly ${safeDays} objects.
         ).trim();
 
 
-      // Remove code fences if model
-      // accidentally returns them.
-
       text =
         text.replace(
           /^```json\s*/i,
@@ -621,8 +618,6 @@ The daysPlan array MUST contain exactly ${safeDays} objects.
         text.trim();
 
 
-      // First attempt.
-
       try {
 
         return JSON.parse(
@@ -633,8 +628,6 @@ The daysPlan array MUST contain exactly ${safeDays} objects.
         // Continue.
       }
 
-
-      // Find first JSON object.
 
       const first =
         text.indexOf("{");
@@ -1341,12 +1334,13 @@ out center tags;
               );
 
 
+            // FIXED: missing closing parenthesis
             if (
               normalized &&
               !hotelNames.has(
                 normalized
               )
-            {
+            ) {
 
               hotelNames.add(
                 normalized
@@ -1552,12 +1546,13 @@ out center tags;
               );
 
 
+            // FIXED: missing closing parenthesis
             if (
               normalized &&
               !restaurantNames.has(
                 normalized
               )
-            {
+            ) {
 
               restaurantNames.add(
                 normalized
@@ -1833,8 +1828,6 @@ out center tags;
 
     // =======================================================
     // RUN GROQ + OSM IN PARALLEL
-    //
-    // This is important for Vercel performance.
     // =======================================================
 
     console.log(
