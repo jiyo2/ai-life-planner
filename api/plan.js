@@ -115,14 +115,14 @@ module.exports = async (req, res) => {
         "General sightseeing"
       )
         .trim()
-        .slice(0, 500);
+        .slice(0, 300);
 
     const safeNotes =
       String(
         notes || ""
       )
         .trim()
-        .slice(0, 500);
+        .slice(0, 300);
 
     const safeStartDate =
       String(
@@ -153,174 +153,64 @@ module.exports = async (req, res) => {
 
 
     // =======================================================
-    // TRAVEL PLAN PROMPT
+    // COMPACT TRAVEL PLAN PROMPT
+    //
+    // IMPORTANT:
+    // This prompt is intentionally compact to stay below
+    // Groq's 8000 TPM limit.
     // =======================================================
 
     const prompt = `
-Create a useful, realistic and detailed travel plan.
-
-TRIP INFORMATION
+Create a realistic travel plan for this trip.
 
 Destination: ${safeDestination}
 Start date: ${safeStartDate}
-Number of days: ${safeDays}
+Days: ${safeDays}
 Budget: ${safeBudget} USD
 Travelers: ${safeTravelers}
 Interests: ${safeInterests}
-Additional notes: ${safeNotes || "None"}
+Notes: ${safeNotes || "None"}
 
-IMPORTANT RULES
+RULES:
+- Hotels and restaurants are provided separately by OpenStreetMap.
+- Never invent hotel names.
+- Never invent restaurant names.
+- Never create image URLs.
+- Do not mention Foursquare or Gemini.
+- Use approximate prices only.
+- Never claim uncertain prices are current guaranteed prices.
+- Do not invent taxi apps.
+- Mention established transport/taxi options only when reasonably known.
+- Include practical tourist safety advice.
+- Return ONLY valid JSON.
+- No markdown.
+- No code fences.
 
-1. Hotels and restaurants are supplied separately by OpenStreetMap.
-2. Do NOT invent hotels.
-3. Do NOT invent restaurants.
-4. Do NOT create hotel names.
-5. Do NOT create restaurant names.
-6. Do NOT create image URLs.
-7. Do NOT pretend an invented place is real.
-8. Do not mention Foursquare.
-9. Do not mention Gemini.
-10. Groq is the AI provider.
-11. OpenStreetMap is the places data source.
-12. Use approximate wording for prices.
-13. Never present uncertain prices as guaranteed current prices.
-14. Never invent taxi applications.
-15. Only mention established taxi applications when reasonably confident they operate in the destination.
+TRANSPORT:
+Give a useful HTML transportation guide covering airport arrival when relevant, metro/subway, tram, bus, ferry when relevant, walking, taxi, approximate costs, best tourist option, cheapest practical option, safety and avoiding unofficial drivers/scams.
 
-TRANSPORT
+EXPERIENCES:
+Give a useful HTML guide covering major attractions, historic/cultural places, scenic places, walking areas, parks, neighborhoods, evening ideas, local food experiences, shopping and relaxing activities.
 
-Create a detailed transportation guide.
+SHOPPING:
+Include markets, shopping streets/malls, souvenirs, local products, bargaining where appropriate and tourist-trap advice.
 
-Include:
-- Airport arrival options when relevant.
-- Metro/subway.
-- Tram when relevant.
-- Bus.
-- Ferry when relevant.
-- Walking.
-- Taxi.
-- Approximate cost guidance.
-- Best option for tourists.
-- Cheapest practical option.
-- Transportation tips.
-- Taxi safety advice.
-- Established taxi applications when reasonably known.
-- Verify vehicle and driver before entering.
-- Avoid unofficial drivers approaching travelers at airports, stations or attractions.
-- Explain how to reduce the risk of overcharging or scams.
+OUTDOORS:
+Include waterfronts when available, parks, viewpoints, scenic streets and relaxing areas.
 
-Return HTML using:
-<h3>
-<h4>
-<p>
-<ul>
-<li>
+MONEY:
+Give an HTML budget strategy covering accommodation, food, transportation, attractions, shopping, activities and emergency/miscellaneous. Use approximate percentages or amounts. Mention that flights may be separate if appropriate.
 
-EXPERIENCES
-
-Create a detailed sightseeing and experiences guide.
-
-Include:
-
-1. Major attractions
-2. Historic and cultural places
-3. Scenic places
-4. Walking and promenade areas
-5. Parks and outdoor places
-6. Local neighborhoods
-7. Evening and nightlife ideas
-8. Local food experiences
-9. Shopping areas
-10. Relaxing activities
-
-SHOPPING
-
-Include when relevant:
-- Traditional markets.
-- Popular shopping streets.
-- Modern shopping areas or malls.
-- Souvenirs.
-- Local products.
-- Bargaining advice where appropriate.
-- Tourist-trap avoidance.
-
-WALKING AND OUTDOORS
-
-Include:
-- Waterfront walks when available.
-- Parks.
-- Viewpoints.
-- Scenic streets.
-- Relaxing areas.
-- Good times of day to visit.
-
-Explain briefly why each category is worth visiting.
-
-Return HTML using:
-<h3>
-<h4>
-<p>
-<ul>
-<li>
-
-MONEY
-
-Create a detailed budget strategy.
-
-Break the budget into:
-
-- Accommodation
-- Food
-- Local transportation
-- Attractions
-- Shopping
-- Activities
-- Emergency/miscellaneous
-
-Explain approximate percentages or amounts.
-
-If the budget probably does not include flights, explicitly say flights may need to be handled separately.
-
-Do not claim exact prices unless provided by the user.
-
-Return HTML.
-
-DAYS PLAN
-
+DAYS:
 Create exactly ${safeDays} days.
+Each day MUST contain morning, afternoon and evening.
+Group activities geographically.
+Avoid unnecessary travel.
+Include sightseeing, food, walking, shopping, relaxation and culture when suitable.
+Optional nightlife may be included.
+Prioritize the most important experiences on short trips.
 
-Every day must contain:
-
-- morning
-- afternoon
-- evening
-
-Each period should contain useful activities.
-
-Group nearby places logically.
-
-Avoid unnecessary travel across the city.
-
-Include:
-- sightseeing
-- food
-- shopping
-- walking
-- relaxation
-- cultural activities
-- optional nightlife
-
-If the trip is short, prioritize the most important experiences.
-
-OUTPUT
-
-Return ONLY valid JSON.
-
-No markdown.
-No code fences.
-No explanations outside JSON.
-
-Required structure:
+OUTPUT JSON EXACTLY LIKE THIS:
 
 {
   "transport": "<HTML>",
@@ -330,9 +220,9 @@ Required structure:
     {
       "day": 1,
       "title": "Day 1 title",
-      "morning": "Detailed morning plan",
-      "afternoon": "Detailed afternoon plan",
-      "evening": "Detailed evening plan"
+      "morning": "Morning plan",
+      "afternoon": "Afternoon plan",
+      "evening": "Evening plan"
     }
   ]
 }
@@ -385,7 +275,7 @@ The daysPlan array MUST contain exactly ${safeDays} objects.
     async function generateWithGroq() {
 
       console.log(
-        "Calling Groq..."
+        "Calling Groq with compact prompt..."
       );
 
       let response;
@@ -420,7 +310,7 @@ The daysPlan array MUST contain exactly ${safeDays} objects.
                         "system",
 
                       content:
-                        "You are a professional travel planner. Return valid JSON only. Follow the requested JSON structure exactly."
+                        "You are a professional travel planner. Return JSON only. Follow the requested structure exactly. Keep the response useful but concise."
                     },
 
                     {
@@ -434,10 +324,13 @@ The daysPlan array MUST contain exactly ${safeDays} objects.
                   ],
 
                   temperature:
-                    0.3,
+                    0.2,
 
+                  // IMPORTANT:
+                  // Keep requested completion below
+                  // the organization's 8000 TPM limit.
                   max_completion_tokens:
-                    10000,
+                    5500,
 
                   response_format: {
                     type:
@@ -510,7 +403,7 @@ The daysPlan array MUST contain exactly ${safeDays} objects.
         ) {
 
           throw new Error(
-            "Groq rate limit reached. Please wait and try again."
+            "Groq rate limit or token limit reached. Please wait and try again."
           );
 
         }
@@ -1334,7 +1227,6 @@ out center tags;
               );
 
 
-            // FIXED: missing closing parenthesis
             if (
               normalized &&
               !hotelNames.has(
@@ -1546,7 +1438,6 @@ out center tags;
               );
 
 
-            // FIXED: missing closing parenthesis
             if (
               normalized &&
               !restaurantNames.has(
