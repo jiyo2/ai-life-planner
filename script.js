@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // =========================================================
-  // HOTEL + RESTAURANT + DAY PLAN STYLES
+  // HOTEL + RESTAURANT STYLES
   // =========================================================
 
   if (!document.getElementById("aiPlannerHotelStyles")) {
@@ -32,18 +32,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     style.textContent = `
 
-      /* =====================================================
-         HOTEL LIST
-      ===================================================== */
-
-      .hotel-list {
+      .hotel-list,
+      .restaurant-list {
         display: flex;
         flex-direction: column;
         gap: 24px;
         margin-top: 24px;
       }
 
-      .hotel-card {
+      .hotel-card,
+      .restaurant-card {
         display: grid;
         grid-template-columns: 250px 1fr;
         gap: 24px;
@@ -56,12 +54,14 @@ document.addEventListener("DOMContentLoaded", () => {
         overflow: hidden;
       }
 
-      .hotel-card:hover {
+      .hotel-card:hover,
+      .restaurant-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 12px 32px rgba(0,0,0,0.09);
       }
 
-      .hotel-image-wrap {
+      .hotel-image-wrap,
+      .restaurant-image-wrap {
         width: 100%;
         height: 220px;
         border-radius: 15px;
@@ -70,14 +70,16 @@ document.addEventListener("DOMContentLoaded", () => {
         position: relative;
       }
 
-      .hotel-image {
+      .hotel-image,
+      .restaurant-image {
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
       }
 
-      .hotel-image-placeholder {
+      .hotel-image-placeholder,
+      .restaurant-image-placeholder {
         width: 100%;
         height: 100%;
         display: flex;
@@ -94,13 +96,15 @@ document.addEventListener("DOMContentLoaded", () => {
         );
       }
 
-      .hotel-info {
+      .hotel-info,
+      .restaurant-info {
         display: flex;
         flex-direction: column;
         min-width: 0;
       }
 
-      .hotel-number {
+      .hotel-number,
+      .restaurant-number {
         font-size: 12px;
         font-weight: 700;
         color: #8b8f9a;
@@ -109,12 +113,13 @@ document.addEventListener("DOMContentLoaded", () => {
         margin-bottom: 6px;
       }
 
-      .hotel-name {
+      .hotel-name,
+      .restaurant-name {
         font-size: 24px;
         line-height: 1.2;
         font-weight: 750;
         color: #17181c;
-        margin: 0 0 8px;
+        margin: 0 0 10px;
       }
 
       .hotel-rating {
@@ -137,10 +142,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       .hotel-price {
-        margin-bottom: 12px;
+        margin-bottom: 8px;
         display: flex;
         align-items: baseline;
-        gap: 5px;
+        gap: 7px;
         flex-wrap: wrap;
       }
 
@@ -155,7 +160,15 @@ document.addEventListener("DOMContentLoaded", () => {
         color: #777c86;
       }
 
-      .hotel-description {
+      .hotel-price-note {
+        font-size: 12px;
+        line-height: 1.5;
+        color: #777c86;
+        margin-bottom: 14px;
+      }
+
+      .hotel-description,
+      .restaurant-description {
         font-size: 14px;
         line-height: 1.65;
         color: #555b66;
@@ -192,7 +205,8 @@ document.addEventListener("DOMContentLoaded", () => {
         gap: 12px;
       }
 
-      .booking-button {
+      .booking-button,
+      .maps-button {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -208,7 +222,8 @@ document.addEventListener("DOMContentLoaded", () => {
         transition: all .2s ease;
       }
 
-      .booking-button:hover {
+      .booking-button:hover,
+      .maps-button:hover {
         background: #252b38;
         transform: translateY(-1px);
       }
@@ -217,104 +232,22 @@ document.addEventListener("DOMContentLoaded", () => {
         font-size: 16px;
       }
 
-      .hotel-intro {
+      .hotel-intro,
+      .restaurant-intro {
         margin-bottom: 4px;
       }
 
-      .hotel-intro h3 {
+      .hotel-intro h3,
+      .restaurant-intro h3 {
         margin: 0 0 6px;
         font-size: 20px;
       }
 
-      .hotel-intro p {
+      .hotel-intro p,
+      .restaurant-intro p {
         margin: 0;
         color: #70757f;
         line-height: 1.6;
-      }
-
-
-      /* =====================================================
-         RESTAURANT LIST
-      ===================================================== */
-
-      .restaurant-list {
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-        margin-top: 24px;
-      }
-
-      .restaurant-card {
-        display: grid;
-        grid-template-columns: 250px 1fr;
-        gap: 24px;
-        background: #ffffff;
-        border: 1px solid #e8e8ee;
-        border-radius: 20px;
-        padding: 18px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.06);
-        transition: transform .2s ease, box-shadow .2s ease;
-        overflow: hidden;
-      }
-
-      .restaurant-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 32px rgba(0,0,0,0.09);
-      }
-
-      .restaurant-image-wrap {
-        width: 100%;
-        height: 220px;
-        border-radius: 15px;
-        overflow: hidden;
-        background: linear-gradient(135deg, #f2f3f7, #e5e7ec);
-      }
-
-      .restaurant-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-
-      .restaurant-image-placeholder {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #8b8f9a;
-        font-size: 14px;
-        text-align: center;
-        padding: 20px;
-        background: linear-gradient(
-          135deg,
-          #f5f6f8 0%,
-          #e8eaf0 100%
-        );
-      }
-
-      .restaurant-info {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-      }
-
-      .restaurant-number {
-        font-size: 12px;
-        font-weight: 700;
-        color: #8b8f9a;
-        text-transform: uppercase;
-        letter-spacing: .08em;
-        margin-bottom: 6px;
-      }
-
-      .restaurant-name {
-        font-size: 24px;
-        line-height: 1.2;
-        font-weight: 750;
-        color: #17181c;
-        margin: 0 0 10px;
       }
 
       .restaurant-meta {
@@ -349,150 +282,9 @@ document.addEventListener("DOMContentLoaded", () => {
         margin-bottom: 10px;
       }
 
-      .restaurant-description {
-        font-size: 14px;
-        line-height: 1.65;
-        color: #555b66;
-        margin-bottom: 18px;
-      }
-
       .restaurant-actions {
         margin-top: auto;
       }
-
-      .maps-button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        min-height: 44px;
-        padding: 0 18px;
-        border-radius: 11px;
-        background: #111827;
-        color: #ffffff !important;
-        text-decoration: none !important;
-        font-size: 14px;
-        font-weight: 700;
-        transition: all .2s ease;
-      }
-
-      .maps-button:hover {
-        background: #252b38;
-        transform: translateY(-1px);
-      }
-
-      .restaurant-intro {
-        margin-bottom: 4px;
-      }
-
-      .restaurant-intro h3 {
-        margin: 0 0 6px;
-        font-size: 20px;
-      }
-
-      .restaurant-intro p {
-        margin: 0;
-        color: #70757f;
-        line-height: 1.6;
-      }
-
-
-      /* =====================================================
-         DAY-BY-DAY
-      ===================================================== */
-
-      .day-plan-list {
-        display: flex;
-        flex-direction: column;
-        gap: 22px;
-        margin-top: 24px;
-      }
-
-      .day-plan-card {
-        background: #ffffff;
-        border: 1px solid #e8e8ee;
-        border-radius: 20px;
-        padding: 24px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.06);
-        overflow: hidden;
-      }
-
-      .day-plan-header {
-        border-bottom: 1px solid #eeeeF2;
-        padding-bottom: 18px;
-        margin-bottom: 4px;
-      }
-
-      .day-plan-number {
-        font-size: 12px;
-        font-weight: 800;
-        letter-spacing: .12em;
-        color: #8b8f9a;
-        margin-bottom: 7px;
-      }
-
-      .day-plan-title {
-        margin: 0;
-        font-size: 23px;
-        line-height: 1.3;
-        color: #17181c;
-      }
-
-      .day-plan-part {
-        padding: 18px 0;
-        border-bottom: 1px solid #f0f0f3;
-      }
-
-      .day-plan-part:last-child {
-        border-bottom: none;
-        padding-bottom: 0;
-      }
-
-      .day-plan-time {
-        font-size: 12px;
-        font-weight: 800;
-        letter-spacing: .08em;
-        color: #555b66;
-        margin-bottom: 9px;
-      }
-
-      .day-plan-content {
-        font-size: 15px;
-        line-height: 1.75;
-        color: #555b66;
-      }
-
-      .day-plan-content p {
-        margin: 0 0 10px;
-      }
-
-      .day-plan-content p:last-child {
-        margin-bottom: 0;
-      }
-
-      .day-plan-content ul {
-        margin: 8px 0 0 20px;
-        padding: 0;
-      }
-
-      .day-plan-content ol {
-        margin: 8px 0 0 20px;
-        padding: 0;
-      }
-
-      .day-plan-content li {
-        margin-bottom: 8px;
-      }
-
-      .day-plan-content h3,
-      .day-plan-content h4 {
-        margin: 10px 0 8px;
-      }
-
-
-      /* =====================================================
-         MOBILE
-      ===================================================== */
 
       @media (max-width: 700px) {
 
@@ -527,20 +319,6 @@ document.addEventListener("DOMContentLoaded", () => {
         .maps-button {
           width: 100%;
         }
-
-        .day-plan-card {
-          padding: 18px;
-          border-radius: 17px;
-        }
-
-        .day-plan-title {
-          font-size: 20px;
-        }
-
-        .day-plan-content {
-          font-size: 14px;
-        }
-
       }
 
     `;
@@ -557,19 +335,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     chip.addEventListener("click", () => {
 
-      const interest =
-        chip.textContent.trim();
+      const interest = chip.textContent.trim();
 
       if (selectedInterests.has(interest)) {
-
         selectedInterests.delete(interest);
         chip.classList.remove("active");
-
       } else {
-
         selectedInterests.add(interest);
         chip.classList.add("active");
-
       }
 
     });
@@ -581,175 +354,115 @@ document.addEventListener("DOMContentLoaded", () => {
   // FORM SUBMISSION
   // =========================================================
 
-  if (plannerForm) {
+  plannerForm.addEventListener("submit", (e) => {
 
-    plannerForm.addEventListener("submit", (e) => {
+    e.preventDefault();
 
-      e.preventDefault();
+    formData = {
 
-      formData = {
+      destination:
+        document.getElementById("destination").value.trim(),
 
-        destination:
-          document
-            .getElementById("destination")
-            .value
-            .trim(),
+      startDate:
+        document.getElementById("startDate").value || "Flexible",
 
-        startDate:
-          document
-            .getElementById("startDate")
-            .value ||
-          "Flexible",
+      days:
+        document.getElementById("days").value,
 
-        days:
-          document
-            .getElementById("days")
-            .value,
+      budget:
+        document.getElementById("budget").value,
 
-        budget:
-          document
-            .getElementById("budget")
-            .value,
+      travelers:
+        document.getElementById("travelers").value,
 
-        travelers:
-          document
-            .getElementById("travelers")
-            .value,
+      interests:
+        Array.from(selectedInterests).join(", ") ||
+        "General Sightseeing",
 
-        interests:
-          Array
-            .from(selectedInterests)
-            .join(", ") ||
-          "General Sightseeing",
+      notes:
+        document.getElementById("notes").value.trim() ||
+        "None"
 
-        notes:
-          document
-            .getElementById("notes")
-            .value
-            .trim() ||
-          "None"
-
-      };
+    };
 
 
-      summaryDiv.innerHTML = `
+    summaryDiv.innerHTML = `
 
-        <p>
-          Destination:
-          <strong>
-            ${escapeHTML(formData.destination)}
-          </strong>
-        </p>
+      <p>
+        Destination:
+        <strong>${escapeHTML(formData.destination)}</strong>
+      </p>
 
-        <p>
-          Duration:
-          <strong>
-            ${escapeHTML(formData.days)} Days
-          </strong>
-          (Starts:
-          ${escapeHTML(formData.startDate)})
-        </p>
+      <p>
+        Duration:
+        <strong>${escapeHTML(formData.days)} Days</strong>
+        (Starts: ${escapeHTML(formData.startDate)})
+      </p>
 
-        <p>
-          Budget limit:
-          <strong>
-            $${escapeHTML(formData.budget)}
-          </strong>
-        </p>
+      <p>
+        Budget limit:
+        <strong>$${escapeHTML(formData.budget)}</strong>
+      </p>
 
-        <p>
-          Party size:
-          <strong>
-            ${escapeHTML(formData.travelers)}
-          </strong>
-        </p>
+      <p>
+        Party size:
+        <strong>${escapeHTML(formData.travelers)}</strong>
+      </p>
 
-        <p>
-          Interests:
-          <strong>
-            ${escapeHTML(formData.interests)}
-          </strong>
-        </p>
+      <p>
+        Interests:
+        <strong>${escapeHTML(formData.interests)}</strong>
+      </p>
 
-        <p>
-          Special requests:
-          <strong>
-            ${escapeHTML(formData.notes)}
-          </strong>
-        </p>
+      <p>
+        Special requests:
+        <strong>${escapeHTML(formData.notes)}</strong>
+      </p>
 
-      `;
+    `;
 
 
-      if (appScreen) {
-        appScreen.classList.add("hidden");
-      }
+    appScreen.classList.add("hidden");
+    reviewScreen.classList.remove("hidden");
 
-      if (reviewScreen) {
-        reviewScreen.classList.remove("hidden");
-      }
-
-    });
-
-  }
+  });
 
 
   // =========================================================
   // EDIT BUTTON
   // =========================================================
 
-  if (closeReviewBtn) {
+  closeReviewBtn.addEventListener("click", () => {
 
-    closeReviewBtn.addEventListener("click", () => {
+    reviewScreen.classList.add("hidden");
+    appScreen.classList.remove("hidden");
 
-      if (reviewScreen) {
-        reviewScreen.classList.add("hidden");
-      }
-
-      if (appScreen) {
-        appScreen.classList.remove("hidden");
-      }
-
-    });
-
-  }
+  });
 
 
   // =========================================================
   // DEMO PAYMENT FLOW
   // =========================================================
 
-  if (payBtn) {
+  payBtn.addEventListener("click", () => {
 
-    payBtn.addEventListener("click", () => {
+    localStorage.setItem(
+      "pendingTripData",
+      JSON.stringify(formData)
+    );
 
-      localStorage.setItem(
-        "pendingTripData",
-        JSON.stringify(formData)
-      );
+    localStorage.setItem(
+      "hasPaid",
+      "true"
+    );
 
-      localStorage.setItem(
-        "hasPaid",
-        "true"
-      );
+    appScreen.classList.add("hidden");
+    reviewScreen.classList.add("hidden");
+    planScreen.classList.remove("hidden");
 
-      if (appScreen) {
-        appScreen.classList.add("hidden");
-      }
+    generatePlan(formData);
 
-      if (reviewScreen) {
-        reviewScreen.classList.add("hidden");
-      }
-
-      if (planScreen) {
-        planScreen.classList.remove("hidden");
-      }
-
-      generatePlan(formData);
-
-    });
-
-  }
+  });
 
 
   // =========================================================
@@ -764,10 +477,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const savedData =
       localStorage.getItem("pendingTripData");
 
-    if (
-      hasPaid === "true" &&
-      savedData
-    ) {
+    if (hasPaid === "true" && savedData) {
 
       try {
 
@@ -775,22 +485,11 @@ document.addEventListener("DOMContentLoaded", () => {
           JSON.parse(savedData);
 
         localStorage.removeItem("hasPaid");
+        localStorage.removeItem("pendingTripData");
 
-        localStorage.removeItem(
-          "pendingTripData"
-        );
-
-        if (appScreen) {
-          appScreen.classList.add("hidden");
-        }
-
-        if (reviewScreen) {
-          reviewScreen.classList.add("hidden");
-        }
-
-        if (planScreen) {
-          planScreen.classList.remove("hidden");
-        }
+        appScreen.classList.add("hidden");
+        reviewScreen.classList.add("hidden");
+        planScreen.classList.remove("hidden");
 
         generatePlan(parsedData);
 
@@ -820,25 +519,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const planIntro =
       document.getElementById("planIntro");
 
+    planTitle.textContent =
+      "Creating your personalized plan...";
 
-    if (planTitle) {
+    planIntro.textContent =
+      "Our AI is building your itinerary. Please wait a moment.";
 
-      planTitle.textContent =
-        "Creating your personalized plan...";
-
-    }
-
-    if (planIntro) {
-
-      planIntro.textContent =
-        "Our AI is building your itinerary. Please wait a moment.";
-
-    }
-
-
-    // =======================================================
-    // RESET SECTIONS
-    // =======================================================
 
     const stayContent =
       document.getElementById("stayContent");
@@ -860,45 +546,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     if (stayContent) {
-
       stayContent.innerHTML =
         "Generating accommodation strategy...";
-
     }
 
     if (restaurantsContent) {
-
       restaurantsContent.innerHTML =
         "Finding restaurants in your destination...";
-
     }
 
     if (transportContent) {
-
       transportContent.innerHTML =
         "Generating transport guide...";
-
     }
 
     if (experiencesContent) {
-
       experiencesContent.innerHTML =
         "Generating curated experiences...";
-
     }
 
     if (moneyContent) {
-
       moneyContent.innerHTML =
         "Calculating budget split...";
-
     }
 
     if (daysContent) {
-
       daysContent.innerHTML =
         "Structuring your days...";
-
     }
 
 
@@ -922,9 +596,7 @@ document.addEventListener("DOMContentLoaded", () => {
             },
 
             body:
-              JSON.stringify(
-                tripData
-              )
+              JSON.stringify(tripData)
           }
         );
 
@@ -950,9 +622,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
 
         data =
-          JSON.parse(
-            rawResponse
-          );
+          JSON.parse(rawResponse);
 
       } catch (jsonError) {
 
@@ -983,19 +653,11 @@ document.addEventListener("DOMContentLoaded", () => {
       // HEADER
       // =====================================================
 
-      if (planTitle) {
+      planTitle.textContent =
+        `Your Trip to ${tripData.destination}`;
 
-        planTitle.textContent =
-          `Your Trip to ${tripData.destination}`;
-
-      }
-
-      if (planIntro) {
-
-        planIntro.textContent =
-          `Customized strategy for ${tripData.days} days with a $${tripData.budget} budget.`;
-
-      }
+      planIntro.textContent =
+        `Customized strategy for ${tripData.days} days with a $${tripData.budget} budget.`;
 
 
       // =====================================================
@@ -1003,7 +665,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // =====================================================
 
       renderHotels(
-        data.stay || data.hotels,
+        data.stay,
         tripData.destination
       );
 
@@ -1030,9 +692,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (transportContent) {
 
         transportContent.innerHTML =
-          safeHTML(
-            data.transport
-          );
+          safeHTML(data.transport);
 
       }
 
@@ -1044,9 +704,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (experiencesContent) {
 
         experiencesContent.innerHTML =
-          safeHTML(
-            data.experiences
-          );
+          safeHTML(data.experiences);
 
       }
 
@@ -1058,9 +716,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (moneyContent) {
 
         moneyContent.innerHTML =
-          safeHTML(
-            data.money
-          );
+          safeHTML(data.money);
 
       }
 
@@ -1087,19 +743,11 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
 
-      if (planTitle) {
+      planTitle.textContent =
+        "Generation Error";
 
-        planTitle.textContent =
-          "Generation Error";
-
-      }
-
-      if (planIntro) {
-
-        planIntro.textContent =
-          "The travel plan could not be generated.";
-
-      }
+      planIntro.textContent =
+        "The travel plan could not be generated.";
 
 
       const errorHTML = `
@@ -1120,9 +768,7 @@ document.addEventListener("DOMContentLoaded", () => {
             margin-top:8px;
             font-size:14px;
           ">
-            ${escapeHTML(
-              error.message
-            )}
+            ${escapeHTML(error.message)}
           </div>
 
         </div>
@@ -1131,24 +777,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
       if (stayContent) {
-
-        stayContent.innerHTML =
-          errorHTML;
-
+        stayContent.innerHTML = errorHTML;
       }
 
       if (restaurantsContent) {
-
-        restaurantsContent.innerHTML =
-          errorHTML;
-
-      }
-
-      if (daysContent) {
-
-        daysContent.innerHTML =
-          errorHTML;
-
+        restaurantsContent.innerHTML = errorHTML;
       }
 
     }
@@ -1166,9 +799,7 @@ document.addEventListener("DOMContentLoaded", () => {
   ) {
 
     const container =
-      document.getElementById(
-        "stayContent"
-      );
+      document.getElementById("stayContent");
 
 
     if (!container) {
@@ -1215,7 +846,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const intro =
       document.createElement("div");
 
-
     intro.className =
       "hotel-intro";
 
@@ -1238,7 +868,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const hotelList =
       document.createElement("div");
 
-
     hotelList.className =
       "hotel-list";
 
@@ -1253,9 +882,7 @@ document.addEventListener("DOMContentLoaded", () => {
             destination
           );
 
-        hotelList.appendChild(
-          card
-        );
+        hotelList.appendChild(card);
 
       }
     );
@@ -1263,13 +890,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     container.innerHTML = "";
 
-    container.appendChild(
-      intro
-    );
-
-    container.appendChild(
-      hotelList
-    );
+    container.appendChild(intro);
+    container.appendChild(hotelList);
 
   }
 
@@ -1285,10 +907,7 @@ document.addEventListener("DOMContentLoaded", () => {
   ) {
 
     const card =
-      document.createElement(
-        "article"
-      );
-
+      document.createElement("article");
 
     card.className =
       "hotel-card";
@@ -1303,30 +922,20 @@ document.addEventListener("DOMContentLoaded", () => {
       Number(hotel?.stars) || 0;
 
 
-    // =======================================================
-    // PRICE
-    // =======================================================
-
-    const realPrice =
+    const price =
       hotel?.price !== undefined &&
       hotel?.price !== null &&
       hotel?.price !== ""
-        ? hotel.price
+        ? Number(hotel.price)
         : null;
 
 
-    const estimatedPrice =
-      hotel?.estimatedPrice !== undefined &&
-      hotel?.estimatedPrice !== null &&
-      hotel?.estimatedPrice !== ""
-        ? hotel.estimatedPrice
+    const priceMax =
+      hotel?.priceMax !== undefined &&
+      hotel?.priceMax !== null &&
+      hotel?.priceMax !== ""
+        ? Number(hotel.priceMax)
         : null;
-
-
-    const price =
-      realPrice !== null
-        ? realPrice
-        : estimatedPrice;
 
 
     const currency =
@@ -1335,20 +944,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     const priceType =
-      realPrice !== null
-        ? (
-            hotel?.priceType ||
-            "per night"
-          )
-        : estimatedPrice !== null
-          ? (
-              hotel?.estimatedPriceType ||
-              "estimated per night"
-            )
-          : (
-              hotel?.priceType ||
-              "Price not available"
-            );
+      hotel?.priceType ||
+      "estimated per night";
 
 
     const description =
@@ -1357,16 +954,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     const amenities =
-      Array.isArray(
-        hotel?.amenities
-      )
+      Array.isArray(hotel?.amenities)
         ? hotel.amenities
         : [];
 
-
-    // =======================================================
-    // IMAGE
-    // =======================================================
 
     const image =
       hotel?.image ||
@@ -1375,6 +966,10 @@ document.addEventListener("DOMContentLoaded", () => {
       hotel?.photoUrl ||
       "";
 
+
+    // =======================================================
+    // HOTEL IMAGE
+    // =======================================================
 
     let imageHTML = "";
 
@@ -1431,20 +1026,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <span class="hotel-stars">
             ${"★".repeat(
-              Math.min(
-                Math.max(
-                  Math.round(stars),
-                  0
-                ),
-                5
-              )
+              Math.min(stars, 5)
             )}
           </span>
 
           <span class="hotel-star-text">
-            ${escapeHTML(
-              String(stars)
-            )}-star property
+            ${escapeHTML(String(stars))}-star property
           </span>
 
         </div>
@@ -1455,51 +1042,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // =======================================================
-    // PRICE HTML
+    // PRICE
     // =======================================================
 
     let priceHTML = "";
 
 
-    if (price !== null) {
+    if (
+      price !== null &&
+      Number.isFinite(price)
+    ) {
+
+      let priceDisplay =
+        `$${escapeHTML(
+          String(price)
+        )}`;
+
+
+      if (
+        priceMax !== null &&
+        Number.isFinite(priceMax) &&
+        priceMax > price
+      ) {
+
+        priceDisplay =
+          `$${escapeHTML(
+            String(price)
+          )}–$${escapeHTML(
+            String(priceMax)
+          )}`;
+
+      }
+
 
       priceHTML = `
 
         <div class="hotel-price">
 
           <span class="hotel-price-value">
-
-            ${escapeHTML(
-              formatPrice(price)
-            )}
-            ${escapeHTML(
-              String(currency)
-            )}
-
+            ${priceDisplay}
           </span>
 
           <span class="hotel-price-label">
-
-            ${escapeHTML(
-              priceType
-            )}
-
+            ${escapeHTML(String(currency))} / night
           </span>
 
         </div>
 
-      `;
-
-    } else {
-
-      priceHTML = `
-
-        <div class="hotel-price">
-
-          <span class="hotel-price-label">
-            Price not available
-          </span>
-
+        <div class="hotel-price-note">
+          Estimated price — verify current price on Booking.com
         </div>
 
       `;
@@ -1528,17 +1119,9 @@ document.addEventListener("DOMContentLoaded", () => {
             .slice(0, 8)
             .map(
               amenity => `
-
                 <span class="hotel-amenity">
-
-                  ${escapeHTML(
-                    String(
-                      amenity
-                    )
-                  )}
-
+                  ${escapeHTML(String(amenity))}
                 </span>
-
               `
             )
             .join("")
@@ -1591,11 +1174,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ${priceHTML}
 
         <div class="hotel-description">
-
-          ${escapeHTML(
-            description
-          )}
-
+          ${escapeHTML(description)}
         </div>
 
         ${amenitiesHTML}
@@ -1604,13 +1183,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <a
             class="booking-button"
-            href="${escapeAttribute(
-              bookingURL
-            )}"
+            href="${escapeAttribute(bookingURL)}"
             target="_blank"
             rel="noopener noreferrer"
           >
-
             Check availability on Booking.com
 
             <span class="booking-arrow">
@@ -1627,57 +1203,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     return card;
-
-  }
-
-
-  // =========================================================
-  // FORMAT PRICE
-  // =========================================================
-
-  function formatPrice(value) {
-
-    if (
-      typeof value === "number" &&
-      Number.isFinite(value)
-    ) {
-
-      return value.toLocaleString(
-        "en-US",
-        {
-          maximumFractionDigits: 0
-        }
-      );
-
-    }
-
-
-    const numeric =
-      Number(
-        String(value)
-          .replace(
-            /[^0-9.]/g,
-            ""
-          )
-      );
-
-
-    if (
-      Number.isFinite(numeric) &&
-      numeric > 0
-    ) {
-
-      return numeric.toLocaleString(
-        "en-US",
-        {
-          maximumFractionDigits: 0
-        }
-      );
-
-    }
-
-
-    return String(value);
 
   }
 
@@ -1711,14 +1236,8 @@ document.addEventListener("DOMContentLoaded", () => {
     container.innerHTML = "";
 
 
-    // =======================================================
-    // NO RESTAURANTS
-    // =======================================================
-
     if (
-      !Array.isArray(
-        restaurantData
-      ) ||
+      !Array.isArray(restaurantData) ||
       restaurantData.length === 0
     ) {
 
@@ -1756,17 +1275,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    // =======================================================
-    // MAXIMUM 10
-    // =======================================================
-
     const restaurants =
       restaurantData.slice(0, 10);
 
-
-    // =======================================================
-    // INTRO
-    // =======================================================
 
     const introWrapper =
       document.createElement("div");
@@ -1791,14 +1302,8 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
 
 
-    container.appendChild(
-      introWrapper
-    );
+    container.appendChild(introWrapper);
 
-
-    // =======================================================
-    // LIST
-    // =======================================================
 
     const restaurantList =
       document.createElement("div");
@@ -1807,10 +1312,6 @@ document.addEventListener("DOMContentLoaded", () => {
     restaurantList.className =
       "restaurant-list";
 
-
-    // =======================================================
-    // CARDS
-    // =======================================================
 
     restaurants.forEach(
       (restaurant, index) => {
@@ -1822,18 +1323,13 @@ document.addEventListener("DOMContentLoaded", () => {
             destination
           );
 
-
-        restaurantList.appendChild(
-          card
-        );
+        restaurantList.appendChild(card);
 
       }
     );
 
 
-    container.appendChild(
-      restaurantList
-    );
+    container.appendChild(restaurantList);
 
   }
 
@@ -1849,10 +1345,7 @@ document.addEventListener("DOMContentLoaded", () => {
   ) {
 
     const card =
-      document.createElement(
-        "article"
-      );
-
+      document.createElement("article");
 
     card.className =
       "restaurant-card";
@@ -1907,10 +1400,6 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
 
-    // =======================================================
-    // IMAGE
-    // =======================================================
-
     let imageHTML = "";
 
 
@@ -1951,10 +1440,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    // =======================================================
-    // RATING
-    // =======================================================
-
     let ratingHTML = "";
 
 
@@ -1963,21 +1448,13 @@ document.addEventListener("DOMContentLoaded", () => {
       ratingHTML = `
 
         <span class="restaurant-rating">
-
-          ★ ${escapeHTML(
-            String(rating)
-          )}
-
+          ★ ${escapeHTML(String(rating))}
         </span>
 
       `;
 
     }
 
-
-    // =======================================================
-    // CARD
-    // =======================================================
 
     card.innerHTML = `
 
@@ -1996,29 +1473,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         <h3 class="restaurant-name">
-
           ${escapeHTML(name)}
-
         </h3>
 
 
         <div class="restaurant-meta">
 
           <span class="restaurant-cuisine">
-
-            ${escapeHTML(
-              String(cuisine)
-            )}
-
+            ${escapeHTML(String(cuisine))}
           </span>
 
 
           <span class="restaurant-price">
-
-            ${escapeHTML(
-              String(priceLevel)
-            )}
-
+            ${escapeHTML(String(priceLevel))}
           </span>
 
 
@@ -2028,20 +1495,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         <div class="restaurant-address">
-
-          ${escapeHTML(
-            address
-          )}
-
+          ${escapeHTML(address)}
         </div>
 
 
         <div class="restaurant-description">
-
-          ${escapeHTML(
-            description
-          )}
-
+          ${escapeHTML(description)}
         </div>
 
 
@@ -2049,9 +1508,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <a
             class="maps-button"
-            href="${escapeAttribute(
-              mapsURL
-            )}"
+            href="${escapeAttribute(mapsURL)}"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -2077,7 +1534,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // =========================================================
-  // RENDER DAY-BY-DAY
+  // DAY-BY-DAY RENDER
   // =========================================================
 
   function renderDayByDay(
@@ -2086,23 +1543,12 @@ document.addEventListener("DOMContentLoaded", () => {
   ) {
 
     const container =
-      document.getElementById(
-        "daysContent"
-      );
+      document.getElementById("daysContent");
 
 
     if (!container) {
-
-      console.error(
-        "daysContent element not found."
-      );
-
       return;
-
     }
-
-
-    container.innerHTML = "";
 
 
     if (
@@ -2111,30 +1557,14 @@ document.addEventListener("DOMContentLoaded", () => {
     ) {
 
       container.innerHTML = `
-
         <div style="
           padding:20px;
           background:#f7f7f8;
           border-radius:14px;
           color:#666;
-          line-height:1.6;
         ">
-
-          <strong>
-            No daily itinerary was generated.
-          </strong>
-
-          <div style="
-            margin-top:8px;
-            font-size:14px;
-          ">
-
-            Please try generating the trip again.
-
-          </div>
-
+          No day-by-day itinerary was returned.
         </div>
-
       `;
 
       return;
@@ -2142,52 +1572,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    // =======================================================
-    // INTRO
-    // =======================================================
+    container.innerHTML = `
 
-    const intro =
-      document.createElement("div");
+      <div style="
+        margin-bottom:22px;
+      ">
 
+        <h3 style="
+          margin:0 0 6px;
+          font-size:22px;
+        ">
+          Day-by-Day Itinerary
+        </h3>
 
-    intro.className =
-      "restaurant-intro";
+        <p style="
+          margin:0;
+          color:#70757f;
+          line-height:1.6;
+        ">
+          Your optimized daily travel schedule
+          for ${escapeHTML(destination)}.
+        </p>
 
-
-    intro.innerHTML = `
-
-      <h3>
-        Day-by-Day Itinerary
-      </h3>
-
-      <p>
-        Your optimized daily travel schedule
-        for ${escapeHTML(destination)}.
-      </p>
+      </div>
 
     `;
 
-
-    container.appendChild(
-      intro
-    );
-
-
-    // =======================================================
-    // LIST
-    // =======================================================
-
-    const wrapper =
-      document.createElement("div");
-
-
-    wrapper.className =
-      "day-plan-list";
-
-
-    // =======================================================
-    // DAYS
-    // =======================================================
 
     daysPlan.forEach(
       (day, index) => {
@@ -2198,105 +1608,134 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         const title =
-          String(
-            day?.title ||
-            `Day ${dayNumber}`
-          );
+          day?.title ||
+          `Day ${dayNumber}`;
 
 
         const morning =
-          typeof day?.morning === "string" &&
-          day.morning.trim()
-            ? day.morning
-            : "<p>Explore the destination in the morning.</p>";
+          day?.morning ||
+          "<p>Explore the destination in the morning.</p>";
 
 
         const afternoon =
-          typeof day?.afternoon === "string" &&
-          day.afternoon.trim()
-            ? day.afternoon
-            : "<p>Enjoy sightseeing, local food and activities in the afternoon.</p>";
+          day?.afternoon ||
+          "<p>Enjoy local food, sightseeing and shopping.</p>";
 
 
         const evening =
-          typeof day?.evening === "string" &&
-          day.evening.trim()
-            ? day.evening
-            : "<p>Relax and explore the local area in the evening.</p>";
+          day?.evening ||
+          "<p>Relax and explore a popular evening area.</p>";
 
 
-        const card =
-          document.createElement(
-            "article"
-          );
+        const dayCard =
+          document.createElement("article");
 
 
-        card.className =
-          "day-plan-card";
+        dayCard.style.cssText = `
+          background:#ffffff;
+          border:1px solid #e8e8ee;
+          border-radius:18px;
+          padding:22px;
+          margin-bottom:18px;
+          box-shadow:0 7px 22px rgba(0,0,0,0.05);
+        `;
 
 
-        card.innerHTML = `
+        dayCard.innerHTML = `
 
-          <div class="day-plan-header">
-
-            <div class="day-plan-number">
-
-              DAY ${escapeHTML(
-                String(dayNumber)
-              )}
-
-            </div>
-
-
-            <h3 class="day-plan-title">
-
-              ${escapeHTML(title)}
-
-            </h3>
-
+          <div style="
+            font-size:12px;
+            font-weight:800;
+            color:#8b8f9a;
+            text-transform:uppercase;
+            letter-spacing:.08em;
+            margin-bottom:6px;
+          ">
+            DAY ${escapeHTML(String(dayNumber))}
           </div>
 
 
-          <div class="day-plan-part">
+          <h3 style="
+            margin:0 0 18px;
+            font-size:22px;
+            line-height:1.3;
+            color:#17181c;
+          ">
+            ${escapeHTML(String(title))}
+          </h3>
 
-            <div class="day-plan-time">
+
+          <div style="
+            margin-bottom:17px;
+          ">
+
+            <div style="
+              font-size:12px;
+              font-weight:800;
+              color:#555b66;
+              text-transform:uppercase;
+              letter-spacing:.06em;
+              margin-bottom:6px;
+            ">
               MORNING
             </div>
 
-            <div class="day-plan-content">
-
+            <div style="
+              color:#444952;
+              line-height:1.7;
+              font-size:14px;
+            ">
               ${safeHTML(morning)}
-
             </div>
 
           </div>
 
 
-          <div class="day-plan-part">
+          <div style="
+            margin-bottom:17px;
+          ">
 
-            <div class="day-plan-time">
+            <div style="
+              font-size:12px;
+              font-weight:800;
+              color:#555b66;
+              text-transform:uppercase;
+              letter-spacing:.06em;
+              margin-bottom:6px;
+            ">
               AFTERNOON
             </div>
 
-            <div class="day-plan-content">
-
+            <div style="
+              color:#444952;
+              line-height:1.7;
+              font-size:14px;
+            ">
               ${safeHTML(afternoon)}
-
             </div>
 
           </div>
 
 
-          <div class="day-plan-part">
+          <div>
 
-            <div class="day-plan-time">
+            <div style="
+              font-size:12px;
+              font-weight:800;
+              color:#555b66;
+              text-transform:uppercase;
+              letter-spacing:.06em;
+              margin-bottom:6px;
+            ">
               EVENING
             </div>
 
-            <div class="day-plan-content">
-
+            <div style="
+              color:#444952;
+              line-height:1.7;
+              font-size:14px;
+            ">
               ${safeHTML(evening)}
-
             </div>
 
           </div>
@@ -2304,16 +1743,9 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
 
-        wrapper.appendChild(
-          card
-        );
+        container.appendChild(dayCard);
 
       }
-    );
-
-
-    container.appendChild(
-      wrapper
     );
 
   }
@@ -2367,19 +1799,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       return (
         "https://www.openstreetmap.org/" +
-        `?mlat=${encodeURIComponent(
-          latitude
-        )}` +
-        `&mlon=${encodeURIComponent(
-          longitude
-        )}` +
+        `?mlat=${encodeURIComponent(latitude)}` +
+        `&mlon=${encodeURIComponent(longitude)}` +
         "#map=18/" +
-        `${encodeURIComponent(
-          latitude
-        )}/` +
-        `${encodeURIComponent(
-          longitude
-        )}`
+        `${encodeURIComponent(latitude)}/` +
+        `${encodeURIComponent(longitude)}`
       );
 
     }
@@ -2428,30 +1852,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return String(value)
 
-      .replace(
-        /&/g,
-        "&amp;"
-      )
+      .replace(/&/g, "&amp;")
 
-      .replace(
-        /</g,
-        "&lt;"
-      )
+      .replace(/</g, "&lt;")
 
-      .replace(
-        />/g,
-        "&gt;"
-      )
+      .replace(/>/g, "&gt;")
 
-      .replace(
-        /"/g,
-        "&quot;"
-      )
+      .replace(/"/g, "&quot;")
 
-      .replace(
-        /'/g,
-        "&#039;"
-      );
+      .replace(/'/g, "&#039;");
 
   }
 
@@ -2462,9 +1871,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function escapeAttribute(value) {
 
-    return escapeHTML(
-      value
-    );
+    return escapeHTML(value);
 
   }
 
@@ -2474,15 +1881,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================================
 
   const tabs =
-    document.querySelectorAll(
-      ".plan-tab"
-    );
+    document.querySelectorAll(".plan-tab");
 
 
   const sections =
-    document.querySelectorAll(
-      ".plan-section"
-    );
+    document.querySelectorAll(".plan-section");
 
 
   tabs.forEach(
@@ -2493,17 +1896,13 @@ document.addEventListener("DOMContentLoaded", () => {
         () => {
 
           const targetSectionId =
-            tab.getAttribute(
-              "data-target"
-            );
+            tab.getAttribute("data-target");
 
 
           tabs.forEach(
             (t) => {
 
-              t.classList.remove(
-                "active"
-              );
+              t.classList.remove("active");
 
             }
           );
@@ -2512,17 +1911,13 @@ document.addEventListener("DOMContentLoaded", () => {
           sections.forEach(
             (section) => {
 
-              section.classList.add(
-                "hidden"
-              );
+              section.classList.add("hidden");
 
             }
           );
 
 
-          tab.classList.add(
-            "active"
-          );
+          tab.classList.add("active");
 
 
           const target =
@@ -2533,9 +1928,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
           if (target) {
 
-            target.classList.remove(
-              "hidden"
-            );
+            target.classList.remove("hidden");
 
           }
 
