@@ -47,7 +47,8 @@ module.exports = async (req, res) => {
     // ENVIRONMENT
     // =======================================================
 
-    const GROQ_API_KEY = process.env.GROQ_API_KEY;
+    const GROQ_API_KEY =
+      process.env.GROQ_API_KEY;
 
     if (!GROQ_API_KEY) {
       return res.status(500).json({
@@ -58,13 +59,48 @@ module.exports = async (req, res) => {
 
 
     // =======================================================
+    // BOOKING.COM
+    // =======================================================
+    //
+    // These are optional.
+    //
+    // Add to Vercel later:
+    //
+    // BOOKING_API_KEY
+    // BOOKING_AFFILIATE_ID
+    //
+    // Without them the app continues working with OSM.
+    //
+
+    const BOOKING_API_KEY =
+      process.env.BOOKING_API_KEY || "";
+
+    const BOOKING_AFFILIATE_ID =
+      process.env.BOOKING_AFFILIATE_ID || "";
+
+    const BOOKING_ENABLED =
+      !!(
+        BOOKING_API_KEY &&
+        BOOKING_AFFILIATE_ID
+      );
+
+
+    // =======================================================
     // VALIDATION
     // =======================================================
 
-    if (!destination || !days || !budget || !travelers) {
+    if (
+      !destination ||
+      !days ||
+      !budget ||
+      !travelers
+    ) {
+
       return res.status(400).json({
-        error: "Missing required trip information."
+        error:
+          "Missing required trip information."
       });
+
     }
 
 
@@ -95,7 +131,10 @@ module.exports = async (req, res) => {
         .slice(0, 80);
 
     const safeInterests =
-      String(interests || "General sightseeing")
+      String(
+        interests ||
+        "General sightseeing"
+      )
         .trim()
         .slice(0, 300);
 
@@ -105,7 +144,10 @@ module.exports = async (req, res) => {
         .slice(0, 300);
 
     const safeStartDate =
-      String(startDate || "Flexible")
+      String(
+        startDate ||
+        "Flexible"
+      )
         .trim()
         .slice(0, 80);
 
@@ -114,14 +156,15 @@ module.exports = async (req, res) => {
     // GROQ CONFIG
     // =======================================================
 
-    const GROQ_MODEL = "openai/gpt-oss-20b";
+    const GROQ_MODEL =
+      "openai/gpt-oss-20b";
 
     const GROQ_URL =
       "https://api.groq.com/openai/v1/chat/completions";
 
 
     // =======================================================
-    // OSM USER AGENT
+    // OSM
     // =======================================================
 
     const OSM_USER_AGENT =
@@ -133,7 +176,7 @@ module.exports = async (req, res) => {
     // =======================================================
 
     const prompt = `
-Create a realistic and detailed travel plan.
+Create a detailed and realistic travel plan.
 
 Destination: ${safeDestination}
 Start date: ${safeStartDate}
@@ -143,94 +186,52 @@ Travelers: ${safeTravelers}
 Interests: ${safeInterests}
 Notes: ${safeNotes || "None"}
 
-IMPORTANT RULES:
-
-1. Do not invent hotels.
-2. Do not invent restaurants.
-3. Do not create hotel names.
-4. Do not create restaurant names.
-5. Hotels and restaurants are supplied separately by OpenStreetMap.
-6. Do not create image URLs.
-7. Give practical transportation advice.
-8. Give realistic sightseeing, food, shopping, walking and cultural suggestions.
-9. Prices are approximate only.
-10. Mention flights separately if they may not be included in the budget.
-11. Return valid JSON only.
-12. HTML is allowed inside string fields.
-13. Do not use Markdown.
-14. Do not return explanations outside the JSON.
-
-DAY-BY-DAY REQUIREMENTS:
-
-Create EXACTLY ${safeDays} days.
-
-Every day MUST be different.
-
-Do NOT repeat:
-- "Explore ${safeDestination} according to your personalized interests and budget."
-- generic sightseeing text
-- the same attraction
-- the same morning/afternoon/evening description
-
-Each day must have:
-
-- day
-- title
-- morning
-- afternoon
-- evening
-
-The title must describe the actual focus of that day.
-
-Morning must contain a specific activity or area.
-
-Afternoon must contain a different specific activity or area.
-
-Evening must contain a specific evening activity, neighborhood, viewpoint, cultural activity, walk, market, waterfront, entertainment area or other realistic experience.
-
-Use the traveler's interests when choosing activities.
-
-The activities must be realistic for ${safeDestination}.
-
-Do not invent businesses.
-
-If you mention a famous landmark, museum, square, park, district, market, waterfront or historical site, use a real and well-known place.
-
-Keep each morning, afternoon and evening section useful and specific.
-
-Example of the expected level of detail:
-
-{
-  "day": 1,
-  "title": "Historic Center and Old City",
-  "morning": "<p>Visit a major historic landmark and walk through the surrounding old streets.</p>",
-  "afternoon": "<p>Explore a nearby market or museum and have time for local shopping.</p>",
-  "evening": "<p>Take an evening walk through a popular central district and enjoy the city atmosphere.</p>"
-}
-
-For multiple days, progressively explore different parts of the destination.
+IMPORTANT:
+- Do not invent hotels.
+- Do not invent restaurants.
+- Hotels and restaurants are retrieved separately.
+- Do not create hotel names.
+- Do not create restaurant names.
+- Do not create image URLs.
+- Do not create fake booking prices.
+- Give useful practical transportation advice.
+- Give detailed sightseeing suggestions.
+- Give realistic activities.
+- Give realistic shopping suggestions.
+- Give realistic food suggestions without inventing restaurant names.
+- Explain approximate costs where appropriate.
+- Flights should be mentioned separately.
+- Do not assume flights are included in the budget.
+- Make the itinerary detailed.
+- Every day must have a meaningful morning, afternoon and evening.
+- Avoid repeating the same generic sentence.
+- Use the destination and interests to customize every day.
+- Return HTML inside string fields.
+- Return valid JSON only.
 
 JSON structure:
 
 {
-  "transport": "<h3>Transportation</h3><p>...</p><ul><li>...</li></ul>",
-  "experiences": "<h3>Experiences</h3><p>...</p><ul><li>...</li></ul>",
-  "money": "<h3>Budget</h3><p>...</p><ul><li>...</li></ul>",
+  "transport": "<h3>...</h3><p>...</p><ul><li>...</li></ul>",
+  "experiences": "<h3>...</h3><p>...</p><ul><li>...</li></ul>",
+  "money": "<h3>...</h3><p>...</p><ul><li>...</li></ul>",
   "daysPlan": [
     {
       "day": 1,
-      "title": "...",
-      "morning": "<p>...</p>",
-      "afternoon": "<p>...</p>",
-      "evening": "<p>...</p>"
+      "title": "Day 1 title",
+      "morning": "<h4>Morning</h4><p>Detailed activity...</p>",
+      "afternoon": "<h4>Afternoon</h4><p>Detailed activity...</p>",
+      "evening": "<h4>Evening</h4><p>Detailed activity...</p>"
     }
   ]
 }
+
+The daysPlan array MUST contain exactly ${safeDays} days.
 `;
 
 
     // =======================================================
-    // TIMEOUT
+    // FETCH WITH TIMEOUT
     // =======================================================
 
     function fetchWithTimeout(
@@ -252,11 +253,13 @@ JSON structure:
         url,
         {
           ...options,
-          signal: controller.signal
+          signal:
+            controller.signal
         }
       ).finally(
         () => clearTimeout(timeout)
       );
+
     }
 
 
@@ -266,7 +269,9 @@ JSON structure:
 
     async function generateWithGroq() {
 
-      console.log("Calling Groq...");
+      console.log(
+        "Calling Groq..."
+      );
 
       let response;
 
@@ -279,40 +284,50 @@ JSON structure:
               method: "POST",
 
               headers: {
-                "Content-Type": "application/json",
+                "Content-Type":
+                  "application/json",
+
                 "Authorization":
-                  "Bearer " + GROQ_API_KEY
+                  "Bearer " +
+                  GROQ_API_KEY
               },
 
-              body: JSON.stringify({
+              body:
+                JSON.stringify({
 
-                model: GROQ_MODEL,
+                  model:
+                    GROQ_MODEL,
 
-                messages: [
+                  messages: [
 
-                  {
-                    role: "system",
-                    content:
-                      "You are a professional travel planner. Return valid JSON only. Create specific, non-repetitive daily itineraries. Never invent hotels or restaurants."
-                  },
+                    {
+                      role: "system",
 
-                  {
-                    role: "user",
-                    content: prompt
+                      content:
+                        "You are a detailed travel planner. Return valid JSON only. Never invent hotels or restaurants."
+                    },
+
+                    {
+                      role: "user",
+
+                      content:
+                        prompt
+                    }
+
+                  ],
+
+                  temperature:
+                    0.2,
+
+                  max_completion_tokens:
+                    4500,
+
+                  response_format: {
+                    type:
+                      "json_object"
                   }
 
-                ],
-
-                temperature: 0.4,
-
-                max_completion_tokens: 4500,
-
-                response_format: {
-                  type: "json_object"
-                }
-
-              })
-
+                })
             },
             15000
           );
@@ -328,11 +343,13 @@ JSON structure:
           "Could not connect to Groq: " +
           error.message
         );
+
       }
 
 
       const text =
         await response.text();
+
 
       console.log(
         "Groq HTTP status:",
@@ -360,19 +377,26 @@ JSON structure:
             message;
 
         } catch {
-          // Ignore parsing error.
+          // Ignore.
         }
 
 
-        if (response.status === 429) {
+        if (
+          response.status ===
+          429
+        ) {
 
           throw new Error(
             "Groq rate limit reached. Please wait and try again."
           );
+
         }
 
 
-        throw new Error(message);
+        throw new Error(
+          message
+        );
+
       }
 
 
@@ -385,14 +409,10 @@ JSON structure:
 
       } catch {
 
-        console.error(
-          "Invalid Groq response:",
-          text.slice(0, 3000)
-        );
-
         throw new Error(
           "Groq returned an invalid response."
         );
+
       }
 
 
@@ -402,18 +422,15 @@ JSON structure:
 
       if (!content) {
 
-        console.error(
-          "Groq returned no content:",
-          JSON.stringify(data).slice(0, 3000)
-        );
-
         throw new Error(
           "Groq returned an empty response."
         );
+
       }
 
 
       return content;
+
     }
 
 
@@ -427,12 +444,15 @@ JSON structure:
         typeof value === "object" &&
         value !== null
       ) {
+
         return value;
+
       }
 
 
       let text =
-        String(value || "").trim();
+        String(value || "")
+          .trim();
 
 
       text =
@@ -487,17 +507,21 @@ JSON structure:
 
         try {
 
-          return JSON.parse(candidate);
+          return JSON.parse(
+            candidate
+          );
 
         } catch {
           // Continue.
         }
+
       }
 
 
       throw new Error(
         "Groq returned invalid travel plan JSON."
       );
+
     }
 
 
@@ -505,7 +529,9 @@ JSON structure:
     // GEOCODE DESTINATION
     // =======================================================
 
-    async function geocodeDestination(placeName) {
+    async function geocodeDestination(
+      placeName
+    ) {
 
       try {
 
@@ -514,7 +540,9 @@ JSON structure:
           "?format=json" +
           "&limit=1" +
           "&q=" +
-          encodeURIComponent(placeName);
+          encodeURIComponent(
+            placeName
+          );
 
 
         const response =
@@ -537,12 +565,8 @@ JSON structure:
 
         if (!response.ok) {
 
-          console.error(
-            "Nominatim HTTP:",
-            response.status
-          );
-
           return null;
+
         }
 
 
@@ -554,22 +578,30 @@ JSON structure:
           !Array.isArray(data) ||
           data.length === 0
         ) {
+
           return null;
+
         }
 
 
         const lat =
-          Number(data[0].lat);
+          Number(
+            data[0].lat
+          );
 
         const lon =
-          Number(data[0].lon);
+          Number(
+            data[0].lon
+          );
 
 
         if (
           !Number.isFinite(lat) ||
           !Number.isFinite(lon)
         ) {
+
           return null;
+
         }
 
 
@@ -586,7 +618,9 @@ JSON structure:
         );
 
         return null;
+
       }
+
     }
 
 
@@ -594,7 +628,9 @@ JSON structure:
     // NORMALIZE NAME
     // =======================================================
 
-    function normalizeName(value) {
+    function normalizeName(
+      value
+    ) {
 
       return String(value || "")
         .toLowerCase()
@@ -608,6 +644,7 @@ JSON structure:
           " "
         )
         .trim();
+
     }
 
 
@@ -615,24 +652,32 @@ JSON structure:
     // IMAGE URL
     // =======================================================
 
-    function normalizeImageUrl(value) {
+    function normalizeImageUrl(
+      value
+    ) {
 
       if (!value) {
         return "";
       }
 
       const url =
-        String(value).trim();
+        String(value)
+          .trim();
 
 
       if (
-        !/^https?:\/\//i.test(url)
+        !/^https?:\/\//i.test(
+          url
+        )
       ) {
+
         return "";
+
       }
 
 
       return url;
+
     }
 
 
@@ -640,7 +685,9 @@ JSON structure:
     // WIKIMEDIA IMAGE
     // =======================================================
 
-    function getWikimediaImage(value) {
+    function getWikimediaImage(
+      value
+    ) {
 
       if (!value) {
         return "";
@@ -648,19 +695,27 @@ JSON structure:
 
 
       const raw =
-        String(value).trim();
+        String(value)
+          .trim();
 
 
       if (
-        /^https?:\/\//i.test(raw)
+        /^https?:\/\//i.test(
+          raw
+        )
       ) {
+
         return raw;
+
       }
 
 
       const filename =
         raw
-          .replace(/^File:/i, "")
+          .replace(
+            /^File:/i,
+            ""
+          )
           .trim();
 
 
@@ -671,8 +726,11 @@ JSON structure:
 
       return (
         "https://commons.wikimedia.org/wiki/Special:FilePath/" +
-        encodeURIComponent(filename)
+        encodeURIComponent(
+          filename
+        )
       );
+
     }
 
 
@@ -680,7 +738,9 @@ JSON structure:
     // OSM IMAGE
     // =======================================================
 
-    function getOSMImage(tags) {
+    function getOSMImage(
+      tags
+    ) {
 
       const directImage =
         normalizeImageUrl(
@@ -704,10 +764,12 @@ JSON structure:
         return getWikimediaImage(
           wikimedia
         );
+
       }
 
 
       return "";
+
     }
 
 
@@ -715,7 +777,9 @@ JSON structure:
     // OSM COORDINATES
     // =======================================================
 
-    function getElementCoordinates(item) {
+    function getElementCoordinates(
+      item
+    ) {
 
       let lat =
         item?.lat;
@@ -734,6 +798,7 @@ JSON structure:
 
         lon =
           item.center.lon;
+
       }
 
 
@@ -753,6 +818,7 @@ JSON structure:
           lat: null,
           lon: null
         };
+
       }
 
 
@@ -760,6 +826,7 @@ JSON structure:
         lat,
         lon
       };
+
     }
 
 
@@ -784,20 +851,27 @@ JSON structure:
       ];
 
 
-      for (const field of fields) {
+      for (
+        const field of fields
+      ) {
 
         if (tags?.[field]) {
 
           parts.push(
-            String(tags[field])
+            String(
+              tags[field]
+            )
           );
+
         }
+
       }
 
 
       return parts.length
         ? parts.join(", ")
         : fallback;
+
     }
 
 
@@ -823,6 +897,7 @@ JSON structure:
             `${lat},${lon}`
           )
         );
+
       }
 
 
@@ -832,6 +907,7 @@ JSON structure:
           `${name} ${destination}`
         )
       );
+
     }
 
 
@@ -839,22 +915,31 @@ JSON structure:
     // OSM URL
     // =======================================================
 
-    function buildOSMUrl(item) {
+    function buildOSMUrl(
+      item
+    ) {
 
       if (
         !item?.type ||
         !item?.id
       ) {
+
         return "";
+
       }
 
 
       return (
         "https://www.openstreetmap.org/" +
-        encodeURIComponent(item.type) +
+        encodeURIComponent(
+          item.type
+        ) +
         "/" +
-        encodeURIComponent(item.id)
+        encodeURIComponent(
+          item.id
+        )
       );
+
     }
 
 
@@ -862,7 +947,9 @@ JSON structure:
     // GET OSM PLACES
     // =======================================================
 
-    async function getOSMPlaces(placeName) {
+    async function getOSMPlaces(
+      placeName
+    ) {
 
       try {
 
@@ -879,14 +966,11 @@ JSON structure:
 
         if (!geo) {
 
-          console.error(
-            "Could not geocode destination."
-          );
-
           return {
             hotels: [],
             restaurants: []
           };
+
         }
 
 
@@ -894,13 +978,6 @@ JSON structure:
           lat,
           lon
         } = geo;
-
-
-        console.log(
-          "OSM coordinates:",
-          lat,
-          lon
-        );
 
 
         const overpassQuery = `
@@ -957,6 +1034,7 @@ out center tags;
             hotels: [],
             restaurants: []
           };
+
         }
 
 
@@ -966,20 +1044,17 @@ out center tags;
 
         if (
           !data ||
-          !Array.isArray(data.elements)
+          !Array.isArray(
+            data.elements
+          )
         ) {
 
           return {
             hotels: [],
             restaurants: []
           };
+
         }
-
-
-        console.log(
-          "OSM total places:",
-          data.elements.length
-        );
 
 
         const hotels = [];
@@ -994,10 +1069,12 @@ out center tags;
 
 
         // ===================================================
-        // PROCESS OSM ELEMENTS
+        // PROCESS OSM
         // ===================================================
 
-        for (const item of data.elements) {
+        for (
+          const item of data.elements
+        ) {
 
           const tags =
             item.tags || {};
@@ -1015,7 +1092,9 @@ out center tags;
 
 
           const coordinates =
-            getElementCoordinates(item);
+            getElementCoordinates(
+              item
+            );
 
 
           const itemLat =
@@ -1026,7 +1105,9 @@ out center tags;
 
 
           const osmUrl =
-            buildOSMUrl(item);
+            buildOSMUrl(
+              item
+            );
 
 
           const mapsUrl =
@@ -1039,7 +1120,9 @@ out center tags;
 
 
           const imageUrl =
-            getOSMImage(tags);
+            getOSMImage(
+              tags
+            );
 
 
           // =================================================
@@ -1059,12 +1142,16 @@ out center tags;
           if (isHotel) {
 
             const normalized =
-              normalizeName(name);
+              normalizeName(
+                name
+              );
 
 
             if (
               normalized &&
-              !hotelNames.has(normalized)
+              !hotelNames.has(
+                normalized
+              )
             ) {
 
               hotelNames.add(
@@ -1073,24 +1160,33 @@ out center tags;
 
 
               let stars =
-                Number(tags.stars);
+                Number(
+                  tags.stars
+                );
 
 
               if (
-                !Number.isFinite(stars)
+                !Number.isFinite(
+                  stars
+                )
               ) {
 
                 stars =
                   Number(
                     tags["stars:number"]
                   );
+
               }
 
 
               if (
-                !Number.isFinite(stars)
+                !Number.isFinite(
+                  stars
+                )
               ) {
+
                 stars = 0;
+
               }
 
 
@@ -1100,9 +1196,11 @@ out center tags;
               if (
                 tags.internet_access
               ) {
+
                 amenities.push(
                   "Wi-Fi"
                 );
+
               }
 
 
@@ -1110,9 +1208,11 @@ out center tags;
                 tags.air_conditioning ===
                 "yes"
               ) {
+
                 amenities.push(
                   "Air Conditioning"
                 );
+
               }
 
 
@@ -1120,9 +1220,11 @@ out center tags;
                 tags.breakfast ===
                 "yes"
               ) {
+
                 amenities.push(
                   "Breakfast"
                 );
+
               }
 
 
@@ -1130,9 +1232,11 @@ out center tags;
                 tags.pool ===
                 "yes"
               ) {
+
                 amenities.push(
                   "Swimming Pool"
                 );
+
               }
 
 
@@ -1140,9 +1244,11 @@ out center tags;
                 tags.parking ===
                 "yes"
               ) {
+
                 amenities.push(
                   "Parking"
                 );
+
               }
 
 
@@ -1150,9 +1256,11 @@ out center tags;
                 tags.restaurant ===
                 "yes"
               ) {
+
                 amenities.push(
                   "Restaurant"
                 );
+
               }
 
 
@@ -1171,6 +1279,8 @@ out center tags;
 
                 stars,
 
+                // IMPORTANT:
+                // No fake price.
                 price:
                   null,
 
@@ -1178,10 +1288,13 @@ out center tags;
                   "USD",
 
                 priceType:
-                  "Price not available from OpenStreetMap",
+                  "Live price unavailable",
 
                 amenities:
-                  amenities.slice(0, 6),
+                  amenities.slice(
+                    0,
+                    6
+                  ),
 
                 description:
                   String(
@@ -1220,8 +1333,11 @@ out center tags;
 
                 osmId:
                   item.id || null
+
               });
+
             }
+
           }
 
 
@@ -1235,7 +1351,9 @@ out center tags;
           ) {
 
             const normalized =
-              normalizeName(name);
+              normalizeName(
+                name
+              );
 
 
             if (
@@ -1262,7 +1380,9 @@ out center tags;
 
 
               const numericRating =
-                Number(tags.rating);
+                Number(
+                  tags.rating
+                );
 
 
               const rating =
@@ -1357,9 +1477,13 @@ out center tags;
 
                 osmId:
                   item.id || null
+
               });
+
             }
+
           }
+
         }
 
 
@@ -1378,10 +1502,15 @@ out center tags;
 
 
             if (
-              bImage !== aImage
+              bImage !==
+              aImage
             ) {
 
-              return bImage - aImage;
+              return (
+                bImage -
+                aImage
+              );
+
             }
 
 
@@ -1389,6 +1518,7 @@ out center tags;
               (Number(b.stars) || 0) -
               (Number(a.stars) || 0)
             );
+
           }
         );
 
@@ -1408,10 +1538,15 @@ out center tags;
 
 
             if (
-              bImage !== aImage
+              bImage !==
+              aImage
             ) {
 
-              return bImage - aImage;
+              return (
+                bImage -
+                aImage
+              );
+
             }
 
 
@@ -1419,6 +1554,7 @@ out center tags;
               (Number(b.rating) || 0) -
               (Number(a.rating) || 0)
             );
+
           }
         );
 
@@ -1451,10 +1587,16 @@ out center tags;
         return {
 
           hotels:
-            hotels.slice(0, 10),
+            hotels.slice(
+              0,
+              10
+            ),
 
           restaurants:
-            restaurants.slice(0, 15)
+            restaurants.slice(
+              0,
+              15
+            )
 
         };
 
@@ -1469,12 +1611,887 @@ out center tags;
           hotels: [],
           restaurants: []
         };
+
       }
+
     }
 
 
     // =======================================================
-    // RUN GROQ + OSM IN PARALLEL
+    // BOOKING.COM CITY SEARCH
+    // =======================================================
+    //
+    // Booking requires a Booking.com city ID.
+    //
+    // We try to find it dynamically.
+    //
+
+    async function findBookingCity(
+      placeName
+    ) {
+
+      if (!BOOKING_ENABLED) {
+        return null;
+      }
+
+
+      try {
+
+        const url =
+          "https://demandapi.booking.com/3.1/common/locations/cities";
+
+
+        const response =
+          await fetchWithTimeout(
+            url,
+            {
+              method: "POST",
+
+              headers: {
+
+                "Authorization":
+                  "Bearer " +
+                  BOOKING_API_KEY,
+
+                "X-Affiliate-Id":
+                  String(
+                    BOOKING_AFFILIATE_ID
+                  ),
+
+                "Content-Type":
+                  "application/json",
+
+                "Accept":
+                  "application/json"
+
+              },
+
+              body:
+                JSON.stringify({
+
+                  country:
+                    "tr",
+
+                  languages: [
+                    "en"
+                  ],
+
+                  maximum_results:
+                    100
+
+                })
+
+            },
+            9000
+          );
+
+
+        if (!response.ok) {
+
+          console.error(
+            "Booking city lookup HTTP:",
+            response.status
+          );
+
+          return null;
+
+        }
+
+
+        const data =
+          await response.json();
+
+
+        const items =
+          Array.isArray(
+            data?.data
+          )
+            ? data.data
+            : [];
+
+
+        const wanted =
+          normalizeName(
+            placeName
+          );
+
+
+        // Exact match first.
+
+        let match =
+          items.find(
+            item =>
+              normalizeName(
+                item?.name
+              ) === wanted
+          );
+
+
+        // Contains match.
+
+        if (!match) {
+
+          match =
+            items.find(
+              item => {
+
+                const itemName =
+                  normalizeName(
+                    item?.name
+                  );
+
+                return (
+                  itemName.includes(
+                    wanted
+                  ) ||
+                  wanted.includes(
+                    itemName
+                  )
+                );
+
+              }
+            );
+
+        }
+
+
+        if (!match) {
+
+          return null;
+
+        }
+
+
+        return (
+          match?.id ||
+          match?.city ||
+          null
+        );
+
+      } catch (error) {
+
+        console.error(
+          "Booking city lookup error:",
+          error.message
+        );
+
+        return null;
+
+      }
+
+    }
+
+
+    // =======================================================
+    // PARSE TRAVELERS
+    // =======================================================
+
+    function parseAdultCount(
+      value
+    ) {
+
+      const text =
+        String(value || "")
+          .toLowerCase();
+
+
+      const match =
+        text.match(
+          /\d+/
+        );
+
+
+      if (!match) {
+        return 2;
+      }
+
+
+      const count =
+        Number(
+          match[0]
+        );
+
+
+      if (
+        !Number.isFinite(count)
+      ) {
+
+        return 2;
+
+      }
+
+
+      return Math.max(
+        1,
+        Math.min(
+          count,
+          12
+        )
+      );
+
+    }
+
+
+    // =======================================================
+    // PARSE START DATE
+    // =======================================================
+
+    function getCheckinDate(
+      value
+    ) {
+
+      if (
+        !value ||
+        value ===
+        "Flexible"
+      ) {
+
+        return null;
+
+      }
+
+
+      const date =
+        new Date(
+          String(value)
+        );
+
+
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+
+        return null;
+
+      }
+
+
+      return date;
+
+    }
+
+
+    // =======================================================
+    // FORMAT YYYY-MM-DD
+    // =======================================================
+
+    function formatDate(
+      date
+    ) {
+
+      const year =
+        date.getFullYear();
+
+      const month =
+        String(
+          date.getMonth() + 1
+        ).padStart(
+          2,
+          "0"
+        );
+
+      const day =
+        String(
+          date.getDate()
+        ).padStart(
+          2,
+          "0"
+        );
+
+
+      return (
+        `${year}-${month}-${day}`
+      );
+
+    }
+
+
+    // =======================================================
+    // BOOKING PRICE EXTRACTION
+    // =======================================================
+
+    function extractBookingPrice(
+      accommodation
+    ) {
+
+      const price =
+        accommodation?.price;
+
+
+      if (!price) {
+        return null;
+      }
+
+
+      let amount = null;
+
+
+      if (
+        typeof price ===
+        "number"
+      ) {
+
+        amount =
+          price;
+
+      }
+
+
+      if (
+        typeof price ===
+        "object"
+      ) {
+
+        const candidates = [
+
+          price.total,
+
+          price.book,
+
+          price.base,
+
+          price.display,
+
+          price.amount
+
+        ];
+
+
+        for (
+          const candidate
+          of candidates
+        ) {
+
+          if (
+            typeof candidate ===
+            "number"
+          ) {
+
+            amount =
+              candidate;
+
+            break;
+
+          }
+
+
+          if (
+            typeof candidate ===
+            "string"
+          ) {
+
+            const numeric =
+              Number(
+                candidate
+              );
+
+
+            if (
+              Number.isFinite(
+                numeric
+              )
+            ) {
+
+              amount =
+                numeric;
+
+              break;
+
+            }
+
+          }
+
+
+          if (
+            typeof candidate ===
+            "object" &&
+            candidate !== null
+          ) {
+
+            const nested =
+              Number(
+                candidate.amount ??
+                candidate.value ??
+                candidate.total
+              );
+
+
+            if (
+              Number.isFinite(
+                nested
+              )
+            ) {
+
+              amount =
+                nested;
+
+              break;
+
+            }
+
+          }
+
+        }
+
+      }
+
+
+      if (
+        !Number.isFinite(
+          Number(amount)
+        )
+      ) {
+
+        return null;
+
+      }
+
+
+      return Number(
+        amount
+      );
+
+    }
+
+
+    // =======================================================
+    // BOOKING.COM HOTEL SEARCH
+    // =======================================================
+    //
+    // This ONLY adds live pricing.
+    //
+    // OSM remains the source for hotel identity,
+    // restaurant identity and OSM photos.
+    //
+
+    async function getBookingPrices(
+      placeName,
+      checkin,
+      checkout,
+      adults
+    ) {
+
+      if (!BOOKING_ENABLED) {
+
+        console.log(
+          "Booking.com pricing disabled: credentials not configured."
+        );
+
+        return [];
+
+      }
+
+
+      if (
+        !checkin ||
+        !checkout
+      ) {
+
+        console.log(
+          "Booking.com pricing skipped: no valid dates."
+        );
+
+        return [];
+
+      }
+
+
+      try {
+
+        const cityId =
+          await findBookingCity(
+            placeName
+          );
+
+
+        if (!cityId) {
+
+          console.log(
+            "Booking.com city ID not found for:",
+            placeName
+          );
+
+          return [];
+
+        }
+
+
+        console.log(
+          "Booking.com city ID:",
+          cityId
+        );
+
+
+        const url =
+          "https://demandapi.booking.com/3.1/accommodations/search";
+
+
+        const body = {
+
+          city:
+            Number(cityId),
+
+          booker: {
+
+            country:
+              "tr",
+
+            platform:
+              "mobile"
+
+          },
+
+          checkin:
+            formatDate(
+              checkin
+            ),
+
+          checkout:
+            formatDate(
+              checkout
+            ),
+
+          guests: {
+
+            number_of_rooms:
+              1,
+
+            number_of_adults:
+              adults
+
+          },
+
+          sort: {
+
+            by:
+              "price",
+
+            direction:
+              "ascending"
+
+          }
+
+        };
+
+
+        const response =
+          await fetchWithTimeout(
+            url,
+            {
+              method: "POST",
+
+              headers: {
+
+                "Authorization":
+                  "Bearer " +
+                  BOOKING_API_KEY,
+
+                "X-Affiliate-Id":
+                  String(
+                    BOOKING_AFFILIATE_ID
+                  ),
+
+                "Content-Type":
+                  "application/json",
+
+                "Accept":
+                  "application/json"
+
+              },
+
+              body:
+                JSON.stringify(
+                  body
+                )
+
+            },
+            12000
+          );
+
+
+        const text =
+          await response.text();
+
+
+        if (!response.ok) {
+
+          console.error(
+            "Booking.com search error:",
+            response.status,
+            text.slice(
+              0,
+              2000
+            )
+          );
+
+          return [];
+
+        }
+
+
+        let data;
+
+
+        try {
+
+          data =
+            JSON.parse(
+              text
+            );
+
+        } catch {
+
+          console.error(
+            "Booking.com returned invalid JSON."
+          );
+
+          return [];
+
+        }
+
+
+        const results =
+          Array.isArray(
+            data?.data
+          )
+            ? data.data
+            : [];
+
+
+        console.log(
+          "Booking.com hotels returned:",
+          results.length
+        );
+
+
+        return results
+          .slice(
+            0,
+            50
+          )
+          .map(
+            hotel => {
+
+              const amount =
+                extractBookingPrice(
+                  hotel
+                );
+
+
+              const currency =
+                typeof hotel?.currency ===
+                "string"
+                  ? hotel.currency
+                  : (
+                      hotel?.currency?.booker ||
+                      hotel?.currency?.accommodation ||
+                      "USD"
+                    );
+
+
+              return {
+
+                id:
+                  hotel?.id ||
+                  null,
+
+                name:
+                  hotel?.name ||
+                  "",
+
+                price:
+                  amount,
+
+                currency:
+                  currency,
+
+                bookingUrl:
+                  hotel?.url ||
+                  hotel?.deep_link_url ||
+                  "",
+
+                bookingPriceSource:
+                  "Booking.com",
+
+                rawPrice:
+                  hotel?.price ||
+                  null
+
+              };
+
+            }
+          );
+
+      } catch (error) {
+
+        console.error(
+          "Booking.com pricing error:",
+          error.message
+        );
+
+        return [];
+
+      }
+
+    }
+
+
+    // =======================================================
+    // MATCH BOOKING PRICES TO OSM HOTELS
+    // =======================================================
+
+    function attachBookingPrices(
+      hotels,
+      bookingHotels
+    ) {
+
+      if (
+        !Array.isArray(hotels) ||
+        !Array.isArray(
+          bookingHotels
+        )
+      ) {
+
+        return hotels;
+
+      }
+
+
+      if (
+        bookingHotels.length === 0
+      ) {
+
+        return hotels;
+
+      }
+
+
+      const bookingMap =
+        new Map();
+
+
+      for (
+        const bookingHotel
+        of bookingHotels
+      ) {
+
+        const key =
+          normalizeName(
+            bookingHotel?.name
+          );
+
+
+        if (!key) {
+          continue;
+        }
+
+
+        bookingMap.set(
+          key,
+          bookingHotel
+        );
+
+      }
+
+
+      for (
+        const hotel
+        of hotels
+      ) {
+
+        const hotelKey =
+          normalizeName(
+            hotel?.name
+          );
+
+
+        let booking =
+          bookingMap.get(
+            hotelKey
+          );
+
+
+        // Try partial matching.
+
+        if (!booking) {
+
+          for (
+            const [
+              bookingName,
+              bookingHotel
+            ]
+            of bookingMap
+          ) {
+
+            if (
+              bookingName.includes(
+                hotelKey
+              ) ||
+              hotelKey.includes(
+                bookingName
+              )
+            ) {
+
+              booking =
+                bookingHotel;
+
+              break;
+
+            }
+
+          }
+
+        }
+
+
+        if (
+          booking &&
+          Number.isFinite(
+            Number(
+              booking.price
+            )
+          )
+        ) {
+
+          hotel.price =
+            Number(
+              booking.price
+            );
+
+          hotel.currency =
+            booking.currency ||
+            "USD";
+
+          hotel.priceType =
+            "Best available price";
+
+          hotel.bookingPriceSource =
+            "Booking.com";
+
+
+          if (
+            booking.bookingUrl
+          ) {
+
+            hotel.bookingUrl =
+              booking.bookingUrl;
+
+          }
+
+        }
+
+      }
+
+
+      return hotels;
+
+    }
+
+
+    // =======================================================
+    // RUN GROQ + OSM
     // =======================================================
 
     console.log(
@@ -1515,6 +2532,7 @@ out center tags;
         groqResponse.reason
       );
 
+
       return res.status(502).json({
 
         error:
@@ -1525,6 +2543,7 @@ out center tags;
           "Groq request failed."
 
       });
+
     }
 
 
@@ -1537,8 +2556,11 @@ out center tags;
     // =======================================================
 
     let osmResult = {
+
       hotels: [],
+
       restaurants: []
+
     };
 
 
@@ -1556,6 +2578,7 @@ out center tags;
         "OSM failed:",
         osmResponse.reason
       );
+
     }
 
 
@@ -1582,8 +2605,14 @@ out center tags;
 
       console.error(
         "AI RAW RESPONSE:",
-        String(groqResult).slice(0, 5000)
+        String(
+          groqResult
+        ).slice(
+          0,
+          5000
+        )
       );
+
 
       return res.status(500).json({
 
@@ -1594,6 +2623,7 @@ out center tags;
           error.message
 
       });
+
     }
 
 
@@ -1640,77 +2670,46 @@ out center tags;
         : [];
 
 
-    // =======================================================
-    // CLEAN + NORMALIZE DAY CONTENT
-    // =======================================================
-
     daysPlan =
       daysPlan
-        .slice(0, safeDays)
+        .slice(
+          0,
+          safeDays
+        )
         .map(
-          (day, index) => {
+          (day, index) => ({
 
-            const dayNumber =
-              index + 1;
+            day:
+              Number(
+                day?.day
+              ) ||
+              index + 1,
 
-
-            const title =
+            title:
               String(
                 day?.title ||
-                `Day ${dayNumber}`
-              ).trim();
+                `Day ${index + 1}`
+              ),
 
-
-            const morning =
+            morning:
               String(
                 day?.morning ||
-                ""
-              ).trim();
+                "<p>Explore the destination in the morning.</p>"
+              ),
 
-
-            const afternoon =
+            afternoon:
               String(
                 day?.afternoon ||
-                ""
-              ).trim();
+                "<p>Enjoy local food, sightseeing and shopping.</p>"
+              ),
 
-
-            const evening =
+            evening:
               String(
                 day?.evening ||
-                ""
-              ).trim();
+                "<p>Relax and explore a popular evening area.</p>"
+              )
 
-
-            return {
-
-              day:
-                dayNumber,
-
-              title:
-                title,
-
-              morning:
-                morning ||
-                `<p>Start the day by exploring ${escapeForAIHTML(
-                  safeDestination
-                )} and visiting a notable local attraction.</p>`,
-
-              afternoon:
-                afternoon ||
-                `<p>Continue with a different area of ${escapeForAIHTML(
-                  safeDestination
-                )}, including sightseeing, local food and shopping.</p>`,
-
-              evening:
-                evening ||
-                `<p>Spend the evening walking through a popular area of ${escapeForAIHTML(
-                  safeDestination
-                )} and enjoying the local atmosphere.</p>`
-
-            };
-
-          }
+          })
         );
 
 
@@ -1727,34 +2726,25 @@ out center tags;
         daysPlan.length;
 
 
-      const dayNumber =
-        index + 1;
-
-
       daysPlan.push({
 
         day:
-          dayNumber,
+          index + 1,
 
         title:
-          `Day ${dayNumber} — Explore ${safeDestination}`,
+          `Day ${index + 1}`,
 
         morning:
-          `<p>Start the day with a visit to a major attraction or historic area in ${escapeForAIHTML(
-            safeDestination
-          )}.</p>`,
+          "<p>Explore the destination's main attractions and local area.</p>",
 
         afternoon:
-          `<p>Explore another part of ${escapeForAIHTML(
-            safeDestination
-          )}, with time for local food, shopping and walking.</p>`,
+          "<p>Enjoy local food, shopping and a walking experience.</p>",
 
         evening:
-          `<p>Finish the day with an evening walk through a popular district, waterfront or cultural area in ${escapeForAIHTML(
-            safeDestination
-          )}.</p>`
+          "<p>Relax and explore a safe, popular evening area.</p>"
 
       });
+
     }
 
 
@@ -1762,7 +2752,7 @@ out center tags;
     // OSM DATA
     // =======================================================
 
-    const hotels =
+    let hotels =
       Array.isArray(
         osmResult?.hotels
       )
@@ -1776,6 +2766,93 @@ out center tags;
       )
         ? osmResult.restaurants
         : [];
+
+
+    // =======================================================
+    // BOOKING LIVE PRICES
+    // =======================================================
+
+    //
+    // Only if:
+    //
+    // 1. Booking credentials exist
+    // 2. A real start date exists
+    //
+    // No fake prices are generated.
+    //
+
+    if (
+      BOOKING_ENABLED
+    ) {
+
+      const checkin =
+        getCheckinDate(
+          safeStartDate
+        );
+
+
+      if (checkin) {
+
+        const checkout =
+          new Date(
+            checkin.getTime()
+          );
+
+
+        checkout.setDate(
+          checkout.getDate() +
+          safeDays
+        );
+
+
+        const adults =
+          parseAdultCount(
+            safeTravelers
+          );
+
+
+        console.log(
+          "Getting live Booking.com prices..."
+        );
+
+
+        const bookingHotels =
+          await getBookingPrices(
+            safeDestination,
+            checkin,
+            checkout,
+            adults
+          );
+
+
+        hotels =
+          attachBookingPrices(
+            hotels,
+            bookingHotels
+          );
+
+
+        console.log(
+          "Hotels with live prices:",
+          hotels.filter(
+            hotel =>
+              Number.isFinite(
+                Number(
+                  hotel.price
+                )
+              )
+          ).length
+        );
+
+      } else {
+
+        console.log(
+          "No fixed start date. Live hotel pricing skipped."
+        );
+
+      }
+
+    }
 
 
     // =======================================================
@@ -1831,7 +2908,12 @@ out center tags;
             : "no_results",
 
         source:
-          "OpenStreetMap"
+          "OpenStreetMap",
+
+        pricingSource:
+          BOOKING_ENABLED
+            ? "Booking.com when matched"
+            : "Not configured"
 
       },
 
@@ -1849,7 +2931,10 @@ out center tags;
 
       },
 
-      // script.js compatibility
+      // =====================================================
+      // SCRIPT.JS COMPATIBILITY
+      // =====================================================
+
       stay:
         hotels,
 
@@ -1885,6 +2970,11 @@ out center tags;
     );
 
     console.log(
+      "Booking pricing enabled:",
+      BOOKING_ENABLED
+    );
+
+    console.log(
       "Hotels:",
       hotels.length
     );
@@ -1894,6 +2984,18 @@ out center tags;
       hotels.filter(
         hotel =>
           !!hotel.imageUrl
+      ).length
+    );
+
+    console.log(
+      "Hotels with prices:",
+      hotels.filter(
+        hotel =>
+          Number.isFinite(
+            Number(
+              hotel.price
+            )
+          )
       ).length
     );
 
@@ -1908,11 +3010,6 @@ out center tags;
         restaurant =>
           !!restaurant.imageUrl
       ).length
-    );
-
-    console.log(
-      "Days generated:",
-      daysPlan.length
     );
 
     console.log(
@@ -1939,7 +3036,9 @@ out center tags;
 
     return res
       .status(200)
-      .json(responseData);
+      .json(
+        responseData
+      );
 
 
   } catch (error) {
@@ -1964,36 +3063,6 @@ out center tags;
         "Unknown server error."
 
     });
-  }
-
-
-  // =========================================================
-  // SMALL HTML ESCAPE FOR FALLBACK DAY TEXT
-  // =========================================================
-
-  function escapeForAIHTML(value) {
-
-    return String(value || "")
-      .replace(
-        /&/g,
-        "&amp;"
-      )
-      .replace(
-        /</g,
-        "&lt;"
-      )
-      .replace(
-        />/g,
-        "&gt;"
-      )
-      .replace(
-        /"/g,
-        "&quot;"
-      )
-      .replace(
-        /'/g,
-        "&#039;"
-      );
 
   }
 
