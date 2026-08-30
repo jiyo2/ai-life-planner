@@ -129,16 +129,11 @@ module.exports = async (req, res) => {
 
 
     // =======================================================
-    // SMALL TRAVEL PROMPT
+    // TRAVEL PROMPT
     // =======================================================
-    //
-    // IMPORTANT:
-    // This prompt is intentionally much smaller than the old one.
-    // This prevents the Groq TPM error.
-    //
 
     const prompt = `
-Create a realistic travel plan.
+Create a realistic and detailed travel plan.
 
 Destination: ${safeDestination}
 Start date: ${safeStartDate}
@@ -148,30 +143,83 @@ Travelers: ${safeTravelers}
 Interests: ${safeInterests}
 Notes: ${safeNotes || "None"}
 
-Rules:
-- Do not invent hotels or restaurants.
-- Do not create hotel or restaurant names.
-- Do not create image URLs.
-- Hotels and restaurants come from OpenStreetMap separately.
-- Give practical transportation advice.
-- Give realistic sightseeing, food, shopping and walking suggestions.
-- Prices must be approximate, never guaranteed.
-- Mention flights separately if they may not be included in the budget.
-- Return HTML only inside the string fields.
-- Return valid JSON only.
-- daysPlan must contain exactly ${safeDays} days.
-- Every day needs morning, afternoon and evening.
+IMPORTANT RULES:
+
+1. Do not invent hotels.
+2. Do not invent restaurants.
+3. Do not create hotel names.
+4. Do not create restaurant names.
+5. Hotels and restaurants are supplied separately by OpenStreetMap.
+6. Do not create image URLs.
+7. Give practical transportation advice.
+8. Give realistic sightseeing, food, shopping, walking and cultural suggestions.
+9. Prices are approximate only.
+10. Mention flights separately if they may not be included in the budget.
+11. Return valid JSON only.
+12. HTML is allowed inside string fields.
+13. Do not use Markdown.
+14. Do not return explanations outside the JSON.
+
+DAY-BY-DAY REQUIREMENTS:
+
+Create EXACTLY ${safeDays} days.
+
+Every day MUST be different.
+
+Do NOT repeat:
+- "Explore ${safeDestination} according to your personalized interests and budget."
+- generic sightseeing text
+- the same attraction
+- the same morning/afternoon/evening description
+
+Each day must have:
+
+- day
+- title
+- morning
+- afternoon
+- evening
+
+The title must describe the actual focus of that day.
+
+Morning must contain a specific activity or area.
+
+Afternoon must contain a different specific activity or area.
+
+Evening must contain a specific evening activity, neighborhood, viewpoint, cultural activity, walk, market, waterfront, entertainment area or other realistic experience.
+
+Use the traveler's interests when choosing activities.
+
+The activities must be realistic for ${safeDestination}.
+
+Do not invent businesses.
+
+If you mention a famous landmark, museum, square, park, district, market, waterfront or historical site, use a real and well-known place.
+
+Keep each morning, afternoon and evening section useful and specific.
+
+Example of the expected level of detail:
+
+{
+  "day": 1,
+  "title": "Historic Center and Old City",
+  "morning": "<p>Visit a major historic landmark and walk through the surrounding old streets.</p>",
+  "afternoon": "<p>Explore a nearby market or museum and have time for local shopping.</p>",
+  "evening": "<p>Take an evening walk through a popular central district and enjoy the city atmosphere.</p>"
+}
+
+For multiple days, progressively explore different parts of the destination.
 
 JSON structure:
 
 {
-  "transport": "<h3>...</h3><p>...</p><ul><li>...</li></ul>",
-  "experiences": "<h3>...</h3><p>...</p><ul><li>...</li></ul>",
-  "money": "<h3>...</h3><p>...</p><ul><li>...</li></ul>",
+  "transport": "<h3>Transportation</h3><p>...</p><ul><li>...</li></ul>",
+  "experiences": "<h3>Experiences</h3><p>...</p><ul><li>...</li></ul>",
+  "money": "<h3>Budget</h3><p>...</p><ul><li>...</li></ul>",
   "daysPlan": [
     {
       "day": 1,
-      "title": "Day 1",
+      "title": "...",
       "morning": "<p>...</p>",
       "afternoon": "<p>...</p>",
       "evening": "<p>...</p>"
@@ -245,7 +293,7 @@ JSON structure:
                   {
                     role: "system",
                     content:
-                      "You are a travel planner. Return valid JSON only. Never invent hotels or restaurants."
+                      "You are a professional travel planner. Return valid JSON only. Create specific, non-repetitive daily itineraries. Never invent hotels or restaurants."
                   },
 
                   {
@@ -255,11 +303,8 @@ JSON structure:
 
                 ],
 
-                temperature: 0.2,
+                temperature: 0.4,
 
-                // IMPORTANT:
-                // Reduced from 10000 to 4500
-                // to stay below Groq TPM limit.
                 max_completion_tokens: 4500,
 
                 response_format: {
@@ -1595,41 +1640,77 @@ out center tags;
         : [];
 
 
+    // =======================================================
+    // CLEAN + NORMALIZE DAY CONTENT
+    // =======================================================
+
     daysPlan =
       daysPlan
         .slice(0, safeDays)
         .map(
-          (day, index) => ({
+          (day, index) => {
 
-            day:
-              Number(day?.day) ||
-              index + 1,
+            const dayNumber =
+              index + 1;
 
-            title:
+
+            const title =
               String(
                 day?.title ||
-                `Day ${index + 1}`
-              ),
+                `Day ${dayNumber}`
+              ).trim();
 
-            morning:
+
+            const morning =
               String(
                 day?.morning ||
-                "Explore the destination in the morning."
-              ),
+                ""
+              ).trim();
 
-            afternoon:
+
+            const afternoon =
               String(
                 day?.afternoon ||
-                "Enjoy local food, sightseeing and shopping."
-              ),
+                ""
+              ).trim();
 
-            evening:
+
+            const evening =
               String(
                 day?.evening ||
-                "Relax and explore a popular evening area."
-              )
+                ""
+              ).trim();
 
-          })
+
+            return {
+
+              day:
+                dayNumber,
+
+              title:
+                title,
+
+              morning:
+                morning ||
+                `<p>Start the day by exploring ${escapeForAIHTML(
+                  safeDestination
+                )} and visiting a notable local attraction.</p>`,
+
+              afternoon:
+                afternoon ||
+                `<p>Continue with a different area of ${escapeForAIHTML(
+                  safeDestination
+                )}, including sightseeing, local food and shopping.</p>`,
+
+              evening:
+                evening ||
+                `<p>Spend the evening walking through a popular area of ${escapeForAIHTML(
+                  safeDestination
+                )} and enjoying the local atmosphere.</p>`
+
+            };
+
+          }
         );
 
 
@@ -1646,22 +1727,32 @@ out center tags;
         daysPlan.length;
 
 
+      const dayNumber =
+        index + 1;
+
+
       daysPlan.push({
 
         day:
-          index + 1,
+          dayNumber,
 
         title:
-          `Day ${index + 1}`,
+          `Day ${dayNumber} — Explore ${safeDestination}`,
 
         morning:
-          "<p>Explore the destination's main attractions and local area.</p>",
+          `<p>Start the day with a visit to a major attraction or historic area in ${escapeForAIHTML(
+            safeDestination
+          )}.</p>`,
 
         afternoon:
-          "<p>Enjoy local food, shopping and a walking experience.</p>",
+          `<p>Explore another part of ${escapeForAIHTML(
+            safeDestination
+          )}, with time for local food, shopping and walking.</p>`,
 
         evening:
-          "<p>Relax and explore a safe, popular evening area.</p>"
+          `<p>Finish the day with an evening walk through a popular district, waterfront or cultural area in ${escapeForAIHTML(
+            safeDestination
+          )}.</p>`
 
       });
     }
@@ -1820,6 +1911,11 @@ out center tags;
     );
 
     console.log(
+      "Days generated:",
+      daysPlan.length
+    );
+
+    console.log(
       "Groq model:",
       GROQ_MODEL
     );
@@ -1868,6 +1964,37 @@ out center tags;
         "Unknown server error."
 
     });
+  }
+
+
+  // =========================================================
+  // SMALL HTML ESCAPE FOR FALLBACK DAY TEXT
+  // =========================================================
+
+  function escapeForAIHTML(value) {
+
+    return String(value || "")
+      .replace(
+        /&/g,
+        "&amp;"
+      )
+      .replace(
+        /</g,
+        "&lt;"
+      )
+      .replace(
+        />/g,
+        "&gt;"
+      )
+      .replace(
+        /"/g,
+        "&quot;"
+      )
+      .replace(
+        /'/g,
+        "&#039;"
+      );
+
   }
 
 };
