@@ -1,15 +1,18 @@
-/* =========================================================
-   AI LIFE PLANNER — PRODUCTION V16
-   Paddle Production + Payment Gate
-========================================================= */
-
 const $ = (id) => document.getElementById(id);
 
 let trip = null;
 let currentPlan = null;
 
 let paddleInitialized = false;
+
+/*
+ * IMPORTANT PAYMENT STATE
+ *
+ * false = user has NOT completed payment
+ * true  = Paddle sent checkout.completed
+ */
 let paymentCompleted = false;
+
 let planCreationStarted = false;
 
 console.log("AI LIFE PLANNER — PRODUCTION V16");
@@ -26,12 +29,14 @@ const PADDLE_PRICE_ID =
 
 
 /* =========================================================
-   STYLES
+   DYNAMIC STYLES
 ========================================================= */
 
-(function injectStyles() {
+(function injectPlannerStyles() {
 
-  if ($("aiPlannerDynamicStyles")) return;
+  if (document.getElementById("aiPlannerDynamicStyles")) {
+    return;
+  }
 
   const style = document.createElement("style");
 
@@ -64,11 +69,20 @@ const PADDLE_PRICE_ID =
       transition:.15s ease;
     }
 
+    .chip:hover {
+      transform:translateY(-1px);
+    }
+
+    .chip:active {
+      transform:scale(.97);
+    }
+
     .chip.selected,
     .chip.active {
       background:#111 !important;
       color:#fff !important;
       border-color:#111 !important;
+      box-shadow:0 4px 14px rgba(0,0,0,.15);
     }
 
     .plan-section {
@@ -132,6 +146,8 @@ const PADDLE_PRICE_ID =
       font-size:14px;
       font-weight:600;
       text-align:center;
+      padding:20px;
+      box-sizing:border-box;
     }
 
     .hotel-body {
@@ -143,6 +159,7 @@ const PADDLE_PRICE_ID =
       font-weight:700;
       line-height:1.35;
       margin-bottom:7px;
+      color:#111;
     }
 
     .hotel-meta {
@@ -156,11 +173,13 @@ const PADDLE_PRICE_ID =
       font-size:18px;
       font-weight:800;
       margin-top:12px;
+      color:#111;
     }
 
     .hotel-price-label {
       font-size:12px;
       color:#777;
+      margin-left:3px;
     }
 
     .hotel-button,
@@ -188,6 +207,7 @@ const PADDLE_PRICE_ID =
       border-radius:16px;
       padding:16px;
       background:#fff;
+      box-shadow:0 3px 14px rgba(0,0,0,.05);
     }
 
     .restaurant-name {
@@ -271,7 +291,26 @@ const PADDLE_PRICE_ID =
       line-height:1.5;
     }
 
+    .payment-success {
+      padding:15px;
+      border-radius:12px;
+      background:#f1fff4;
+      color:#176b2c;
+      margin-top:15px;
+      line-height:1.5;
+    }
+
     @media(max-width:600px) {
+
+      .chips {
+        gap:8px;
+      }
+
+      .chip {
+        padding:9px 12px;
+        font-size:13px;
+      }
+
       .hotels-grid,
       .restaurants-grid {
         grid-template-columns:1fr;
@@ -283,6 +322,7 @@ const PADDLE_PRICE_ID =
 
       .plan-tabs {
         overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
       }
 
       .plan-tab {
@@ -315,6 +355,10 @@ function escapeHTML(value) {
 }
 
 
+/* =========================================================
+   NUMBER
+========================================================= */
+
 function extractNumber(value) {
 
   if (value === null || value === undefined) {
@@ -322,18 +366,23 @@ function extractNumber(value) {
   }
 
   if (typeof value === "number") {
-    return Number.isFinite(value) ? value : null;
+
+    return Number.isFinite(value)
+      ? value
+      : null;
   }
 
   if (typeof value === "string") {
 
-    const cleaned =
-      value.replace(/,/g,"")
-           .replace(/[^\d.-]/g,"");
+    const cleaned = value
+      .replace(/,/g,"")
+      .replace(/[^\d.-]/g,"");
 
-    const n = Number(cleaned);
+    const number = Number(cleaned);
 
-    return Number.isFinite(n) ? n : null;
+    return Number.isFinite(number)
+      ? number
+      : null;
   }
 
   if (typeof value === "object") {
@@ -356,13 +405,17 @@ function extractNumber(value) {
 
     for (const key of keys) {
 
-      if (value[key] !== null &&
-          value[key] !== undefined) {
+      if (
+        value[key] !== null &&
+        value[key] !== undefined
+      ) {
 
-        const n =
+        const result =
           extractNumber(value[key]);
 
-        if (n !== null) return n;
+        if (result !== null) {
+          return result;
+        }
       }
     }
   }
@@ -371,21 +424,92 @@ function extractNumber(value) {
 }
 
 
+/* =========================================================
+   USD
+========================================================= */
+
 function formatUSD(value) {
 
-  const n = extractNumber(value);
+  const number =
+    extractNumber(value);
 
-  if (n === null) return "$0";
+  if (number === null) {
+    return "$0";
+  }
 
-  return "$" + n.toLocaleString("en-US", {
-    maximumFractionDigits:2
-  });
+  return "$" +
+    number.toLocaleString(
+      "en-US",
+      {
+        maximumFractionDigits:2
+      }
+    );
 }
 
 
+/* =========================================================
+   SHOW / HIDE
+========================================================= */
+
+function showElement(id) {
+
+  const element = $(id);
+
+  if (!element) return;
+
+  element.classList.remove("hidden");
+  element.style.display = "";
+}
+
+
+function hideElement(id) {
+
+  const element = $(id);
+
+  if (!element) return;
+
+  element.classList.add("hidden");
+}
+
+
+/* =========================================================
+   TEXT / HTML
+========================================================= */
+
+function setText(id,text) {
+
+  const element = $(id);
+
+  if (!element) return;
+
+  element.textContent =
+    text === null || text === undefined
+      ? ""
+      : String(text);
+}
+
+
+function setHTML(id,html) {
+
+  const element = $(id);
+
+  if (!element) return;
+
+  element.innerHTML =
+    html || "";
+}
+
+
+/* =========================================================
+   DISPLAY VALUE
+========================================================= */
+
 function extractDisplayValue(value) {
 
-  if (value === null || value === undefined) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
     return "";
   }
 
@@ -433,58 +557,18 @@ function extractDisplayValue(value) {
       ) {
 
         const result =
-          extractDisplayValue(value[key]);
+          extractDisplayValue(
+            value[key]
+          );
 
-        if (result) return result;
+        if (result) {
+          return result;
+        }
       }
     }
   }
 
   return "";
-}
-
-
-function showElement(id) {
-
-  const element = $(id);
-
-  if (!element) return;
-
-  element.classList.remove("hidden");
-  element.style.display = "";
-}
-
-
-function hideElement(id) {
-
-  const element = $(id);
-
-  if (!element) return;
-
-  element.classList.add("hidden");
-}
-
-
-function setText(id,text) {
-
-  const element = $(id);
-
-  if (!element) return;
-
-  element.textContent =
-    text === null || text === undefined
-      ? ""
-      : String(text);
-}
-
-
-function setHTML(id,html) {
-
-  const element = $(id);
-
-  if (!element) return;
-
-  element.innerHTML = html || "";
 }
 
 
@@ -502,50 +586,77 @@ function setupInterestChips() {
     chips.length
   );
 
-  chips.forEach(chip => {
+  chips.forEach((chip) => {
 
-    chip.addEventListener("click",function(event) {
+    chip.addEventListener(
+      "click",
+      function(event) {
 
-      event.preventDefault();
-      event.stopPropagation();
+        event.preventDefault();
+        event.stopPropagation();
 
-      this.classList.toggle("selected");
+        this.classList.toggle(
+          "selected"
+        );
 
-    },false);
+        console.log(
+          "INTEREST:",
+          this.textContent.trim(),
+          "SELECTED:",
+          this.classList.contains(
+            "selected"
+          )
+        );
+
+      },
+      false
+    );
 
   });
 
 }
 
 
+/* =========================================================
+   SELECTED INTERESTS
+========================================================= */
+
 function getSelectedInterests() {
 
   const selected =
-    document.querySelectorAll(".chip.selected");
+    document.querySelectorAll(
+      ".chip.selected"
+    );
 
   const interests = [];
 
-  selected.forEach(chip => {
+  selected.forEach((chip) => {
 
     let text =
       chip.textContent.trim();
 
     text =
-      text.replace(
-        /^[^\p{L}\p{N}]*/u,
-        ""
-      ).trim();
+      text
+        .replace(
+          /^[^\p{L}\p{N}]*/u,
+          ""
+        )
+        .trim();
 
-    if (text) interests.push(text);
+    if (text) {
+      interests.push(text);
+    }
 
   });
 
-  return [...new Set(interests)];
+  return [
+    ...new Set(interests)
+  ];
 }
 
 
 /* =========================================================
-   TRIP DATA
+   FORM DATA
 ========================================================= */
 
 function collectTripData() {
@@ -559,13 +670,18 @@ function collectTripData() {
       $("startDate")?.value || "",
 
     days:
-      Number($("days")?.value || 0),
+      Number(
+        $("days")?.value || 0
+      ),
 
     budget:
-      Number($("budget")?.value || 0),
+      Number(
+        $("budget")?.value || 0
+      ),
 
     travelers:
-      $("travelers")?.value || "1 traveler",
+      $("travelers")?.value ||
+      "1 traveler",
 
     interests:
       getSelectedInterests(),
@@ -574,7 +690,6 @@ function collectTripData() {
       $("notes")?.value.trim() || ""
 
   };
-
 }
 
 
@@ -584,7 +699,8 @@ function collectTripData() {
 
 function createReviewSummary(data) {
 
-  const summary = $("summary");
+  const summary =
+    $("summary");
 
   if (!summary) return;
 
@@ -602,7 +718,10 @@ function createReviewSummary(data) {
 
     <p>
       <strong>Start date:</strong>
-      ${escapeHTML(data.start || "Not specified")}
+      ${escapeHTML(
+        data.start ||
+        "Not specified"
+      )}
     </p>
 
     <p>
@@ -641,26 +760,51 @@ function createReviewSummary(data) {
 }
 
 
+/* =========================================================
+   SHOW REVIEW
+========================================================= */
+
 function showReview() {
 
-  trip = collectTripData();
+  trip =
+    collectTripData();
 
   createReviewSummary(trip);
 
+  /*
+   * VERY IMPORTANT:
+   *
+   * Every new trip starts unpaid.
+   */
+
   paymentCompleted = false;
+
   planCreationStarted = false;
+
+  currentPlan = null;
 
   hideElement("app");
   showElement("review");
+
+  /*
+   * NEVER show old plan.
+   */
+
   hideElement("plan");
 
 }
 
 
+/* =========================================================
+   CLOSE REVIEW
+========================================================= */
+
 function closeReviewScreen() {
 
   hideElement("review");
+
   showElement("app");
+
   hideElement("plan");
 
 }
@@ -672,7 +816,9 @@ function closeReviewScreen() {
 
 function checkPaddleConfig() {
 
-  console.log("========== PADDLE PRODUCTION ==========");
+  console.log(
+    "========== PADDLE PRODUCTION CONFIG =========="
+  );
 
   console.log(
     "Paddle JS:",
@@ -696,7 +842,14 @@ function checkPaddleConfig() {
     PADDLE_PRICE_ID
   );
 
-  console.log("========================================");
+  console.log(
+    "Payment completed:",
+    paymentCompleted
+  );
+
+  console.log(
+    "==============================================="
+  );
 
 }
 
@@ -708,10 +861,16 @@ function checkPaddleConfig() {
 function isPaddleReady() {
 
   return (
+
     typeof window.Paddle !== "undefined" &&
+
     window.Paddle &&
+
     window.Paddle.Checkout &&
-    typeof window.Paddle.Checkout.open === "function"
+
+    typeof window.Paddle.Checkout.open ===
+      "function"
+
   );
 
 }
@@ -724,7 +883,8 @@ function isPaddleReady() {
 function initializePaddle() {
 
   if (
-    typeof window.Paddle === "undefined"
+    typeof window.Paddle ===
+    "undefined"
   ) {
 
     console.error(
@@ -757,15 +917,17 @@ function initializePaddle() {
   }
 
   /*
-   * PRODUCTION TOKEN MUST BE live_
+   * Production token must be live_
    */
 
   if (
-    !PADDLE_CLIENT_TOKEN.startsWith("live_")
+    !PADDLE_CLIENT_TOKEN.startsWith(
+      "live_"
+    )
   ) {
 
     console.error(
-      "WRONG PADDLE TOKEN — MUST BE live_"
+      "WRONG PADDLE TOKEN — PRODUCTION REQUIRES live_"
     );
 
     return false;
@@ -774,8 +936,9 @@ function initializePaddle() {
   try {
 
     /*
-     * IMPORTANT:
-     * NO sandbox environment here.
+     * NO sandbox.
+     *
+     * Production is used.
      */
 
     window.Paddle.Initialize({
@@ -833,27 +996,55 @@ function handlePaddleEvent(event) {
     "=================================="
   );
 
+  if (!event) {
+    return;
+  }
 
-  if (!event) return;
 
-
-  /* -------------------------------------------------------
+  /* =======================================================
      PAYMENT COMPLETED
-  ------------------------------------------------------- */
+  ======================================================= */
 
   if (
-    event.name === "checkout.completed"
+    event.name ===
+    "checkout.completed"
   ) {
+
+    console.log(
+      "================================"
+    );
 
     console.log(
       "PADDLE CHECKOUT COMPLETED"
     );
 
+    console.log(
+      "PAYMENT ACCEPTED"
+    );
+
+    console.log(
+      "PLAN MAY NOW BE CREATED"
+    );
+
+    console.log(
+      "================================"
+    );
+
     /*
-     * PAYMENT GATE
+     * THIS is the gate.
+     *
+     * Before this:
+     * paymentCompleted = false
+     *
+     * After this:
+     * paymentCompleted = true
      */
 
     paymentCompleted = true;
+
+    /*
+     * Now and ONLY now create plan.
+     */
 
     createPlanAfterPayment(event);
 
@@ -861,18 +1052,21 @@ function handlePaddleEvent(event) {
   }
 
 
-  /* -------------------------------------------------------
+  /* =======================================================
      CHECKOUT ERROR
-  ------------------------------------------------------- */
+  ======================================================= */
 
   if (
-    event.name === "checkout.error"
+    event.name ===
+    "checkout.error"
   ) {
 
     console.error(
       "PADDLE CHECKOUT ERROR:",
       event
     );
+
+    paymentCompleted = false;
 
     showPaymentError(
       "Payment could not be completed. Please try again."
@@ -882,8 +1076,13 @@ function handlePaddleEvent(event) {
   }
 
 
+  /* =======================================================
+     CHECKOUT WARNING
+  ======================================================= */
+
   if (
-    event.name === "checkout.warning"
+    event.name ===
+    "checkout.warning"
   ) {
 
     console.warn(
@@ -891,6 +1090,7 @@ function handlePaddleEvent(event) {
       event
     );
 
+    return;
   }
 
 }
@@ -902,7 +1102,8 @@ function handlePaddleEvent(event) {
 
 function showPaymentError(message) {
 
-  const review = $("review");
+  const review =
+    $("review");
 
   if (!review) {
 
@@ -917,7 +1118,9 @@ function showPaymentError(message) {
   if (!box) {
 
     box =
-      document.createElement("div");
+      document.createElement(
+        "div"
+      );
 
     box.id =
       "paddlePaymentStatus";
@@ -926,15 +1129,54 @@ function showPaymentError(message) {
       "planner-error";
 
     review.appendChild(box);
+
   }
 
-  box.textContent = message;
+  box.textContent =
+    message;
 
 }
 
 
 /* =========================================================
-   OPEN PADDLE PRODUCTION CHECKOUT
+   PAYMENT SUCCESS MESSAGE
+========================================================= */
+
+function showPaymentSuccess() {
+
+  const review =
+    $("review");
+
+  if (!review) return;
+
+  let box =
+    $("paddlePaymentStatus");
+
+  if (!box) {
+
+    box =
+      document.createElement(
+        "div"
+      );
+
+    box.id =
+      "paddlePaymentStatus";
+
+    review.appendChild(box);
+
+  }
+
+  box.className =
+    "payment-success";
+
+  box.textContent =
+    "Payment successful. Creating your personalized travel plan...";
+
+}
+
+
+/* =========================================================
+   OPEN PADDLE CHECKOUT
 ========================================================= */
 
 async function openPaddleCheckout() {
@@ -946,27 +1188,18 @@ async function openPaddleCheckout() {
   checkPaddleConfig();
 
 
-  if (!PADDLE_CLIENT_TOKEN) {
+  /* -------------------------------------------------------
+     RESET PAYMENT STATE
+  ------------------------------------------------------- */
 
-    showPaymentError(
-      "Paddle client token is missing."
-    );
+  paymentCompleted = false;
 
-    return;
-  }
+  planCreationStarted = false;
 
 
-  if (
-    !PADDLE_CLIENT_TOKEN.startsWith("live_")
-  ) {
-
-    showPaymentError(
-      "The website is not configured with a Paddle Production token."
-    );
-
-    return;
-  }
-
+  /* -------------------------------------------------------
+     PRICE ID
+  ------------------------------------------------------- */
 
   if (!PADDLE_PRICE_ID) {
 
@@ -979,8 +1212,15 @@ async function openPaddleCheckout() {
 
 
   if (
-    !PADDLE_PRICE_ID.startsWith("pri_")
+    !PADDLE_PRICE_ID.startsWith(
+      "pri_"
+    )
   ) {
+
+    console.error(
+      "INVALID PADDLE PRICE ID:",
+      PADDLE_PRICE_ID
+    );
 
     showPaymentError(
       "Invalid Paddle Price ID."
@@ -990,7 +1230,12 @@ async function openPaddleCheckout() {
   }
 
 
-  trip = collectTripData();
+  /* -------------------------------------------------------
+     COLLECT TRIP
+  ------------------------------------------------------- */
+
+  trip =
+    collectTripData();
 
 
   if (!trip.destination) {
@@ -1029,6 +1274,10 @@ async function openPaddleCheckout() {
   }
 
 
+  /* -------------------------------------------------------
+     INITIALIZE PADDLE
+  ------------------------------------------------------- */
+
   const initialized =
     initializePaddle();
 
@@ -1052,17 +1301,16 @@ async function openPaddleCheckout() {
   }
 
 
+  /* -------------------------------------------------------
+     OPEN CHECKOUT
+  ------------------------------------------------------- */
+
   try {
 
     console.log(
-      "OPENING LIVE PADDLE CHECKOUT"
-    );
-
-    console.log(
-      "LIVE PRICE:",
+      "OPENING LIVE CHECKOUT WITH PRICE:",
       PADDLE_PRICE_ID
     );
-
 
     window.Paddle.Checkout.open({
 
@@ -1073,7 +1321,6 @@ async function openPaddleCheckout() {
             PADDLE_PRICE_ID,
 
           quantity: 1
-
         }
 
       ],
@@ -1097,7 +1344,9 @@ async function openPaddleCheckout() {
           Number(trip.budget),
 
         interests:
-          Array.isArray(trip.interests)
+          Array.isArray(
+            trip.interests
+          )
             ? trip.interests.join(", ")
             : "",
 
@@ -1139,7 +1388,7 @@ async function openPaddleCheckout() {
 
 
 /* =========================================================
-   PAYMENT → PLAN GATE
+   CREATE PLAN AFTER PAYMENT
 ========================================================= */
 
 async function createPlanAfterPayment(
@@ -1147,13 +1396,15 @@ async function createPlanAfterPayment(
 ) {
 
   /*
-   * ABSOLUTE CLIENT-SIDE GATE
+   * ABSOLUTE FRONTEND PAYMENT GATE
    */
 
-  if (!paymentCompleted) {
+  if (
+    paymentCompleted !== true
+  ) {
 
     console.error(
-      "SECURITY BLOCK — PAYMENT NOT COMPLETED"
+      "SECURITY BLOCK: PAYMENT NOT COMPLETED"
     );
 
     return;
@@ -1161,7 +1412,7 @@ async function createPlanAfterPayment(
 
 
   /*
-   * Prevent duplicate calls.
+   * Prevent duplicate plan creation.
    */
 
   if (planCreationStarted) {
@@ -1178,7 +1429,15 @@ async function createPlanAfterPayment(
 
 
   console.log(
-    "PAYMENT COMPLETED — STARTING PLAN"
+    "PAYMENT VERIFIED BY checkout.completed"
+  );
+
+
+  showPaymentSuccess();
+
+
+  console.log(
+    "STARTING AI PLAN CREATION..."
   );
 
 
@@ -1190,123 +1449,24 @@ async function createPlanAfterPayment(
 
 
 /* =========================================================
-   PLAN TABS
-========================================================= */
-
-function setupPlanTabs() {
-
-  const tabs =
-    document.querySelectorAll(".plan-tab");
-
-  console.log(
-    "PLAN TABS FOUND:",
-    tabs.length
-  );
-
-  tabs.forEach(tab => {
-
-    tab.addEventListener(
-      "click",
-      function(event) {
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        const target =
-          this.dataset.target;
-
-        if (!target) return;
-
-        document
-          .querySelectorAll(".plan-tab")
-          .forEach(item =>
-            item.classList.remove("active")
-          );
-
-        this.classList.add("active");
-
-
-        document
-          .querySelectorAll(".plan-section")
-          .forEach(section =>
-            section.classList.remove("active")
-          );
-
-
-        const targetSection =
-          $(target);
-
-        if (targetSection) {
-
-          targetSection.classList.add(
-            "active"
-          );
-
-        }
-
-      },
-      false
-    );
-
-  });
-
-}
-
-
-/* =========================================================
-   DEFAULT PLAN SECTION
-========================================================= */
-
-function activateDefaultPlanSection() {
-
-  document
-    .querySelectorAll(".plan-section")
-    .forEach(section =>
-      section.classList.remove("active")
-    );
-
-  const stay =
-    $("staySection");
-
-  if (stay) {
-
-    stay.classList.add("active");
-
-  }
-
-
-  document
-    .querySelectorAll(".plan-tab")
-    .forEach(tab =>
-      tab.classList.remove("active")
-    );
-
-
-  const firstTab =
-    document.querySelector(
-      '.plan-tab[data-target="staySection"]'
-    );
-
-  if (firstTab) {
-
-    firstTab.classList.add("active");
-
-  }
-
-}
-
-
-/* =========================================================
    CREATE PLAN
 ========================================================= */
 
-async function createPlan(paddleEvent) {
+async function createPlan(
+  paddleEvent
+) {
 
   /*
    * SECOND PAYMENT GATE
+   *
+   * Even if createPlan() is called
+   * accidentally from somewhere else,
+   * it cannot proceed without payment.
    */
 
-  if (!paymentCompleted) {
+  if (
+    paymentCompleted !== true
+  ) {
 
     console.error(
       "BLOCKED — PAYMENT NOT COMPLETED"
@@ -1324,8 +1484,14 @@ async function createPlan(paddleEvent) {
   }
 
 
+  /*
+   * Only NOW show plan screen.
+   */
+
   hideElement("review");
+
   hideElement("app");
+
   showElement("plan");
 
 
@@ -1349,25 +1515,30 @@ async function createPlan(paddleEvent) {
     "Generating accommodation strategy..."
   );
 
+
   setHTML(
     "restaurantsContent",
     "Finding restaurants in your destination..."
   );
+
 
   setHTML(
     "transportContent",
     "Generating transportation strategy..."
   );
 
+
   setHTML(
     "experiencesContent",
     "Generating curated experiences..."
   );
 
+
   setHTML(
     "moneyContent",
     "Calculating your budget..."
   );
+
 
   setHTML(
     "daysContent",
@@ -1381,43 +1552,59 @@ async function createPlan(paddleEvent) {
       await fetch(
         "/api/plan",
         {
-          method:"POST",
 
-          headers:{
-            "Content-Type":"application/json",
-            "Accept":"application/json"
+          method:
+            "POST",
+
+          headers: {
+
+            "Content-Type":
+              "application/json",
+
+            "Accept":
+              "application/json"
+
           },
 
-          body:JSON.stringify({
+          body:
+            JSON.stringify({
 
-            destination:
-              trip.destination,
+              destination:
+                trip.destination,
 
-            start:
-              trip.start,
+              start:
+                trip.start,
 
-            days:
-              trip.days,
+              days:
+                trip.days,
 
-            budget:
-              trip.budget,
+              budget:
+                trip.budget,
 
-            travelers:
-              trip.travelers,
+              travelers:
+                trip.travelers,
 
-            interests:
-              trip.interests,
+              interests:
+                trip.interests,
 
-            notes:
-              trip.notes,
+              notes:
+                trip.notes,
 
-            paymentCompleted:
-              true,
+              /*
+               * Frontend payment state.
+               */
 
-            paddleEvent:
-              paddleEvent || null
+              paymentCompleted:
+                true,
 
-          })
+              /*
+               * Paddle checkout event.
+               */
+
+              paddleEvent:
+                paddleEvent || null
+
+            })
 
         }
       );
@@ -1470,7 +1657,9 @@ async function createPlan(paddleEvent) {
 
 
     currentPlan.hotels =
-      Array.isArray(data.hotels)
+      Array.isArray(
+        data.hotels
+      )
         ? data.hotels
         : [];
 
@@ -1480,7 +1669,9 @@ async function createPlan(paddleEvent) {
 
 
     currentPlan.restaurants =
-      Array.isArray(data.restaurants)
+      Array.isArray(
+        data.restaurants
+      )
         ? data.restaurants
         : [];
 
@@ -1500,6 +1691,7 @@ async function createPlan(paddleEvent) {
       "CREATE PLAN ERROR:",
       error
     );
+
 
     showPlanError(
       error?.message ||
@@ -1530,9 +1722,11 @@ function showPlanError(message) {
 
 
   const html = `
+
     <div class="planner-error">
       ${escapeHTML(message)}
     </div>
+
   `;
 
 
@@ -1541,25 +1735,30 @@ function showPlanError(message) {
     html
   );
 
+
   setHTML(
     "restaurantsContent",
     ""
   );
+
 
   setHTML(
     "transportContent",
     ""
   );
 
+
   setHTML(
     "experiencesContent",
     ""
   );
 
+
   setHTML(
     "moneyContent",
     ""
   );
+
 
   setHTML(
     "daysContent",
@@ -1570,10 +1769,179 @@ function showPlanError(message) {
 
 
 /* =========================================================
+   PLAN TABS
+========================================================= */
+
+function setupPlanTabs() {
+
+  const tabs =
+    document.querySelectorAll(
+      ".plan-tab"
+    );
+
+
+  console.log(
+    "PLAN TABS FOUND:",
+    tabs.length
+  );
+
+
+  tabs.forEach((tab) => {
+
+    tab.addEventListener(
+      "click",
+      function(event) {
+
+        event.preventDefault();
+        event.stopPropagation();
+
+
+        const target =
+          this.dataset.target;
+
+
+        if (!target) return;
+
+
+        document
+          .querySelectorAll(
+            ".plan-tab"
+          )
+          .forEach((item) => {
+
+            item.classList.remove(
+              "active"
+            );
+
+          });
+
+
+        this.classList.add(
+          "active"
+        );
+
+
+        document
+          .querySelectorAll(
+            ".plan-section"
+          )
+          .forEach((section) => {
+
+            section.classList.remove(
+              "active"
+            );
+
+          });
+
+
+        const targetSection =
+          $(target);
+
+
+        if (targetSection) {
+
+          targetSection.classList.add(
+            "active"
+          );
+
+        }
+
+      },
+      false
+    );
+
+  });
+
+}
+
+
+/* =========================================================
+   DEFAULT SECTION
+========================================================= */
+
+function activateDefaultPlanSection() {
+
+  document
+    .querySelectorAll(
+      ".plan-section"
+    )
+    .forEach((section) => {
+
+      section.classList.remove(
+        "active"
+      );
+
+    });
+
+
+  const stay =
+    $("staySection");
+
+
+  if (stay) {
+
+    stay.classList.add(
+      "active"
+    );
+
+  }
+
+
+  document
+    .querySelectorAll(
+      ".plan-tab"
+    )
+    .forEach((tab) => {
+
+      tab.classList.remove(
+        "active"
+      );
+
+    });
+
+
+  const firstTab =
+    document.querySelector(
+      '.plan-tab[data-target="staySection"]'
+    );
+
+
+  if (firstTab) {
+
+    firstTab.classList.add(
+      "active"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
    RENDER PLAN
 ========================================================= */
 
 function renderPlan(plan) {
+
+  /*
+   * FINAL SAFETY CHECK
+   */
+
+  if (
+    paymentCompleted !== true
+  ) {
+
+    console.error(
+      "RENDER BLOCKED — PAYMENT NOT COMPLETED"
+    );
+
+    hideElement("plan");
+
+    showElement("review");
+
+    return;
+  }
+
 
   setText(
     "planTitle",
@@ -1589,10 +1957,15 @@ function renderPlan(plan) {
 
 
   renderStay(plan);
+
   renderRestaurants(plan);
+
   renderTransport(plan);
+
   renderExperiences(plan);
+
   renderBudget(plan);
+
   renderDays(plan);
 
 
@@ -1602,163 +1975,171 @@ function renderPlan(plan) {
 
 
 /* =========================================================
+   STAY
+========================================================= */
+
+function renderStay(plan) {
+
+  const stay =
+    plan.stay || {};
+
+
+  const areas =
+    Array.isArray(stay.areas)
+      ? stay.areas
+      : [];
+
+
+  const tips =
+    Array.isArray(stay.tips)
+      ? stay.tips
+      : [];
+
+
+  const hotels =
+    Array.isArray(plan.hotels)
+      ? plan.hotels
+      : [];
+
+
+  let html = "";
+
+
+  if (stay.strategy) {
+
+    html += `
+
+      <div class="planner-status">
+        ${escapeHTML(stay.strategy)}
+      </div>
+
+    `;
+
+  }
+
+
+  if (areas.length) {
+
+    html += `
+
+      <h3>Recommended Areas</h3>
+
+      <ul>
+
+        ${areas
+          .map(
+            area => `
+
+              <li>
+                ${escapeHTML(
+                  extractDisplayValue(area)
+                )}
+              </li>
+
+            `
+          )
+          .join("")}
+
+      </ul>
+
+    `;
+
+  }
+
+
+  if (tips.length) {
+
+    html += `
+
+      <h3>Accommodation Tips</h3>
+
+      <ul>
+
+        ${tips
+          .map(
+            tip => `
+
+              <li>
+                ${escapeHTML(
+                  extractDisplayValue(tip)
+                )}
+              </li>
+
+            `
+          )
+          .join("")}
+
+      </ul>
+
+    `;
+
+  }
+
+
+  html += `
+
+    <h3 style="margin-top:25px;">
+      Live Hotel Options
+    </h3>
+
+  `;
+
+
+  if (hotels.length) {
+
+    html += `
+
+      <div class="hotels-grid">
+
+        ${hotels
+          .map(renderHotelCard)
+          .join("")}
+
+      </div>
+
+    `;
+
+  } else {
+
+    html += `
+
+      <div class="planner-status">
+
+        No live hotel options were returned.
+        Your AI accommodation strategy is still available above.
+
+      </div>
+
+    `;
+
+  }
+
+
+  setHTML(
+    "stayContent",
+    html ||
+    "Accommodation strategy unavailable."
+  );
+
+}
+
+
+/* =========================================================
    HOTEL IMAGE
 ========================================================= */
 
-function extractImageValue(value) {
-
-  if (
-    typeof value === "string" &&
-    value.trim()
-  ) {
-
-    const text =
-      value.trim();
-
-    if (
-      text.startsWith("http://") ||
-      text.startsWith("https://")
-    ) {
-
-      return text;
-
-    }
-
-    if (
-      text.startsWith("//")
-    ) {
-
-      return "https:" + text;
-
-    }
-
-  }
-
-
-  if (Array.isArray(value)) {
-
-    for (const item of value) {
-
-      const found =
-        extractImageValue(item);
-
-      if (found) return found;
-
-    }
-
-  }
-
-
-  if (
-    value &&
-    typeof value === "object"
-  ) {
-
-    const keys = [
-      "url",
-      "src",
-      "href",
-      "image",
-      "image_url",
-      "imageUrl",
-      "photo",
-      "photo_url",
-      "photoUrl",
-      "thumbnail",
-      "thumbnail_url",
-      "thumbnailUrl",
-      "original",
-      "originalUrl",
-      "large",
-      "largeUrl"
-    ];
-
-
-    for (const key of keys) {
-
-      const found =
-        extractImageValue(
-          value[key]
-        );
-
-      if (found) return found;
-
-    }
-
-  }
-
-  return null;
-
-}
-
-
-function findImageDeep(value,depth = 0) {
-
-  if (
-    depth > 5 ||
-    value === null ||
-    value === undefined
-  ) {
-
-    return null;
-
-  }
-
-
-  const direct =
-    extractImageValue(value);
-
-  if (direct) return direct;
-
-
-  if (Array.isArray(value)) {
-
-    for (const item of value) {
-
-      const found =
-        findImageDeep(
-          item,
-          depth + 1
-        );
-
-      if (found) return found;
-
-    }
-
-  }
-
-
-  if (
-    value &&
-    typeof value === "object"
-  ) {
-
-    for (
-      const key of Object.keys(value)
-    ) {
-
-      const found =
-        findImageDeep(
-          value[key],
-          depth + 1
-        );
-
-      if (found) return found;
-
-    }
-
-  }
-
-  return null;
-
-}
-
-
 function extractHotelImage(hotel) {
 
-  if (!hotel) return null;
+  if (
+    !hotel ||
+    typeof hotel !== "object"
+  ) {
+    return null;
+  }
+
 
   const fields = [
+
     "image",
     "image_url",
     "imageUrl",
@@ -1779,6 +2160,7 @@ function extractHotelImage(hotel) {
     "heroImage",
     "featured_image",
     "featuredImage"
+
   ];
 
 
@@ -1789,14 +2171,206 @@ function extractHotelImage(hotel) {
         hotel[field]
       );
 
-    if (found) return found;
+
+    if (found) {
+      return found;
+    }
 
   }
 
 
   return findImageDeep(
-    hotel
+    hotel,
+    0
   );
+
+}
+
+
+function extractImageValue(value) {
+
+  if (
+    typeof value === "string" &&
+    value.trim()
+  ) {
+
+    const text =
+      value.trim();
+
+
+    if (
+      text.startsWith(
+        "http://"
+      ) ||
+      text.startsWith(
+        "https://"
+      ) ||
+      text.startsWith(
+        "//"
+      )
+    ) {
+
+      return text.startsWith("//")
+        ? "https:" + text
+        : text;
+
+    }
+
+
+    return null;
+
+  }
+
+
+  if (Array.isArray(value)) {
+
+    for (
+      const item of value
+    ) {
+
+      const found =
+        extractImageValue(
+          item
+        );
+
+
+      if (found) {
+        return found;
+      }
+
+    }
+
+  }
+
+
+  if (
+    value &&
+    typeof value === "object"
+  ) {
+
+    const keys = [
+
+      "url",
+      "src",
+      "href",
+      "image",
+      "image_url",
+      "imageUrl",
+      "photo",
+      "photo_url",
+      "photoUrl",
+      "thumbnail",
+      "thumbnail_url",
+      "thumbnailUrl",
+      "original",
+      "originalUrl",
+      "large",
+      "largeUrl"
+
+    ];
+
+
+    for (
+      const key of keys
+    ) {
+
+      const found =
+        extractImageValue(
+          value[key]
+        );
+
+
+      if (found) {
+        return found;
+      }
+
+    }
+
+  }
+
+
+  return null;
+
+}
+
+
+function findImageDeep(
+  value,
+  depth
+) {
+
+  if (
+    depth > 5 ||
+    value === null ||
+    value === undefined
+  ) {
+
+    return null;
+
+  }
+
+
+  const direct =
+    extractImageValue(
+      value
+    );
+
+
+  if (direct) {
+    return direct;
+  }
+
+
+  if (Array.isArray(value)) {
+
+    for (
+      const item of value
+    ) {
+
+      const found =
+        findImageDeep(
+          item,
+          depth + 1
+        );
+
+
+      if (found) {
+        return found;
+      }
+
+    }
+
+
+    return null;
+
+  }
+
+
+  if (
+    typeof value === "object"
+  ) {
+
+    for (
+      const key of Object.keys(value)
+    ) {
+
+      const found =
+        findImageDeep(
+          value[key],
+          depth + 1
+        );
+
+
+      if (found) {
+        return found;
+      }
+
+    }
+
+  }
+
+
+  return null;
 
 }
 
@@ -1807,9 +2381,16 @@ function extractHotelImage(hotel) {
 
 function extractHotelPrice(hotel) {
 
-  if (!hotel) return "";
+  if (
+    !hotel ||
+    typeof hotel !== "object"
+  ) {
+    return "";
+  }
+
 
   const fields = [
+
     "price",
     "total_price",
     "totalPrice",
@@ -1825,10 +2406,13 @@ function extractHotelPrice(hotel) {
     "priceValue",
     "display_price",
     "displayPrice"
+
   ];
 
 
-  for (const field of fields) {
+  for (
+    const field of fields
+  ) {
 
     if (
       hotel[field] !== null &&
@@ -1840,13 +2424,16 @@ function extractHotelPrice(hotel) {
           hotel[field]
         );
 
+
       if (number !== null) {
 
-        return number.toLocaleString(
-          "en-US",
-          {
-            maximumFractionDigits:2
-          }
+        return String(
+          number.toLocaleString(
+            "en-US",
+            {
+              maximumFractionDigits:2
+            }
+          )
         );
 
       }
@@ -1857,34 +2444,53 @@ function extractHotelPrice(hotel) {
           hotel[field]
         );
 
-      if (display) return display;
+
+      if (display) {
+        return display;
+      }
 
     }
 
   }
+
 
   return "";
 
 }
 
 
+/* =========================================================
+   HOTEL CURRENCY
+========================================================= */
+
 function extractHotelCurrency(hotel) {
 
-  if (!hotel) return "USD";
+  if (
+    !hotel ||
+    typeof hotel !== "object"
+  ) {
+    return "USD";
+  }
+
 
   const fields = [
+
     "currency",
     "currency_code",
     "currencyCode",
     "price_currency",
     "priceCurrency"
+
   ];
 
 
-  for (const field of fields) {
+  for (
+    const field of fields
+  ) {
 
     const value =
       hotel[field];
+
 
     if (
       typeof value === "string" &&
@@ -1904,13 +2510,16 @@ function extractHotelCurrency(hotel) {
   ) {
 
     return (
+
       hotel.price.currency ||
       hotel.price.currency_code ||
       hotel.price.currencyCode ||
       "USD"
+
     );
 
   }
+
 
   return "USD";
 
@@ -1924,74 +2533,152 @@ function extractHotelCurrency(hotel) {
 function renderHotelCard(hotel) {
 
   const name =
-    extractDisplayValue(hotel?.name) ||
-    extractDisplayValue(hotel?.title) ||
-    extractDisplayValue(hotel?.hotelName) ||
-    extractDisplayValue(hotel?.propertyName) ||
+
+    extractDisplayValue(
+      hotel?.name
+    ) ||
+
+    extractDisplayValue(
+      hotel?.title
+    ) ||
+
+    extractDisplayValue(
+      hotel?.hotelName
+    ) ||
+
+    extractDisplayValue(
+      hotel?.propertyName
+    ) ||
+
     "Hotel";
 
 
   const location =
-    extractDisplayValue(hotel?.location) ||
-    extractDisplayValue(hotel?.address) ||
-    extractDisplayValue(hotel?.city) ||
+
+    extractDisplayValue(
+      hotel?.location
+    ) ||
+
+    extractDisplayValue(
+      hotel?.address
+    ) ||
+
+    extractDisplayValue(
+      hotel?.city
+    ) ||
+
     "";
 
 
   const propertyType =
-    extractDisplayValue(hotel?.propertyType) ||
-    extractDisplayValue(hotel?.property_type) ||
+
+    extractDisplayValue(
+      hotel?.propertyType
+    ) ||
+
+    extractDisplayValue(
+      hotel?.property_type
+    ) ||
+
     "Hotel";
 
 
   const guestRating =
-    extractDisplayValue(hotel?.guestRating) ||
-    extractDisplayValue(hotel?.guest_rating) ||
-    extractDisplayValue(hotel?.review_score) ||
-    extractDisplayValue(hotel?.reviewScore) ||
+
+    extractDisplayValue(
+      hotel?.guestRating
+    ) ||
+
+    extractDisplayValue(
+      hotel?.guest_rating
+    ) ||
+
+    extractDisplayValue(
+      hotel?.review_score
+    ) ||
+
+    extractDisplayValue(
+      hotel?.reviewScore
+    ) ||
+
     "";
 
 
   const starRating =
-    extractDisplayValue(hotel?.starRating) ||
-    extractDisplayValue(hotel?.star_rating) ||
-    extractDisplayValue(hotel?.stars) ||
+
+    extractDisplayValue(
+      hotel?.starRating
+    ) ||
+
+    extractDisplayValue(
+      hotel?.star_rating
+    ) ||
+
+    extractDisplayValue(
+      hotel?.stars
+    ) ||
+
     "";
 
 
   const price =
-    extractHotelPrice(hotel);
+    extractHotelPrice(
+      hotel
+    );
 
 
   const currency =
-    extractHotelCurrency(hotel);
+    extractHotelCurrency(
+      hotel
+    );
 
 
   const image =
-    extractHotelImage(hotel);
+    extractHotelImage(
+      hotel
+    );
 
 
   const url =
-    extractDisplayValue(hotel?.url) ||
-    extractDisplayValue(hotel?.link) ||
-    extractDisplayValue(hotel?.property_url) ||
-    extractDisplayValue(hotel?.propertyUrl) ||
+
+    extractDisplayValue(
+      hotel?.url
+    ) ||
+
+    extractDisplayValue(
+      hotel?.link
+    ) ||
+
+    extractDisplayValue(
+      hotel?.property_url
+    ) ||
+
+    extractDisplayValue(
+      hotel?.propertyUrl
+    ) ||
+
     "";
 
 
   let imageHTML = `
+
     <div class="hotel-image-wrapper">
+
       <div class="hotel-image-placeholder">
         Hotel image unavailable
       </div>
+
     </div>
+
   `;
 
 
   if (image) {
 
     imageHTML = `
+
       <div class="hotel-image-wrapper">
+
         <img
           class="hotel-image"
           src="${escapeHTML(image)}"
@@ -2000,13 +2687,16 @@ function renderHotelCard(hotel) {
           referrerpolicy="no-referrer"
           onerror="this.style.display='none';"
         >
+
       </div>
+
     `;
 
   }
 
 
   return `
+
     <article class="hotel-card">
 
       ${imageHTML}
@@ -2017,57 +2707,78 @@ function renderHotelCard(hotel) {
           ${escapeHTML(name)}
         </div>
 
+
         <div class="hotel-meta">
           ${escapeHTML(propertyType)}
         </div>
 
+
         ${
           location
             ? `
+
               <div class="hotel-meta">
                 ${escapeHTML(location)}
               </div>
+
             `
             : ""
         }
+
 
         ${
           guestRating
             ? `
+
               <div class="hotel-meta">
                 Guest rating:
                 ${escapeHTML(guestRating)}
               </div>
+
             `
             : ""
         }
+
 
         ${
           starRating
             ? `
+
               <div class="hotel-meta">
-                ${escapeHTML(starRating)} star property
+                ${escapeHTML(starRating)}
+                star property
               </div>
+
             `
             : ""
         }
+
 
         ${
           price
             ? `
+
               <div class="hotel-price">
+
                 ${escapeHTML(price)}
+
                 <span class="hotel-price-label">
+
                   ${escapeHTML(currency)}
+
                 </span>
+
               </div>
+
             `
             : ""
         }
 
+
         ${
           url
             ? `
+
               <a
                 class="hotel-button"
                 href="${escapeHTML(url)}"
@@ -2076,6 +2787,7 @@ function renderHotelCard(hotel) {
               >
                 View Hotel
               </a>
+
             `
             : ""
         }
@@ -2083,120 +2795,8 @@ function renderHotelCard(hotel) {
       </div>
 
     </article>
+
   `;
-
-}
-
-
-/* =========================================================
-   STAY
-========================================================= */
-
-function renderStay(plan) {
-
-  const stay =
-    plan.stay || {};
-
-  const areas =
-    Array.isArray(stay.areas)
-      ? stay.areas
-      : [];
-
-  const tips =
-    Array.isArray(stay.tips)
-      ? stay.tips
-      : [];
-
-  const hotels =
-    Array.isArray(plan.hotels)
-      ? plan.hotels
-      : [];
-
-
-  let html = "";
-
-
-  if (stay.strategy) {
-
-    html += `
-      <div class="planner-status">
-        ${escapeHTML(stay.strategy)}
-      </div>
-    `;
-
-  }
-
-
-  if (areas.length) {
-
-    html += `
-      <h3>Recommended Areas</h3>
-
-      <ul>
-        ${areas.map(area => `
-          <li>
-            ${escapeHTML(
-              extractDisplayValue(area)
-            )}
-          </li>
-        `).join("")}
-      </ul>
-    `;
-
-  }
-
-
-  if (tips.length) {
-
-    html += `
-      <h3>Accommodation Tips</h3>
-
-      <ul>
-        ${tips.map(tip => `
-          <li>
-            ${escapeHTML(
-              extractDisplayValue(tip)
-            )}
-          </li>
-        `).join("")}
-      </ul>
-    `;
-
-  }
-
-
-  html += `
-    <h3 style="margin-top:25px;">
-      Live Hotel Options
-    </h3>
-  `;
-
-
-  if (hotels.length) {
-
-    html += `
-      <div class="hotels-grid">
-        ${hotels.map(renderHotelCard).join("")}
-      </div>
-    `;
-
-  } else {
-
-    html += `
-      <div class="planner-status">
-        No live hotel options were returned.
-        Your AI accommodation strategy is still available above.
-      </div>
-    `;
-
-  }
-
-
-  setHTML(
-    "stayContent",
-    html ||
-    "Accommodation strategy unavailable."
-  );
 
 }
 
@@ -2208,7 +2808,9 @@ function renderStay(plan) {
 function renderRestaurants(plan) {
 
   const restaurants =
-    Array.isArray(plan.restaurants)
+    Array.isArray(
+      plan.restaurants
+    )
       ? plan.restaurants
       : [];
 
@@ -2217,10 +2819,13 @@ function renderRestaurants(plan) {
 
     setHTML(
       "restaurantsContent",
+
       `
+
         <div class="planner-status">
           No restaurant recommendations were returned.
         </div>
+
       `
     );
 
@@ -2230,20 +2835,35 @@ function renderRestaurants(plan) {
 
 
   setHTML(
+
     "restaurantsContent",
+
     `
+
       <div class="restaurants-grid">
+
         ${restaurants
-          .map(renderRestaurantCard)
+          .map(
+            renderRestaurantCard
+          )
           .join("")}
+
       </div>
+
     `
+
   );
 
 }
 
 
-function renderRestaurantCard(restaurant) {
+/* =========================================================
+   RESTAURANT CARD
+========================================================= */
+
+function renderRestaurantCard(
+  restaurant
+) {
 
   const name =
     extractDisplayValue(
@@ -2255,13 +2875,15 @@ function renderRestaurantCard(restaurant) {
   const cuisine =
     extractDisplayValue(
       restaurant?.cuisine
-    );
+    ) ||
+    "";
 
 
   const location =
     extractDisplayValue(
       restaurant?.location
-    );
+    ) ||
+    "";
 
 
   const priceLevel =
@@ -2274,59 +2896,74 @@ function renderRestaurantCard(restaurant) {
   const description =
     extractDisplayValue(
       restaurant?.description
-    );
+    ) ||
+    "";
 
 
   const url =
     extractDisplayValue(
       restaurant?.url
-    );
+    ) ||
+    "";
 
 
   return `
+
     <article class="restaurant-card">
 
       <div class="restaurant-name">
         ${escapeHTML(name)}
       </div>
 
+
       ${
         cuisine
           ? `
+
             <div class="restaurant-meta">
               ${escapeHTML(cuisine)}
             </div>
+
           `
           : ""
       }
 
+
       ${
         location
           ? `
+
             <div class="restaurant-meta">
               ${escapeHTML(location)}
             </div>
+
           `
           : ""
       }
+
 
       <div class="restaurant-meta">
         ${escapeHTML(priceLevel)}
       </div>
 
+
       ${
         description
           ? `
+
             <div class="restaurant-description">
               ${escapeHTML(description)}
             </div>
+
           `
           : ""
       }
 
+
       ${
         url
           ? `
+
             <a
               class="restaurant-button"
               href="${escapeHTML(url)}"
@@ -2335,11 +2972,13 @@ function renderRestaurantCard(restaurant) {
             >
               View on Google Maps
             </a>
+
           `
           : ""
       }
 
     </article>
+
   `;
 
 }
@@ -2354,8 +2993,11 @@ function renderTransport(plan) {
   const transport =
     plan.transport || {};
 
+
   const local =
-    Array.isArray(transport.local)
+    Array.isArray(
+      transport.local
+    )
       ? transport.local
       : [];
 
@@ -2366,9 +3008,13 @@ function renderTransport(plan) {
   if (transport.strategy) {
 
     html += `
+
       <div class="planner-status">
-        ${escapeHTML(transport.strategy)}
+        ${escapeHTML(
+          transport.strategy
+        )}
       </div>
+
     `;
 
   }
@@ -2377,11 +3023,15 @@ function renderTransport(plan) {
   if (transport.airport) {
 
     html += `
+
       <h3>Airport Transfer</h3>
 
       <p>
-        ${escapeHTML(transport.airport)}
+        ${escapeHTML(
+          transport.airport
+        )}
       </p>
+
     `;
 
   }
@@ -2390,17 +3040,27 @@ function renderTransport(plan) {
   if (local.length) {
 
     html += `
+
       <h3>Local Transportation</h3>
 
       <ul>
-        ${local.map(item => `
-          <li>
-            ${escapeHTML(
-              extractDisplayValue(item)
-            )}
-          </li>
-        `).join("")}
+
+        ${local
+          .map(
+            item => `
+
+              <li>
+                ${escapeHTML(
+                  extractDisplayValue(item)
+                )}
+              </li>
+
+            `
+          )
+          .join("")}
+
       </ul>
+
     `;
 
   }
@@ -2424,13 +3084,19 @@ function renderExperiences(plan) {
   const experiences =
     plan.experiences || {};
 
+
   const places =
-    Array.isArray(experiences.places)
+    Array.isArray(
+      experiences.places
+    )
       ? experiences.places
       : [];
 
+
   const food =
-    Array.isArray(experiences.food)
+    Array.isArray(
+      experiences.food
+    )
       ? experiences.food
       : [];
 
@@ -2441,11 +3107,13 @@ function renderExperiences(plan) {
   if (experiences.summary) {
 
     html += `
+
       <div class="planner-status">
         ${escapeHTML(
           experiences.summary
         )}
       </div>
+
     `;
 
   }
@@ -2454,17 +3122,27 @@ function renderExperiences(plan) {
   if (places.length) {
 
     html += `
+
       <h3>Places & Experiences</h3>
 
       <ul>
-        ${places.map(place => `
-          <li>
-            ${escapeHTML(
-              extractDisplayValue(place)
-            )}
-          </li>
-        `).join("")}
+
+        ${places
+          .map(
+            place => `
+
+              <li>
+                ${escapeHTML(
+                  extractDisplayValue(place)
+                )}
+              </li>
+
+            `
+          )
+          .join("")}
+
       </ul>
+
     `;
 
   }
@@ -2473,17 +3151,27 @@ function renderExperiences(plan) {
   if (food.length) {
 
     html += `
+
       <h3>Food Experiences</h3>
 
       <ul>
-        ${food.map(item => `
-          <li>
-            ${escapeHTML(
-              extractDisplayValue(item)
-            )}
-          </li>
-        `).join("")}
+
+        ${food
+          .map(
+            item => `
+
+              <li>
+                ${escapeHTML(
+                  extractDisplayValue(item)
+                )}
+              </li>
+
+            `
+          )
+          .join("")}
+
       </ul>
+
     `;
 
   }
@@ -2539,6 +3227,7 @@ function renderBudget(plan) {
 
 
   const calculatedTotal =
+
     accommodation +
     transportation +
     food +
@@ -2563,45 +3252,86 @@ function renderBudget(plan) {
     <div class="budget-box">
 
       <div class="budget-row">
-        <span>Accommodation</span>
+
+        <span>
+          Accommodation
+        </span>
+
         <strong>
-          ${formatUSD(accommodation)}
+          ${formatUSD(
+            accommodation
+          )}
         </strong>
+
       </div>
 
-      <div class="budget-row">
-        <span>Transportation</span>
-        <strong>
-          ${formatUSD(transportation)}
-        </strong>
-      </div>
 
       <div class="budget-row">
-        <span>Food</span>
+
+        <span>
+          Transportation
+        </span>
+
+        <strong>
+          ${formatUSD(
+            transportation
+          )}
+        </strong>
+
+      </div>
+
+
+      <div class="budget-row">
+
+        <span>
+          Food
+        </span>
+
         <strong>
           ${formatUSD(food)}
         </strong>
+
       </div>
 
+
       <div class="budget-row">
-        <span>Activities</span>
+
+        <span>
+          Activities
+        </span>
+
         <strong>
-          ${formatUSD(activities)}
+          ${formatUSD(
+            activities
+          )}
         </strong>
+
       </div>
 
+
       <div class="budget-row">
-        <span>Other</span>
+
+        <span>
+          Other
+        </span>
+
         <strong>
           ${formatUSD(other)}
         </strong>
+
       </div>
 
+
       <div class="budget-row budget-total">
-        <span>Total</span>
+
+        <span>
+          Total
+        </span>
+
         <strong>
           ${formatUSD(total)}
         </strong>
+
       </div>
 
     </div>
@@ -2612,12 +3342,21 @@ function renderBudget(plan) {
   if (budget.strategy) {
 
     html += `
+
       <div class="planner-status">
-        <strong>Strategy:</strong><br>
+
+        <strong>
+          Strategy:
+        </strong>
+
+        <br>
+
         ${escapeHTML(
           budget.strategy
         )}
+
       </div>
+
     `;
 
   }
@@ -2638,7 +3377,9 @@ function renderBudget(plan) {
 function renderDays(plan) {
 
   const days =
-    Array.isArray(plan.days)
+    Array.isArray(
+      plan.days
+    )
       ? plan.days
       : [];
 
@@ -2647,15 +3388,19 @@ function renderDays(plan) {
     $("daysContent");
 
 
-  if (!container) return;
+  if (!container) {
+    return;
+  }
 
 
   if (!days.length) {
 
     container.innerHTML = `
+
       <div class="day">
         No itinerary days were returned.
       </div>
+
     `;
 
     return;
@@ -2664,87 +3409,103 @@ function renderDays(plan) {
 
 
   container.innerHTML =
-    days.map((day,index) => {
 
-      const number =
-        extractDisplayValue(
-          day?.day
-        ) ||
-        index + 1;
+    days
+      .map(
+        (day,index) => {
 
-
-      const title =
-        extractDisplayValue(
-          day?.title
-        ) ||
-        `Day ${number}`;
+          const number =
+            extractDisplayValue(
+              day?.day
+            ) ||
+            index + 1;
 
 
-      return `
-
-        <article class="day">
-
-          <h3>
-            Day ${escapeHTML(number)}
-            — ${escapeHTML(title)}
-          </h3>
+          const title =
+            extractDisplayValue(
+              day?.title
+            ) ||
+            `Day ${number}`;
 
 
-          <div class="day-part">
+          return `
 
-            <strong>
-              Morning
-            </strong>
+            <article class="day">
 
-            <div>
-              ${escapeHTML(
-                extractDisplayValue(
-                  day?.morning
-                )
-              )}
-            </div>
+              <h3>
 
-          </div>
+                Day
+                ${escapeHTML(number)}
+
+                —
+                ${escapeHTML(title)}
+
+              </h3>
 
 
-          <div class="day-part">
+              <div class="day-part">
 
-            <strong>
-              Afternoon
-            </strong>
+                <strong>
+                  Morning
+                </strong>
 
-            <div>
-              ${escapeHTML(
-                extractDisplayValue(
-                  day?.afternoon
-                )
-              )}
-            </div>
+                <div>
 
-          </div>
+                  ${escapeHTML(
+                    extractDisplayValue(
+                      day?.morning
+                    )
+                  )}
+
+                </div>
+
+              </div>
 
 
-          <div class="day-part">
+              <div class="day-part">
 
-            <strong>
-              Evening
-            </strong>
+                <strong>
+                  Afternoon
+                </strong>
 
-            <div>
-              ${escapeHTML(
-                extractDisplayValue(
-                  day?.evening
-                )
-              )}
-            </div>
+                <div>
 
-          </div>
+                  ${escapeHTML(
+                    extractDisplayValue(
+                      day?.afternoon
+                    )
+                  )}
 
-        </article>
+                </div>
 
-      `;
+              </div>
 
-    }).join("");
+
+              <div class="day-part">
+
+                <strong>
+                  Evening
+                </strong>
+
+                <div>
+
+                  ${escapeHTML(
+                    extractDisplayValue(
+                      day?.evening
+                    )
+                  )}
+
+                </div>
+
+              </div>
+
+            </article>
+
+          `;
+
+        }
+      )
+      .join("");
 
 }
 
@@ -2766,25 +3527,41 @@ function setupForm() {
     );
 
     return;
+
   }
 
 
   form.addEventListener(
+
     "submit",
+
     function(event) {
 
       event.preventDefault();
       event.stopPropagation();
 
 
+      console.log(
+        "FORM SUBMITTED"
+      );
+
+
       trip =
         collectTripData();
+
+
+      console.log(
+        "COLLECTED TRIP:",
+        trip
+      );
 
 
       showReview();
 
     },
+
     false
+
   );
 
 }
@@ -2803,16 +3580,21 @@ function setupReviewButtons() {
   if (closeButton) {
 
     closeButton.addEventListener(
+
       "click",
+
       function(event) {
 
         event.preventDefault();
         event.stopPropagation();
 
+
         closeReviewScreen();
 
       },
+
       false
+
     );
 
   }
@@ -2825,20 +3607,26 @@ function setupReviewButtons() {
   if (pay) {
 
     pay.addEventListener(
+
       "click",
+
       async function(event) {
 
         event.preventDefault();
         event.stopPropagation();
 
+
         console.log(
           "PAY BUTTON CLICKED"
         );
 
+
         await openPaddleCheckout();
 
       },
+
       false
+
     );
 
   }
@@ -2847,7 +3635,7 @@ function setupReviewButtons() {
 
 
 /* =========================================================
-   INITIALIZE
+   INITIALIZE APP
 ========================================================= */
 
 function initializeApp() {
@@ -2867,12 +3655,27 @@ function initializeApp() {
 
 
   /*
-   * Paddle is initialized only when
-   * the user presses Pay.
+   * Make absolutely sure
+   * plan is not visible on page load.
    */
+
+  hideElement("plan");
+
 
   console.log(
     "AI LIFE PLANNER V16 READY"
+  );
+
+
+  console.log(
+    "PADDLE PRICE:",
+    PADDLE_PRICE_ID
+  );
+
+
+  console.log(
+    "PAYMENT STATE:",
+    paymentCompleted
   );
 
 }
@@ -2883,7 +3686,8 @@ function initializeApp() {
 ========================================================= */
 
 if (
-  document.readyState === "loading"
+  document.readyState ===
+  "loading"
 ) {
 
   document.addEventListener(
@@ -2895,4 +3699,4 @@ if (
 
   initializeApp();
 
-}
+       }
