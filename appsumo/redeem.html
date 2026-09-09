@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Redeem AI Life Planner</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f7f7f8;
+      color: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .brand {
+      text-align: center;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 28px;
+      text-align: center;
+    }
+
+    .subtitle {
+      margin: 0 0 28px;
+      text-align: center;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 16px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #111;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #111;
+      color: #fff;
+      margin-top: 8px;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .message {
+      display: none;
+      margin-top: 18px;
+      padding: 12px;
+      border-radius: 10px;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .message.error {
+      display: block;
+      background: #fff0f0;
+      color: #b00020;
+    }
+
+    .message.success {
+      display: block;
+      background: #effaf1;
+      color: #176b2c;
+    }
+
+    .login-note {
+      margin-top: 22px;
+      text-align: center;
+      color: #777;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <div class="brand">
+      ✦ AI Life Planner
+    </div>
+
+    <div class="card">
+
+      <h1>Redeem Your AppSumo Code</h1>
+
+      <p class="subtitle">
+        Activate your AI Life Planner access using the code you received from AppSumo.
+      </p>
+
+      <form id="redeemForm">
+
+        <div class="field">
+          <label for="name">Name</label>
+
+          <input
+            id="name"
+            type="text"
+            placeholder="Your name"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label for="email">Email</label>
+
+          <input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+
+          <input
+            id="password"
+            type="password"
+            placeholder="Create a password"
+            minlength="8"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label for="code">AppSumo Code</label>
+
+          <input
+            id="code"
+            type="text"
+            placeholder="Enter your AppSumo code"
+            autocomplete="off"
+            required
+          >
+        </div>
+
+        <button id="redeemButton" type="submit">
+          Redeem & Create Account
+        </button>
+
+      </form>
+
+      <div id="message" class="message"></div>
+
+      <div class="login-note">
+        Already redeemed your code?
+        Your account will be used to access AI Life Planner.
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    const form = document.getElementById("redeemForm");
+    const button = document.getElementById("redeemButton");
+    const message = document.getElementById("message");
+
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      message.className = "message";
+      message.textContent = "";
+
+      button.disabled = true;
+      button.textContent = "Activating...";
+
+      /*
+        AppSumo backend will be connected in the next step.
+        We are intentionally NOT touching the existing Paddle system.
+      */
+
+      setTimeout(() => {
+        message.className = "message success";
+        message.textContent =
+          "The redemption page is ready. AppSumo activation will be connected next.";
+
+        button.disabled = false;
+        button.textContent = "Redeem & Create Account";
+      }, 500);
+    });
+  </script>
+
+</body>
+  </html>
